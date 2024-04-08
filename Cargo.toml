@@ -1,0 +1,42 @@
+[workspace]
+members = [
+    "src/civic_canister_backend",
+    "lib/asset_util",
+    "lib/canister_sig_util",
+    "lib/internet_identity_interface",
+    "lib/vc_util"
+]
+resolver = "2"
+
+
+[workspace.dependencies]
+# local dependencies
+canister_sig_util = { path = "lib/canister_sig_util" }
+internet_identity_interface = { path = "lib/internet_identity_interface" }
+vc_util = { path = "lib/vc_util" }
+asset_util = { path = "lib/asset_util" }
+# ic dependencies
+candid = "0.10"
+ic-cdk = "0.12"
+ic-cdk-macros = "0.8"
+ic-certification = "2.2"
+ic-stable-structures = "0.6.0"
+ic-representation-independent-hash = "2.2"
+ic-crypto-standalone-sig-verifier = { git = "https://github.com/dfinity/ic", rev = "e69bcc7b319cbb3ebc22ec55af35287741244db6" }
+ic-types = { git = "https://github.com/dfinity/ic", rev = "e69bcc7b319cbb3ebc22ec55af35287741244db6" }
+
+
+# other dependencies
+hex = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_bytes = "0.11"
+serde_cbor = "0.11"
+serde_json = "1"
+sha2 = "^0.10" # set bound to match ic-certified-map bound
+strfmt = "0.2"
+lazy_static = "1.4"
+include_dir = "0.7"
+# pocket-ic = "2.2.0"
+
+assert_matches = "1.5.0"
+base64 = "0.21"
