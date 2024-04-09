@@ -44,7 +44,7 @@ const PROD_II_CANISTER_ID: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai";
 
 #[derive(Debug)]
 pub enum SupportedCredentialType {
-    VerifiedAdult(u16),
+    VerifiedAdult,
 }
 
 thread_local! {
@@ -163,6 +163,7 @@ fn authorize_vc_request(
     CONFIG.with_borrow(|config| {
         let config = config.get();
 
+        // check if the ID alias is legitimate and was issued by the internet identity canister    
         for idp_canister_id in &config.idp_canister_ids {
             if let Ok(alias_tuple) = get_verified_id_alias_from_jws(
                 &alias.credential_jws,
@@ -189,11 +190,9 @@ async fn prepare_credential(
         Ok(alias_tuple) => alias_tuple,
         Err(err) => return Err(err),
     };
-    // simple string credential 
-    let credential_string = "Hello, world!".to_string();
 
 
-    let credential_jwt = match prepare_credential_jwt(&req.credential_spec, &alias_tuple) {
+    let credential_string = match prepare_credential_string(&req.credential_spec, &alias_tuple) {
         Ok(credential) => credential,
         Err(err) => return Result::<PreparedCredentialData, IssueCredentialError>::Err(err),
     };
@@ -235,11 +234,11 @@ fn get_credential(req: GetCredentialRequest) -> Result<IssuedCredentialData, Iss
     if let Err(err) = authorize_vc_request(&req.signed_id_alias, &caller(), time().into()) {
         return Result::<IssuedCredentialData, IssueCredentialError>::Err(err);
     };
-    // if let Err(err) = verify_credential_spec(&req.credential_spec) {
-    //     return Result::<IssuedCredentialData, IssueCredentialError>::Err(
-    //         IssueCredentialError::UnsupportedCredentialSpec(err),
-    //     );
-    // }
+    if let Err(err) = verify_credential_spec(&req.credential_spec) {
+        return Result::<IssuedCredentialData, IssueCredentialError>::Err(
+            IssueCredentialError::UnsupportedCredentialSpec(err),
+        );
+    }
     let prepared_context = match req.prepared_context {
         Some(context) => context,
         None => {
@@ -318,4 +317,54 @@ fn fixup_html(html: &str) -> String {
             r#"<script type="module" crossorigin src="/index.js"></script>"#,
             &format!(r#"<script data-canister-id="{canister_id}" type="module" crossorigin src="/index.js"></script>"#).to_string()
         )
+}
+
+// this issues a simple string credential to the user alias 
+fn prepare_credential_string(
+    credential_spec: &CredentialSpec,
+    alias_tuple: &AliasTuple,
+) -> Result<String, IssueCredentialError> {
+    let credential_type = match verify_credential_spec(credential_spec) {
+        Ok(credential_type) => credential_type,
+        Err(err) => {
+            return Err(IssueCredentialError::UnsupportedCredentialSpec(err));
+        }
+    };
+    ADULTS.with_borrow(|adults| {
+        verify_authorized_principal(credential_type, alias_tuple, adults)
+    })?;
+    Ok("Verified as being over 18: ".to_owned() + &alias_tuple.id_alias.to_string()
+    )
+
+}
+
+// checks if the user has a credential, i.e. is contained in set of adults 
+fn verify_authorized_principal(
+    credential_type: SupportedCredentialType,
+    alias_tuple: &AliasTuple,
+    authorized_principals: &HashSet<Principal>,
+) -> Result<(), IssueCredentialError> {
+    if authorized_principals.contains(&alias_tuple.id_dapp) {
+        Ok(())
+    } else {
+        println!(
+            "*** principal {} it is not authorized for credential type {:?}",
+            alias_tuple.id_dapp.to_text(),
+            credential_type
+        );
+        Err(IssueCredentialError::UnauthorizedSubject(format!(
+            "unauthorized principal {}",
+            alias_tuple.id_dapp.to_text()
+        )))
+    }
+}
+
+
+fn verify_credential_spec(spec: &CredentialSpec) -> Result<SupportedCredentialType, String> {
+    match spec.credential_type.as_str() {
+        "VerifiedAdult" => {
+            Ok(SupportedCredentialType::VerifiedAdult)
+        }
+        other => Err(format!("Credential {} is not supported", other)),
+    }
 }
