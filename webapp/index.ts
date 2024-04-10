@@ -6,7 +6,7 @@ import { Actor, ActorMethod, HttpAgent } from "@dfinity/agent";
 import { AuthClient } from "@dfinity/auth-client";
 import type { Principal } from "@dfinity/principal";
 
-const webapp_id = process.env.WHOAMI_CANISTER_ID;
+const webapp_id = process.env.CIVIC_CANISTER_BACKEND_CANISTER_ID;
 // The <canisterId>.localhost URL is used as opposed to setting the canister id as a parameter
 // since the latter is brittle with regards to transitively loaded resources.
 const local_ii_url = `http://${process.env.INTERNET_IDENTITY_CANISTER_ID}.localhost:4943`;
@@ -70,5 +70,5 @@ document.getElementById("loginBtn")?.addEventListener("click", async () => {
   // Call whoami which returns the principal (user id) of the current user.
   const principal = await webapp.whoami();
   // show the principal on the page
-  document.getElementById("loginStatus")!.innerText = "Principal as Civic Canister sees it: " + principal.toText();
+  document.getElementById("loginStatus")!.innerText = webapp_id + "Principal as Civic Canister sees it: " + principal.toText();
 });

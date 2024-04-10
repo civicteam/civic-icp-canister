@@ -183,6 +183,12 @@ fn authorize_vc_request(
 
 #[query]
 #[candid_method]
+async fn whoami() -> Principal {
+    caller()
+}
+
+#[query]
+#[candid_method]
 async fn prepare_credential(
     req: PrepareCredentialRequest,
 ) -> Result<PreparedCredentialData, IssueCredentialError> {
@@ -367,4 +373,11 @@ fn verify_credential_spec(spec: &CredentialSpec) -> Result<SupportedCredentialTy
         }
         other => Err(format!("Credential {} is not supported", other)),
     }
+}
+
+#[update]
+#[candid_method]
+fn add_adult(adult_id: Principal) -> String {
+    ADULTS.with_borrow_mut(|adults| adults.insert(adult_id));
+    format!("Added adult {}", adult_id)
 }
