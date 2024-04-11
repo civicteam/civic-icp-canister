@@ -15,6 +15,7 @@ canister_sig_util = { path = "lib/canister_sig_util" }
 internet_identity_interface = { path = "lib/internet_identity_interface" }
 vc_util = { path = "lib/vc_util" }
 asset_util = { path = "lib/asset_util" }
+
 # ic dependencies
 candid = "0.10"
 ic-cdk = "0.12"
@@ -22,9 +23,9 @@ ic-cdk-macros = "0.8"
 ic-certification = "2.2"
 ic-stable-structures = "0.6.0"
 ic-representation-independent-hash = "2.2"
+ic-test-state-machine-client = "3"
 ic-crypto-standalone-sig-verifier = { git = "https://github.com/dfinity/ic", rev = "e69bcc7b319cbb3ebc22ec55af35287741244db6" }
 ic-types = { git = "https://github.com/dfinity/ic", rev = "e69bcc7b319cbb3ebc22ec55af35287741244db6" }
-
 
 # other dependencies
 hex = "0.4"
@@ -37,6 +38,7 @@ strfmt = "0.2"
 lazy_static = "1.4"
 include_dir = "0.7"
 # pocket-ic = "2.2.0"
+regex = "1.9"
 
 assert_matches = "1.5.0"
 base64 = "0.21"

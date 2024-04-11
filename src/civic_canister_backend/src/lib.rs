@@ -143,11 +143,11 @@ fn init(init_arg: Option<IssuerInit>) {
 //     init(init_arg);
 // }
 
-// #[update]
-// #[candid_method]
-// fn configure(config: IssuerInit) {
-//     apply_config(config);
-// }
+#[update]
+#[candid_method]
+fn configure(config: IssuerInit) {
+    apply_config(config);
+}
 
 fn apply_config(init: IssuerInit) {
     CONFIG
@@ -381,3 +381,4 @@ fn add_adult(adult_id: Principal) -> String {
     ADULTS.with_borrow_mut(|adults| adults.insert(adult_id));
     format!("Added adult {}", adult_id)
 }
+

@@ -70,5 +70,5 @@ document.getElementById("loginBtn")?.addEventListener("click", async () => {
   // Call whoami which returns the principal (user id) of the current user.
   const principal = await webapp.whoami();
   // show the principal on the page
-  document.getElementById("loginStatus")!.innerText = webapp_id + "Principal as Civic Canister sees it: " + principal.toText();
+  document.getElementById("loginStatus")!.innerText = "Principal as Civic Canister sees it: " + principal.toText();
 });

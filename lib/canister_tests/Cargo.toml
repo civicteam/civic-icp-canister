@@ -1,0 +1,25 @@
+[package]
+name = "canister_tests"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+base64.workspace = true
+flate2 = "1.0"
+hex.workspace = true
+ic-test-state-machine-client.workspace = true
+lazy_static.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_cbor.workspace = true
+serde_bytes.workspace = true
+sha2.workspace = true
+
+internet_identity_interface.workspace = true
+vc_util.workspace = true
+identity_jose = { git = "https://github.com/frederikrothenberger/identity.rs.git", branch = "frederik/wasm-test", default-features = false, features = ["iccs"]}
+
+# All IC deps
+candid.workspace = true
+ic-cdk.workspace = true
+ic-representation-independent-hash.workspace = true

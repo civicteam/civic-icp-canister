@@ -9,8 +9,10 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
+internet_identity_interface.workspace = true
+canister_sig_util.workspace = true
+hex.workspace = true
 # local dependencies
-canister_sig_util = { path = "../../lib/canister_sig_util" }
 vc_util = { path = "../../lib/vc_util" }
 asset_util = { path = "../../lib/asset_util" }
 candid = "0.10"
@@ -18,9 +20,18 @@ ic-cdk = "0.12"
 ic-stable-structures = "0.6.0"
 ic-cdk-macros = "0.8"
 ic-certification = "2.2"
+ic-http-certification = "2.2"
+ic-response-verification = "2.2"
+ic-test-state-machine-client = "3"
 
+
+assert_matches = "1.5.0"
 include_dir = "0.7"
 serde_bytes = "0.11"
 serde = { version = "1", features = ["derive"] }
+canister_tests = { path = "../../lib/canister_tests" }
+lazy_static = "1.4"
+mockall = "0.10.2"
+
 
 
