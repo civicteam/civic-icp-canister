@@ -44,6 +44,7 @@ To sign into the Civic Canister:
     
 After this process, the user is logged into the app using a temporary session and without their Internet Identity being able to be linked to other apps. 
 
+Source: https://wiki.internetcomputer.org/wiki/Internet_Identity
 
 ### Canister Call Authentication Fields
 *(dk = delegated public key, wrt = with regards to)*
@@ -56,10 +57,11 @@ After this process, the user is logged into the app using a temporary session an
  
  The ```sender_pubkey``` must authenticate the sender principal, ie ```sender_sig``` verifies the authenticity of the call against the public key (*self-authenticating principal*)
 
+Source:
+https://internetcomputer.org/docs/current/references/ic-interface-spec#authentication
+https://internetcomputer.org/docs/current/developer-docs/web-apps/independently-verifying-ic-signatures
+
 ## Sequence Diagrams 
-![image](https://github.com/civicteam/icp-civic-canister/assets/66886792/f061ec66-59e1-40d8-a3a9-cdbcd6f00ac6)
+![canister drawio](https://github.com/civicteam/icp-civic-canister/assets/66886792/72ef5395-5751-4597-b25c-878b50ef8a85)
 
-![image](https://github.com/civicteam/icp-civic-canister/assets/66886792/8b3d3185-0da4-4731-8faa-23bebaefed62)
-
-![image](https://github.com/civicteam/icp-civic-canister/assets/66886792/8860b248-6eb3-4c2c-b0a2-adbae0ded5b2)
 
