@@ -3,9 +3,9 @@ run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "gh-actions" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "gh-actions" ]
 
 
 env:
@@ -27,7 +27,7 @@ jobs:
         npm install 
         dfx start --clean --background
         dfx canister create --all
-      mkdir src/civic_canister_backend/dist
+        mkdir src/civic_canister_backend/dist
     - name: Build
       run: dfx build --verbose
     - name: Deploy 
