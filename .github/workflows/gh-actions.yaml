@@ -24,13 +24,13 @@ jobs:
     - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
     - name: Install 
       run: npm install 
-      run: dfx start --clean --background
-      run: dfx canister create --all
-      run: mkdir src/civic_canister_backend/dist
+      | dfx start --clean --background
+      | dfx canister create --all
+      | mkdir src/civic_canister_backend/dist
     - name: Build
-      run: dfx build --verbose
+      | dfx build --verbose
     - name: Deploy 
       run: dfx canister install --all
-      run: dfx deploy 
+      | dfx deploy 
     - name: Run tests
       run: cargo test --test integration_tests --verbose
