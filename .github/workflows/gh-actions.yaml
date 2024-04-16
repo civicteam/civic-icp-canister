@@ -22,15 +22,18 @@ jobs:
     - name: Check out repository code
       uses: actions/checkout@v4
     - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-    - name: Install 
+    - name: Install dfx and dependencies 
       run: |
+        sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
         npm install 
+        mkdir src/civic_canister_backend/dist
+    - name: Install canisters and start local ICP replica
+      run: |
         dfx start --clean --background
         dfx canister create --all
-        mkdir src/civic_canister_backend/dist
-    - name: Build
+    - name: Build canisters
       run: dfx build --verbose
-    - name: Deploy 
+    - name: Deploy canisters
       run: dfx canister install --all && dfx deploy 
     - name: Run tests
       run: cargo test --test integration_tests --verbose
