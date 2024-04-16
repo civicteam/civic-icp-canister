@@ -437,6 +437,7 @@ dependencies = [
  "mockall",
  "serde",
  "serde_bytes",
+ "serde_json",
  "vc_util",
 ]
 

@@ -1,3 +1,4 @@
+use candid::types::principal;
 use candid::{candid_method, CandidType, Deserialize, Principal};
 // use ic_cdk::candid::candid_method;
 
@@ -8,12 +9,14 @@ use ic_cdk::api::{caller, set_certified_data, time};
 use ic_cdk_macros::{init, query, update};
 use ic_certification::{fork_hash, labeled_hash, pruned, Hash};
 
-use std::collections::HashSet;
+use std::collections::{HashSet,HashMap};
 use ic_stable_structures::storable::Bound;
 use ic_stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableCell, Storable};
 use include_dir::{include_dir, Dir};
 
 use serde_bytes::ByteBuf;
+use serde::{ Serialize};
+use serde_json::Value as JsonValue;
 
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -41,6 +44,37 @@ type ConfigCell = StableCell<IssuerConfig, Memory>;
 // const VC_EXPIRATION_PERIOD_NS: u64 = 15 * MINUTE_NS;
 const PROD_II_CANISTER_ID: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai";
 
+#[derive( CandidType, Serialize, Deserialize, Debug, Clone)]
+struct CredentialSubject {
+    additional_data: JsonValue, 
+}
+
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+enum ClaimValue {
+    Boolean(bool),
+    Date(String),
+    Text(String),
+    CredentialSubjects(Vec<CredentialSubject>), 
+}
+
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+struct Claim {
+    key: String,
+    value: ClaimValue,
+}
+
+#[derive( Serialize, Deserialize, Debug)]
+struct Credential {
+    id: String, 
+    type_: Vec<String>,
+    context: Vec<String>,
+    issuer: String,
+    claim: Vec<Claim>,
+}
+#[derive(CandidType)]
+enum CredentialError {
+    NoClaimsFound(String),
+}
 
 #[derive(Debug)]
 pub enum SupportedCredentialType {
@@ -53,7 +87,7 @@ thread_local! {
     static SIGNATURES : RefCell<SignatureMap> = RefCell::new(SignatureMap::default());
 
     static ADULTS : RefCell<HashSet<Principal>> = RefCell::new(HashSet::new());
-
+    static CLAIMS : RefCell<HashMap<Principal, Vec<Claim>>> = RefCell::new(HashMap::new());
     // Assets for the management app
     static ASSETS: RefCell<CertifiedAssets> = RefCell::new(CertifiedAssets::default());
 }
@@ -187,7 +221,7 @@ async fn whoami() -> Principal {
     caller()
 }
 
-#[query]
+#[update]
 #[candid_method]
 async fn prepare_credential(
     req: PrepareCredentialRequest,
@@ -382,3 +416,28 @@ fn add_adult(adult_id: Principal) -> String {
     format!("Added adult {}", adult_id)
 }
 
+
+#[update]
+#[candid_method]
+fn add_claims(principal: Principal, claims: Vec<Claim>) -> String {
+        CLAIMS.with_borrow_mut(|credentials| {
+            let entry = credentials.entry(principal).or_insert_with(Vec::new);
+            entry.extend(claims);    
+        });
+    format!("Added claims")
+}
+
+
+
+#[query]
+#[candid_method(query)]
+fn get_claims(principal: Principal) -> Result<Vec<Claim>, CredentialError> {
+    let claims = CLAIMS.with_borrow(|claims| {
+        claims.get(&principal).cloned()
+    });
+    if let Some(claims) = claims {
+        Ok(claims)
+    } else {
+        Err(CredentialError::NoClaimsFound(format!("No claims found for principal {}", principal.to_text())))
+    }
+}

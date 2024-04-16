@@ -32,6 +32,7 @@ serde = { version = "1", features = ["derive"] }
 canister_tests = { path = "../../lib/canister_tests" }
 lazy_static = "1.4"
 mockall = "0.10.2"
+serde_json.workspace = true
 
 
 
