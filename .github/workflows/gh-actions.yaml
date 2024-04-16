@@ -17,14 +17,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-    - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
     - name: Check out repository code
       uses: actions/checkout@v4
-    - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-    - name: Install dfx and dependencies 
+    - name: Install dfx  
+      uses: dfinity/setup-dfx@main
+    - name: Confirm successful installation
+      run: dfx --version
+    - name: Install dependencies
       run: |
-        sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
         npm install 
         mkdir src/civic_canister_backend/dist
     - name: Install canisters and start local ICP replica
