@@ -1,5 +1,4 @@
 name: Rust
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
 
 on:
   push:
@@ -26,9 +25,12 @@ jobs:
     - name: Install dependencies
       run: |
         npm install 
-        mkdir src/civic_canister_backend/dist
+        cargo install ic-wasm
+    - name: Install Rust target
+      run: rustup target add wasm32-unknown-unknown
     - name: Install canisters and start local ICP replica
       run: |
+        mkdir src/civic_canister_backend/dist
         dfx start --clean --background
         dfx canister create --all
     - name: Build canisters
