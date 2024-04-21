@@ -431,6 +431,8 @@ dependencies = [
  "ic-response-verification",
  "ic-stable-structures 0.6.3",
  "ic-test-state-machine-client",
+ "identity_core",
+ "identity_credential",
  "include_dir",
  "internet_identity_interface",
  "lazy_static",
@@ -438,6 +440,7 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_json",
+ "sha2 0.10.8",
  "vc_util",
 ]
 
