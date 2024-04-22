@@ -38,5 +38,5 @@ jobs:
     - name: Deploy canisters
       run: dfx canister install --all && dfx deploy 
     - name: Run tests
-      run: sudo cargo test --test integration_tests --verbose
+      run: cargo test --test integration_tests --verbose
     - run: echo "🍏 This job's status is ${{ job.status }}."
