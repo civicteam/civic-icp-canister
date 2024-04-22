@@ -31,11 +31,11 @@ use vc_util::{ did_for_principal, get_verified_id_alias_from_jws, vc_jwt_to_jws,
 };
 use ic_cdk::api;
 use lazy_static::lazy_static;
-use identity_credential::credential::{Credential, CredentialBuilder, Jwt, Subject};
+use identity_credential::credential::{self, Credential, CredentialBuilder, Jwt, Subject};
 use identity_core::common::{Timestamp, Url, Context};
 
 mod types;
-use types::{Claim, StoredCredential, CredentialError, build_claims_into_credentialSubjects, };
+use types::{Claim, StoredCredential, CredentialError, build_claims_into_credentialSubjects, add_context};
 
 /// We use restricted memory in order to ensure the separation between non-managed config memory (first page)
 /// and the managed memory for potential other data of the canister.
@@ -371,12 +371,11 @@ fn build_credential(
     let params = CredentialParams {
         spec: credential_spec.clone(),
         subject_id: did_for_principal(subject_principal),
-        // credential_id: credential.id,
-        credential_id_url: "https://age_verifier.info/credentials/42".to_string(),
+        credential_id_url: credential.id,
         context: credential.context,
         issuer_url: credential.issuer,
         expiration_timestamp_s: exp_timestamp_s(),
-        claims: build_claims_into_credentialSubjects(credential.claim),
+        claims: credential.claim,
     };
     build_credential_jwt(params)
 }
@@ -461,7 +460,7 @@ fn exp_timestamp_s() -> u32 {
      credential_id_url: String, 
      context: Vec<String>,
      issuer_url: String,
-     claims: Vec<Subject>,
+     claims: Vec<Claim>,
      expiration_timestamp_s: u32,
 }
 
@@ -474,16 +473,25 @@ pub fn build_credential_jwt(params: CredentialParams) -> String {
     //     credential_spec_args_to_json(&params.spec),
     // );
     // let subject = Subject::from_json_value(subject_json).unwrap();
+
+    // build "credentialSubject" objects
+    let subjects = build_claims_into_credentialSubjects(params.claims, params.subject_id); 
     let expiration_date = Timestamp::from_unix(params.expiration_timestamp_s as i64)
         .expect("internal: failed computing expiration timestamp");
-    let credential: Credential = CredentialBuilder::default()
+
+    let mut credential = CredentialBuilder::default()
         .id(Url::parse(params.credential_id_url).unwrap())
         .issuer(Url::parse(params.issuer_url).unwrap())
+        .type_("VerifiedCredential".to_string())
         .type_(params.spec.credential_type)
-        .subjects(params.claims) // add to the "credentialSubjects"
-        .context(Url::parse(params.context[0]).unwrap())
-        .expiration_date(expiration_date)
-        .build()
-        .unwrap();
+        .subjects(subjects) // add objects to the credentialSubject 
+        .expiration_date(expiration_date);
+
+    // add all the context 
+    credential = add_context(credential, params.context);
+    // //add all the type data 
+    // credential = add_types(credential, params.types_);
+
+    let credential = credential.build().unwrap();
     credential.serialize_jwt().unwrap()
 }
