@@ -121,7 +121,7 @@ pub fn get_wasm_path(env_var: String, default_path: &path::PathBuf) -> Option<Ve
 }
 
 /// The path to the state machine binary to run the tests with
-pub static STATE_MACHINE_BINARY: &str = "../../ic-test-state-machine";
+pub static STATE_MACHINE_BINARY: &str = "../../../ic-test-state-machine";
 
 pub fn env() -> StateMachine {
     let path = match env::var_os("STATE_MACHINE_BINARY") {
