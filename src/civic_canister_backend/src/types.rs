@@ -17,7 +17,7 @@ pub enum ClaimValue {
 
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
 pub struct Claim {
-    claims:HashMap<String, ClaimValue>,
+    pub claims:HashMap<String, ClaimValue>,
 }
 
 impl From<ClaimValue> for Value {

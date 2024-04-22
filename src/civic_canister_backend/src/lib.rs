@@ -1,3 +1,6 @@
+pub mod types;
+use types::{Claim, StoredCredential, CredentialError, build_claims_into_credentialSubjects, add_context};
+
 use std::fmt;
 use candid::{candid_method, CandidType, Deserialize, Principal};
 // use ic_cdk::candid::candid_method;
@@ -34,8 +37,6 @@ use lazy_static::lazy_static;
 use identity_credential::credential::{self, Credential, CredentialBuilder, Jwt, Subject};
 use identity_core::common::{Timestamp, Url, Context};
 
-mod types;
-use types::{Claim, StoredCredential, CredentialError, build_claims_into_credentialSubjects, add_context};
 
 /// We use restricted memory in order to ensure the separation between non-managed config memory (first page)
 /// and the managed memory for potential other data of the canister.
