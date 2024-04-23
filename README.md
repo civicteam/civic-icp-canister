@@ -7,7 +7,8 @@ Install the dependencies in `src/civic_canister_frontend`:
 npm ci
 ```
 (Note: there are missing peer dependencies when using yarn, adding these manually gives some errors)
-
+ 
+ 
 Building and deploying the canisters:
 ```
 dfx start --clean --background #start the local replica
@@ -18,7 +19,7 @@ dfx canister install --all
 dfx deploy 
 ```
 
-This deploys the ```civic_canister_backend```, ```internet_identity``` and the frontend canister to the local replica.
+This deploys the ```civic_canister_backeaddnd```, ```internet_identity``` and the frontend canister to the local replica.
 
 To run the tests:
 ```
