@@ -1,4 +1,4 @@
-name: Rust
+name: linux
 
 on:
   push:
@@ -38,5 +38,7 @@ jobs:
     - name: Deploy canisters
       run: dfx canister install --all && dfx deploy 
     - name: Run tests
-      run: cargo test --test integration_tests --verbose
+      run: |
+        chmod +x ic-test-state-machine
+        cargo test --test integration_tests --verbose
     - run: echo "🍏 This job's status is ${{ job.status }}."
