@@ -39,7 +39,7 @@ jobs:
       run: rustup target add wasm32-unknown-unknown
     - name: Install dependencies
       run: |
-        npm install 
+        yarn install 
         cargo install ic-wasm
     - name: Install canisters and start local ICP replica
       run: |
@@ -47,7 +47,7 @@ jobs:
         dfx start --clean --background
         dfx canister create --all
     - name: Build canisters
-      run: dfx build --verbose
+      run: dfx build
     - name: Deploy canisters
       run: dfx canister install --all && dfx deploy 
     - name: Run tests
