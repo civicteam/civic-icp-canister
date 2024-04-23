@@ -1,0 +1,4 @@
+[submodule "src/civic_canister_frontend"]
+	path = src/civic_canister_frontend
+	url = https://github.com/happyhackerbird/internet-identity.git
+	branch = del
