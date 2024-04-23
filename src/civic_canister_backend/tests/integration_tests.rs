@@ -34,7 +34,7 @@ use vc_util::{
     verify_credential_jws_with_canister_id,
 };
 
-use crate::types::{Claim, StoredCredential, CredentialError, build_claims_into_credentialSubjects, add_context};
+// use crate::civic_canister_backend::types::{Claim, StoredCredential, CredentialError, ClaimValue, build_claims_into_credentialSubjects, add_context};
 
 const DUMMY_ROOT_KEY: &str ="308182301d060d2b0601040182dc7c0503010201060c2b0601040182dc7c05030201036100adf65638a53056b2222c91bb2457b0274bca95198a5acbdadfe7fd72178f069bdea8d99e9479d8087a2686fc81bf3c4b11fe275570d481f1698f79d468afe0e57acc1e298f8b69798da7a891bbec197093ec5f475909923d48bfed6843dbed1f";
 const DUMMY_II_CANISTER_ID: &str = "rwlgt-iiaaa-aaaaa-aaaaa-cai";
@@ -151,7 +151,7 @@ mod api {
         adult_id: Principal,
         credential: StoredCredential,
     ) -> Result<String, CallError> {
-        call_candid(env, canister_id, "add_credentials", (adult_id, credential)).map(|(x,)| x)
+        call_candid(env, canister_id, "add_credentials", (adult_id, vec!(credential), )).map(|(x,)| x)
     }
 
     pub fn prepare_credential(
@@ -715,7 +715,7 @@ ic_cdk::export_candid!();
 // Helper functions
 
 fn construct_adult_credential () -> StoredCredential {
-    let claim_map = HashMap::<String, ClaimValue>::new();
+    let mut claim_map = HashMap::<String, ClaimValue>::new();
     claim_map.insert("Is over 18".to_string(), ClaimValue::Boolean(true));
        StoredCredential {
         id: "http://example.edu/credentials/3732".to_string(),
@@ -725,6 +725,99 @@ fn construct_adult_credential () -> StoredCredential {
             "https://www.w3.org/2018/credentials/examples/v1".to_string(),
         ],
         issuer: "https://civic.com".to_string(),
-        claims: claim_map,
+        claim: vec![Claim{claims: claim_map}],
     }
 }
+
+
+// ==================================================
+
+
+use std::collections::{ BTreeMap};
+use identity_credential::credential::{CredentialBuilder, Subject};
+use serde::{Serialize};
+pub use serde_json::Value;
+// use candid::CandidType;
+use identity_core::common::Url;
+use std::iter::repeat;
+
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub enum ClaimValue {
+    Boolean(bool),
+    Date(String),
+    Text(String),
+    Number(i64),
+    Claim(Claim),
+}
+
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub struct Claim {
+    pub claims:HashMap<String, ClaimValue>,
+}
+
+impl From<ClaimValue> for Value {
+    fn from(claim_value: ClaimValue) -> Self {
+        match claim_value {
+            ClaimValue::Boolean(b) => Value::Bool(b),
+            ClaimValue::Date(d) => Value::String(d),
+            ClaimValue::Text(t) => Value::String(t),
+            ClaimValue::Number(n) => Value::Number(n.into()),
+            ClaimValue::Claim(nested_claim) => {
+                serde_json::to_value(nested_claim).unwrap_or(Value::Null)
+            },
+        }
+    }
+}
+
+
+impl Claim {
+    pub fn into(self) -> Subject {
+        let btree_map: BTreeMap<String, Value> = self.claims.into_iter()
+        .map(|(k, v)| (k, v.into()))
+        .collect();
+        Subject::with_properties(btree_map) 
+    }
+}
+
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub struct StoredCredential {
+    pub id: String, 
+    pub type_: Vec<String>,
+    pub context: Vec<String>,
+    pub issuer: String,
+    pub claim: Vec<Claim>,
+}
+#[derive(CandidType)]
+pub enum CredentialError {
+    NoCredentialsFound(String),
+}
+
+
+// Helper functions for constructing the credential that is returned from the canister 
+
+/// Build a credentialSubject {
+/// id: SubjectId, 
+/// otherData
+///  }
+pub fn build_claims_into_credentialSubjects(claims: Vec<Claim>, subject: String) -> Vec<Subject> {
+    claims.into_iter().zip(repeat(subject)).map(|(c, id )|{
+        let mut sub = c.into();
+        sub.id = Url::parse(id).ok();
+        sub
+    }).collect()
+}
+
+
+pub fn add_context(mut credential: CredentialBuilder, context: Vec<String>) -> CredentialBuilder {
+    for c in context {
+     credential = credential.context(Url::parse(c).unwrap());
+    }
+    credential
+}
+
+// pub fn add_types(mut credential: CredentialBuilder, types: Vec<String>) -> CredentialBuilder {
+//     for t in types {
+//      credential = credential.type_(t);
+//     }
+//     credential
+// }
