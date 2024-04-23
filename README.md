@@ -12,6 +12,11 @@ cargo install ic-wasm
 ```
 
 
+Install `dfx` if not already installed:
+```
+sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
+```
+
 Building and deploying the canisters:
 ```
 npm install
