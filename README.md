@@ -4,11 +4,10 @@
 
 Install the dependencies in `src/civic_canister_frontend`: 
 ```
-npm ci
+yarn install
 ```
-(Note: there are missing peer dependencies when using yarn, adding these manually gives some errors)
  
- 
+
 Building and deploying the canisters:
 ```
 dfx start --clean --background #start the local replica
