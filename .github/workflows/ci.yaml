@@ -26,9 +26,10 @@ jobs:
     steps:
     - name: Check out repository code
       uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
     - name: Set up environment
       run: |
-        ls src/civic_canister_frontend/
         echo "Setting up on ${{ matrix.os }}"
         mv ic-test-machine-binaries/ic-test-state-machine${{ matrix.file_suffix }} ic-test-state-machine
 
