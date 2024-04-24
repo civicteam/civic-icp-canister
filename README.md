@@ -1,10 +1,25 @@
 [comment]: # Webapp adapted from: https://internetcomputer.org/docs/current/developer-docs/integrations/internet-identity/integrate-identity/
 
 ## Usage
+Make sure to install dfx: 
+```bash
+sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
+```
+Add Rust target and ic-wasm:
+```
+rustup target add wasm32-unknown-unknown
+cargo install ic-wasm
+```
+
+
+Install the dependencies in `src/civic_canister_frontend`: 
+```
+yarn install
+```
+ 
 
 Building and deploying the canisters:
 ```
-npm install
 dfx start --clean --background #start the local replica
 dfx canister create --all
 mkdir src/civic_canister_backend/dist
@@ -13,7 +28,7 @@ dfx canister install --all
 dfx deploy 
 ```
 
-This deploys the ```civic_canister_backend```, ```internet_identity``` and the frontend canister to the local replica.
+This deploys the ```civic_canister_backeaddnd```, ```internet_identity``` and the frontend canister to the local replica.
 
 To run the tests:
 ```
