@@ -55,9 +55,5 @@ jobs:
     - name: Run tests
       run: |
         chmod +x ic-test-state-machine
-<<<<<<< HEAD
-        cargo test --test integration_tests --verbose
-=======
         # cargo test --test integration_tests --verbose
->>>>>>> add-credential-script
     - run: echo "🐧 This job's status is ${{ job.status }}."
