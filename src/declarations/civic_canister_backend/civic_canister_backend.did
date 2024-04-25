@@ -55,9 +55,10 @@ type StoredCredential = record {
   issuer : text;
 };
 service : (opt IssuerInit) -> {
-  add_credentials : (principal, vec StoredCredential) -> (text);
+  add_credentials : (principal) -> (text);
   configure : (IssuerInit) -> ();
   get_all_credentials : (principal) -> (Result) query;
   get_credential : (GetCredentialRequest) -> (Result_1) query;
   prepare_credential : (PrepareCredentialRequest) -> (Result_2);
+  whoami : () -> (text);
 }

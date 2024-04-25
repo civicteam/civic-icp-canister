@@ -55,11 +55,12 @@ export interface StoredCredential {
   'issuer' : string,
 }
 export interface _SERVICE {
-  'add_credentials' : ActorMethod<[Principal, Array<StoredCredential>], string>,
+  'add_credentials' : ActorMethod<[Principal], string>,
   'configure' : ActorMethod<[IssuerInit], undefined>,
   'get_all_credentials' : ActorMethod<[Principal], Result>,
   'get_credential' : ActorMethod<[GetCredentialRequest], Result_1>,
   'prepare_credential' : ActorMethod<[PrepareCredentialRequest], Result_2>,
+  'whoami' : ActorMethod<[], string>,
 }
 export declare const idlFactory: IDL.InterfaceFactory;
 export declare const init: (args: { IDL: typeof IDL }) => IDL.Type[];

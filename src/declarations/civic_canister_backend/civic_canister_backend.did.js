@@ -64,15 +64,12 @@ export const idlFactory = ({ IDL }) => {
     'Err' : IssueCredentialError,
   });
   return IDL.Service({
-    'add_credentials' : IDL.Func(
-        [IDL.Principal, IDL.Vec(StoredCredential)],
-        [IDL.Text],
-        [],
-      ),
+    'add_credentials' : IDL.Func([IDL.Principal], [IDL.Text], []),
     'configure' : IDL.Func([IssuerInit], [], []),
     'get_all_credentials' : IDL.Func([IDL.Principal], [Result], ['query']),
     'get_credential' : IDL.Func([GetCredentialRequest], [Result_1], ['query']),
     'prepare_credential' : IDL.Func([PrepareCredentialRequest], [Result_2], []),
+    'whoami' : IDL.Func([], [IDL.Text], []),
   });
 };
 export const init = ({ IDL }) => {
