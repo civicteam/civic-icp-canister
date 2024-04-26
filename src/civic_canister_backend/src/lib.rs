@@ -1,5 +1,5 @@
 pub mod types;
-use types::{StoredCredential, CredentialError, add_context};
+use types::{Claim, StoredCredential, CredentialError, add_context, build_claims_into_credentialSubjects};
 
 use std::fmt;
 use candid::{candid_method, CandidType, Deserialize, Principal};
@@ -32,7 +32,7 @@ use vc_util::{ did_for_principal, get_verified_id_alias_from_jws, vc_jwt_to_jws,
 };
 use ic_cdk::api;
 use lazy_static::lazy_static;
-use identity_credential::credential::{CredentialBuilder, Subject};
+use identity_credential::credential::{CredentialBuilder};
 use identity_core::common::{Timestamp, Url};
 
 
@@ -368,7 +368,7 @@ fn build_credential(
         context: credential.context,
         issuer_url: credential.issuer,
         expiration_timestamp_s: exp_timestamp_s(),
-        // claims: vec!(Claim{claims: HashMap::new()}),
+        claims: credential.claim,
     };
     build_credential_jwt(params)
 }
@@ -453,7 +453,7 @@ fn exp_timestamp_s() -> u32 {
      credential_id_url: String, 
      context: Vec<String>,
      issuer_url: String,
-    //  claims: Vec<Claim>,
+     claims: Vec<Claim>,
      expiration_timestamp_s: u32,
 }
 
@@ -468,8 +468,7 @@ pub fn build_credential_jwt(params: CredentialParams) -> String {
     // let subject = Subject::from_json_value(subject_json).unwrap();
 
     // build "credentialSubject" objects
-    // let subjects = build_claims_into_credentialSubjects(params.claims, params.subject_id); 
-    let subjects = Subject::with_id(Url::parse(params.subject_id).unwrap());
+    let subjects = build_claims_into_credentialSubjects(params.claims, params.subject_id); 
     let expiration_date = Timestamp::from_unix(params.expiration_timestamp_s as i64)
         .expect("internal: failed computing expiration timestamp");
 
@@ -478,7 +477,7 @@ pub fn build_credential_jwt(params: CredentialParams) -> String {
         .issuer(Url::parse(params.issuer_url).unwrap())
         .type_("VerifiedCredential".to_string())
         .type_(params.spec.credential_type)
-        .subject(subjects) // add objects to the credentialSubject 
+        .subjects(subjects) // add objects to the credentialSubject 
         .expiration_date(expiration_date);
 
     // add all the context 
