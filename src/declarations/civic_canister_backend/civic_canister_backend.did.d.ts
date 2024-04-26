@@ -4,12 +4,6 @@ import type { IDL } from '@dfinity/candid';
 
 export type ArgumentValue = { 'Int' : number } |
   { 'String' : string };
-export interface Claim { 'claims' : Array<[string, ClaimValue]> }
-export type ClaimValue = { 'Date' : string } |
-  { 'Text' : string } |
-  { 'Boolean' : boolean } |
-  { 'Number' : bigint } |
-  { 'Claim' : Claim };
 export type CredentialError = { 'NoCredentialsFound' : string };
 export interface CredentialSpec {
   'arguments' : [] | [Array<[string, ArgumentValue]>],
@@ -51,7 +45,6 @@ export interface StoredCredential {
   'id' : string,
   'context' : Array<string>,
   'type_' : Array<string>,
-  'claim' : Array<Claim>,
   'issuer' : string,
 }
 export interface _SERVICE {

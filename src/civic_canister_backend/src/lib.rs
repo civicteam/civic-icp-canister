@@ -1,5 +1,5 @@
 pub mod types;
-use types::{Claim, StoredCredential, CredentialError, build_claims_into_credentialSubjects, add_context};
+use types::{StoredCredential, CredentialError, add_context};
 
 use std::fmt;
 use candid::{candid_method, CandidType, Deserialize, Principal};
@@ -9,7 +9,7 @@ use canister_sig_util::signature_map::{SignatureMap, LABEL_SIG};
 
 use ic_cdk::api::{caller, set_certified_data, time};
 use ic_cdk_macros::{init, query, update};
-use ic_certification::{fork_hash, labeled_hash, pruned, Hash};
+use ic_certification::{fork_hash, labeled_hash, Hash};
 
 use std::collections::{HashSet,HashMap};
 use ic_stable_structures::storable::Bound;
@@ -18,15 +18,13 @@ use include_dir::{include_dir, Dir};
 use sha2::{Digest, Sha256};
 
 use serde_bytes::ByteBuf;
-use serde::{ Serialize};
-use serde_json::{Value as JsonValue, json};
+
+
 use std::borrow::Cow;
 use std::cell::RefCell;
 use asset_util::{collect_assets, CertifiedAssets};
 use vc_util::issuer_api::{
-    ArgumentValue, CredentialSpec, DerivationOriginData, DerivationOriginError,
-    DerivationOriginRequest, GetCredentialRequest, Icrc21ConsentInfo, Icrc21Error,
-    Icrc21VcConsentMessageRequest, IssueCredentialError, IssuedCredentialData,
+    CredentialSpec, GetCredentialRequest, IssueCredentialError, IssuedCredentialData,
     PrepareCredentialRequest, PreparedCredentialData, SignedIdAlias,
 };
 use vc_util::{ did_for_principal, get_verified_id_alias_from_jws, vc_jwt_to_jws,
@@ -34,8 +32,8 @@ use vc_util::{ did_for_principal, get_verified_id_alias_from_jws, vc_jwt_to_jws,
 };
 use ic_cdk::api;
 use lazy_static::lazy_static;
-use identity_credential::credential::{self, Credential, CredentialBuilder, Jwt, Subject};
-use identity_core::common::{Timestamp, Url, Context};
+use identity_credential::credential::{CredentialBuilder, Subject};
+use identity_core::common::{Timestamp, Url};
 
 
 /// We use restricted memory in order to ensure the separation between non-managed config memory (first page)
@@ -370,7 +368,7 @@ fn build_credential(
         context: credential.context,
         issuer_url: credential.issuer,
         expiration_timestamp_s: exp_timestamp_s(),
-        claims: vec!(Claim{claims: HashMap::new()}),
+        // claims: vec!(Claim{claims: HashMap::new()}),
     };
     build_credential_jwt(params)
 }
@@ -455,7 +453,7 @@ fn exp_timestamp_s() -> u32 {
      credential_id_url: String, 
      context: Vec<String>,
      issuer_url: String,
-     claims: Vec<Claim>,
+    //  claims: Vec<Claim>,
      expiration_timestamp_s: u32,
 }
 
@@ -470,7 +468,8 @@ pub fn build_credential_jwt(params: CredentialParams) -> String {
     // let subject = Subject::from_json_value(subject_json).unwrap();
 
     // build "credentialSubject" objects
-    let subjects = build_claims_into_credentialSubjects(params.claims, params.subject_id); 
+    // let subjects = build_claims_into_credentialSubjects(params.claims, params.subject_id); 
+    let subjects = Subject::with_id(Url::parse(params.subject_id).unwrap());
     let expiration_date = Timestamp::from_unix(params.expiration_timestamp_s as i64)
         .expect("internal: failed computing expiration timestamp");
 
@@ -479,7 +478,7 @@ pub fn build_credential_jwt(params: CredentialParams) -> String {
         .issuer(Url::parse(params.issuer_url).unwrap())
         .type_("VerifiedCredential".to_string())
         .type_(params.spec.credential_type)
-        .subjects(subjects) // add objects to the credentialSubject 
+        .subject(subjects) // add objects to the credentialSubject 
         .expiration_date(expiration_date);
 
     // add all the context 

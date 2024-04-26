@@ -1,26 +1,14 @@
 export const idlFactory = ({ IDL }) => {
-  const Claim = IDL.Rec();
   const IssuerInit = IDL.Record({
     'derivation_origin' : IDL.Text,
     'idp_canister_ids' : IDL.Vec(IDL.Principal),
     'ic_root_key_der' : IDL.Vec(IDL.Nat8),
     'frontend_hostname' : IDL.Text,
   });
-  const ClaimValue = IDL.Variant({
-    'Date' : IDL.Text,
-    'Text' : IDL.Text,
-    'Boolean' : IDL.Bool,
-    'Number' : IDL.Int64,
-    'Claim' : Claim,
-  });
-  Claim.fill(
-    IDL.Record({ 'claims' : IDL.Vec(IDL.Tuple(IDL.Text, ClaimValue)) })
-  );
   const StoredCredential = IDL.Record({
     'id' : IDL.Text,
     'context' : IDL.Vec(IDL.Text),
     'type_' : IDL.Vec(IDL.Text),
-    'claim' : IDL.Vec(Claim),
     'issuer' : IDL.Text,
   });
   const CredentialError = IDL.Variant({ 'NoCredentialsFound' : IDL.Text });

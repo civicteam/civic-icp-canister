@@ -1,12 +1,4 @@
 type ArgumentValue = variant { Int : int32; String : text };
-type Claim = record { claims : vec record { text; ClaimValue } };
-type ClaimValue = variant {
-  Date : text;
-  Text : text;
-  Boolean : bool;
-  Number : int64;
-  Claim : Claim;
-};
 type CredentialError = variant { NoCredentialsFound : text };
 type CredentialSpec = record {
   arguments : opt vec record { text; ArgumentValue };
@@ -51,7 +43,6 @@ type StoredCredential = record {
   id : text;
   context : vec text;
   type_ : vec text;
-  claim : vec Claim;
   issuer : text;
 };
 service : (opt IssuerInit) -> {
