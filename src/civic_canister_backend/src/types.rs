@@ -50,7 +50,7 @@ pub struct StoredCredential {
     pub type_: Vec<String>,
     pub context: Vec<String>,
     pub issuer: String,
-    pub claim: Vec<Claim>,
+    // pub claim: Vec<Claim>,
 }
 #[derive(CandidType)]
 pub enum CredentialError {

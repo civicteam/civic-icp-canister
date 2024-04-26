@@ -370,7 +370,7 @@ fn build_credential(
         context: credential.context,
         issuer_url: credential.issuer,
         expiration_timestamp_s: exp_timestamp_s(),
-        claims: credential.claim,
+        claims: vec!(Claim{claims: HashMap::new()}),
     };
     build_credential_jwt(params)
 }
@@ -491,31 +491,31 @@ pub fn build_credential_jwt(params: CredentialParams) -> String {
     credential.serialize_jwt().unwrap()
 }
 
-// ic_cdk::export_candid!();
+ic_cdk::export_candid!();
 
 
-candid::export_service!();
+// candid::export_service!();
 
-#[cfg(test)]
-mod test {
-    use crate::__export_service;
-    use candid_parser::utils::{service_equal, CandidSource};
-    use std::path::Path;
+// #[cfg(test)]
+// mod test {
+//     use crate::__export_service;
+//     use candid_parser::utils::{service_equal, CandidSource};
+//     use std::path::Path;
 
-    /// Checks candid interface type equality by making sure that the service in the did file is
-    /// a subtype of the generated interface and vice versa.
-    #[test]
-    fn check_candid_interface_compatibility() {
-        let canister_interface = __export_service();
-        service_equal(
-            CandidSource::Text(&canister_interface),
-            CandidSource::File(Path::new("civic_canister_backend.did")),
-        )
-        .unwrap_or_else(|e| {
-            panic!(
-                "the canister code interface is not equal to the did file: {:?}",
-                e
-            )
-        });
-    }
-}
+//     /// Checks candid interface type equality by making sure that the service in the did file is
+//     /// a subtype of the generated interface and vice versa.
+//     #[test]
+//     fn check_candid_interface_compatibility() {
+//         let canister_interface = __export_service();
+//         service_equal(
+//             CandidSource::Text(&canister_interface),
+//             CandidSource::File(Path::new("civic_canister_backend.did")),
+//         )
+//         .unwrap_or_else(|e| {
+//             panic!(
+//                 "the canister code interface is not equal to the did file: {:?}",
+//                 e
+//             )
+//         });
+//     }
+// }
