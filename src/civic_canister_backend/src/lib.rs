@@ -1,5 +1,5 @@
 pub mod types;
-use types::{Claim, StoredCredential, CredentialError, build_claims_into_credentialSubjects, add_context};
+use types::{Claim, StoredCredential, CredentialError, add_context, build_claims_into_credentialSubjects};
 
 use std::fmt;
 use candid::{candid_method, CandidType, Deserialize, Principal};
@@ -9,7 +9,7 @@ use canister_sig_util::signature_map::{SignatureMap, LABEL_SIG};
 
 use ic_cdk::api::{caller, set_certified_data, time};
 use ic_cdk_macros::{init, query, update};
-use ic_certification::{fork_hash, labeled_hash, pruned, Hash};
+use ic_certification::{fork_hash, labeled_hash, Hash};
 
 use std::collections::{HashSet,HashMap};
 use ic_stable_structures::storable::Bound;
@@ -18,15 +18,13 @@ use include_dir::{include_dir, Dir};
 use sha2::{Digest, Sha256};
 
 use serde_bytes::ByteBuf;
-use serde::{ Serialize};
-use serde_json::{Value as JsonValue, json};
+
+
 use std::borrow::Cow;
 use std::cell::RefCell;
 use asset_util::{collect_assets, CertifiedAssets};
 use vc_util::issuer_api::{
-    ArgumentValue, CredentialSpec, DerivationOriginData, DerivationOriginError,
-    DerivationOriginRequest, GetCredentialRequest, Icrc21ConsentInfo, Icrc21Error,
-    Icrc21VcConsentMessageRequest, IssueCredentialError, IssuedCredentialData,
+    CredentialSpec, GetCredentialRequest, IssueCredentialError, IssuedCredentialData,
     PrepareCredentialRequest, PreparedCredentialData, SignedIdAlias,
 };
 use vc_util::{ did_for_principal, get_verified_id_alias_from_jws, vc_jwt_to_jws,
@@ -34,8 +32,8 @@ use vc_util::{ did_for_principal, get_verified_id_alias_from_jws, vc_jwt_to_jws,
 };
 use ic_cdk::api;
 use lazy_static::lazy_static;
-use identity_credential::credential::{self, Credential, CredentialBuilder, Jwt, Subject};
-use identity_core::common::{Timestamp, Url, Context};
+use identity_credential::credential::{CredentialBuilder};
+use identity_core::common::{Timestamp, Url};
 
 
 /// We use restricted memory in order to ensure the separation between non-managed config memory (first page)
@@ -199,12 +197,6 @@ fn authorize_vc_request(
             "id alias could not be verified".to_string(),
         ))
     })
-}
-
-#[query]
-#[candid_method]
-async fn whoami() -> Principal {
-    caller()
 }
 
 #[update]
@@ -496,3 +488,32 @@ pub fn build_credential_jwt(params: CredentialParams) -> String {
     let credential = credential.build().unwrap();
     credential.serialize_jwt().unwrap()
 }
+
+ic_cdk::export_candid!();
+
+
+// candid::export_service!();
+
+// #[cfg(test)]
+// mod test {
+//     use crate::__export_service;
+//     use candid_parser::utils::{service_equal, CandidSource};
+//     use std::path::Path;
+
+//     /// Checks candid interface type equality by making sure that the service in the did file is
+//     /// a subtype of the generated interface and vice versa.
+//     #[test]
+//     fn check_candid_interface_compatibility() {
+//         let canister_interface = __export_service();
+//         service_equal(
+//             CandidSource::Text(&canister_interface),
+//             CandidSource::File(Path::new("civic_canister_backend.did")),
+//         )
+//         .unwrap_or_else(|e| {
+//             panic!(
+//                 "the canister code interface is not equal to the did file: {:?}",
+//                 e
+//             )
+//         });
+//     }
+// }

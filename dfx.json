@@ -23,6 +23,7 @@
     },
 
 
+
     "civic_canister_frontend": {
       "__0": "Canisters of type 'assets' are like buckets. When deployed, dfx creates a canister that is just one big empty map.",
       "__1": "After the canister itself is created, dfx uploads all the files specified in the 'source' field.",
@@ -35,7 +36,7 @@
         "civic_canister_backend"
       ],
       "frontend": {
-        "entrypoint": "src/civic_canister_frontend/webapp/index.html"
+        "entrypoint": "src/civic_canister_frontend/src/index.html"
       },
       "source": [
         "src/civic_canister_frontend/dist"

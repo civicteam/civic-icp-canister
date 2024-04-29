@@ -1,0 +1,63 @@
+type ArgumentValue = variant { Int : int32; String : text };
+type Claim = record { claims : vec record { text; ClaimValue } };
+type ClaimValue = variant {
+  Date : text;
+  Text : text;
+  Boolean : bool;
+  Number : int64;
+  Claim : Claim;
+};
+type CredentialError = variant { NoCredentialsFound : text };
+type CredentialSpec = record {
+  arguments : opt vec record { text; ArgumentValue };
+  credential_type : text;
+};
+type GetCredentialRequest = record {
+  signed_id_alias : SignedIdAlias;
+  prepared_context : opt blob;
+  credential_spec : CredentialSpec;
+};
+type IssueCredentialError = variant {
+  Internal : text;
+  SignatureNotFound : text;
+  InvalidIdAlias : text;
+  UnauthorizedSubject : text;
+  UnknownSubject : text;
+  UnsupportedCredentialSpec : text;
+};
+type IssuedCredentialData = record { vc_jws : text };
+type IssuerInit = record {
+  derivation_origin : text;
+  idp_canister_ids : vec principal;
+  ic_root_key_der : blob;
+  frontend_hostname : text;
+};
+type PrepareCredentialRequest = record {
+  signed_id_alias : SignedIdAlias;
+  credential_spec : CredentialSpec;
+};
+type PreparedCredentialData = record { prepared_context : opt blob };
+type Result = variant { Ok : vec StoredCredential; Err : CredentialError };
+type Result_1 = variant {
+  Ok : IssuedCredentialData;
+  Err : IssueCredentialError;
+};
+type Result_2 = variant {
+  Ok : PreparedCredentialData;
+  Err : IssueCredentialError;
+};
+type SignedIdAlias = record { credential_jws : text };
+type StoredCredential = record {
+  id : text;
+  context : vec text;
+  type_ : vec text;
+  claim : vec Claim;
+  issuer : text;
+};
+service : (opt IssuerInit) -> {
+  add_credentials : (principal, vec StoredCredential) -> (text);
+  configure : (IssuerInit) -> ();
+  get_all_credentials : (principal) -> (Result) query;
+  get_credential : (GetCredentialRequest) -> (Result_1) query;
+  prepare_credential : (PrepareCredentialRequest) -> (Result_2);
+}

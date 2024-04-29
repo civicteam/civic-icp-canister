@@ -64,6 +64,7 @@ pub enum CredentialError {
 /// id: SubjectId, 
 /// otherData
 ///  }
+
 pub fn build_claims_into_credentialSubjects(claims: Vec<Claim>, subject: String) -> Vec<Subject> {
     claims.into_iter().zip(repeat(subject)).map(|(c, id )|{
         let mut sub = c.into();

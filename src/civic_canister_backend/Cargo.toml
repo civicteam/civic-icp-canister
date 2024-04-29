@@ -16,6 +16,8 @@ hex.workspace = true
 # local dependencies
 vc_util = { path = "../../lib/vc_util" }
 asset_util = { path = "../../lib/asset_util" }
+
+# ic dependencies 
 candid = "0.10"
 ic-cdk = "0.12"
 ic-stable-structures = "0.6.0"
@@ -24,6 +26,7 @@ ic-certification = "2.2"
 ic-http-certification = "2.2"
 ic-response-verification = "2.2"
 ic-test-state-machine-client = "3"
+candid_parser = "0.1.2"
 
 # vc dependencies
 identity_core = { git = "https://github.com/frederikrothenberger/identity.rs.git", branch = "frederik/wasm-test", default-features = false }
