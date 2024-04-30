@@ -7,7 +7,7 @@ use identity_core::common::Url;
 use std::iter::repeat;
 
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
-pub enum ClaimValue {
+pub(crate) enum ClaimValue {
     Boolean(bool),
     Date(String),
     Text(String),
@@ -16,8 +16,8 @@ pub enum ClaimValue {
 }
 
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
-pub struct Claim {
-    pub claims:HashMap<String, ClaimValue>,
+pub(crate) struct Claim {
+    pub(crate)  claims:HashMap<String, ClaimValue>,
 }
 
 impl From<ClaimValue> for Value {
@@ -36,7 +36,7 @@ impl From<ClaimValue> for Value {
 
 
 impl Claim {
-    pub fn into(self) -> Subject {
+    pub(crate) fn into(self) -> Subject {
         let btree_map: BTreeMap<String, Value> = self.claims.into_iter()
         .map(|(k, v)| (k, v.into()))
         .collect();
@@ -45,15 +45,15 @@ impl Claim {
 }
 
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
-pub struct StoredCredential {
-    pub id: String, 
-    pub type_: Vec<String>,
-    pub context: Vec<String>,
-    pub issuer: String,
-    pub claim: Vec<Claim>,
+pub(crate) struct StoredCredential {
+    pub(crate)  id: String, 
+    pub(crate)  type_: Vec<String>,
+    pub(crate)  context: Vec<String>,
+    pub(crate)  issuer: String,
+    pub(crate)  claim: Vec<Claim>,
 }
 #[derive(CandidType)]
-pub enum CredentialError {
+pub(crate) enum CredentialError {
     NoCredentialsFound(String),
 }
 
@@ -65,7 +65,7 @@ pub enum CredentialError {
 /// otherData
 ///  }
 
-pub fn build_claims_into_credentialSubjects(claims: Vec<Claim>, subject: String) -> Vec<Subject> {
+pub(crate) fn build_claims_into_credentialSubjects(claims: Vec<Claim>, subject: String) -> Vec<Subject> {
     claims.into_iter().zip(repeat(subject)).map(|(c, id )|{
         let mut sub = c.into();
         sub.id = Url::parse(id).ok();
@@ -74,7 +74,7 @@ pub fn build_claims_into_credentialSubjects(claims: Vec<Claim>, subject: String)
 }
 
 
-pub fn add_context(mut credential: CredentialBuilder, context: Vec<String>) -> CredentialBuilder {
+pub(crate) fn add_context(mut credential: CredentialBuilder, context: Vec<String>) -> CredentialBuilder {
     for c in context {
      credential = credential.context(Url::parse(c).unwrap());
     }

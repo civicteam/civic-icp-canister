@@ -59,7 +59,7 @@ pub enum SupportedCredentialType {
 impl fmt::Display for SupportedCredentialType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SupportedCredentialType::VerifiedAdult => write!(f, "VerifiedEmployee"),
+            SupportedCredentialType::VerifiedAdult => write!(f, "VerifiedAdult"),
         }
     }
 }
@@ -417,9 +417,10 @@ fn verify_credential_spec(spec: &CredentialSpec) -> Result<SupportedCredentialTy
 fn add_credentials(principal: Principal, new_credentials: Vec<StoredCredential>) -> String {
     CREDENTIALS.with_borrow_mut(|credentials| {
             let entry = credentials.entry(principal).or_insert_with(Vec::new);
-            entry.extend(new_credentials);    
+            entry.extend(new_credentials.clone());    
         });
-    format!("Added credentials")
+    let credential_info = format!("Added credentials: \n{:?}", new_credentials);
+    credential_info
 }
 
 
