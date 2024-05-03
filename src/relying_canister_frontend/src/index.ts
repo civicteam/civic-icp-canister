@@ -65,7 +65,8 @@ document.getElementById("loginBtn")?.addEventListener("click", async () => {
 
 document.getElementById("credentialBtn")?.addEventListener("click", async () => {
   // Open the II window 
-  const vcUrl = document.querySelector<HTMLInputElement>("#iiUrl")!.value + '/vc-flow';
+  // const vcUrl = document.querySelector<HTMLInputElement>("#iiUrl")!.value + '/vc-flow';
+  const vcUrl = ""
   const iiWindow = window.open(vcUrl, "_blank");
 
   // Listen for the JSON-RPC notification from the II window to indicate the vc flow is ready 
@@ -103,7 +104,7 @@ document.getElementById("credentialBtn")?.addEventListener("click", async () => 
         headers: {
           'Content-Type': 'application/json'
         },
-        mode: 'no-cors', // This disables CORS checks but also makes the response opaque
+        // mode: 'no-cors', // This disables CORS checks but also makes the response opaque
         body: JSON.stringify(json)
       }).then(response => {
         if (!response.ok) {

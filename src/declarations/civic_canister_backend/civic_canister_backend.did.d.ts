@@ -20,6 +20,18 @@ export interface GetCredentialRequest {
   'prepared_context' : [] | [Uint8Array | number[]],
   'credential_spec' : CredentialSpec,
 }
+export interface HttpRequest {
+  'url' : string,
+  'method' : string,
+  'body' : Uint8Array | number[],
+  'headers' : Array<[string, string]>,
+  'certificate_version' : [] | [number],
+}
+export interface HttpResponse {
+  'body' : Uint8Array | number[],
+  'headers' : Array<[string, string]>,
+  'status_code' : number,
+}
 export type IssueCredentialError = { 'Internal' : string } |
   { 'SignatureNotFound' : string } |
   { 'InvalidIdAlias' : string } |
@@ -59,6 +71,7 @@ export interface _SERVICE {
   'configure' : ActorMethod<[IssuerInit], undefined>,
   'get_all_credentials' : ActorMethod<[Principal], Result>,
   'get_credential' : ActorMethod<[GetCredentialRequest], Result_1>,
+  'http_request' : ActorMethod<[HttpRequest], HttpResponse>,
   'prepare_credential' : ActorMethod<[PrepareCredentialRequest], Result_2>,
 }
 export declare const idlFactory: IDL.InterfaceFactory;

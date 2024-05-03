@@ -17,6 +17,18 @@ type GetCredentialRequest = record {
   prepared_context : opt blob;
   credential_spec : CredentialSpec;
 };
+type HttpRequest = record {
+  url : text;
+  method : text;
+  body : blob;
+  headers : vec record { text; text };
+  certificate_version : opt nat16;
+};
+type HttpResponse = record {
+  body : blob;
+  headers : vec record { text; text };
+  status_code : nat16;
+};
 type IssueCredentialError = variant {
   Internal : text;
   SignatureNotFound : text;
@@ -59,5 +71,6 @@ service : (opt IssuerInit) -> {
   configure : (IssuerInit) -> ();
   get_all_credentials : (principal) -> (Result) query;
   get_credential : (GetCredentialRequest) -> (Result_1) query;
+  http_request : (HttpRequest) -> (HttpResponse) query;
   prepare_credential : (PrepareCredentialRequest) -> (Result_2);
 }
