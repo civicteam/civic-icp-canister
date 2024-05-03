@@ -11,7 +11,7 @@ export const readCanisterIds = (): Record<string, string> => {
   const canisterIdsJsonFile =
     network === "ic"
       ? join(process.cwd(), "canister_ids.json")
-      : join(process.cwd(), ".dfx", "local", "canister_ids.json");
+      : join(process.cwd(), "../..", ".dfx", "local", "canister_ids.json");
 
   try {
     type Details = {
