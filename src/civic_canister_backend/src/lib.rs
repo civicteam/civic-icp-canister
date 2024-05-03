@@ -45,8 +45,8 @@ type ConfigCell = StableCell<IssuerConfig, Memory>;
 const MINUTE_NS: u64 = 60 * 1_000_000_000;
 const PROD_II_CANISTER_ID: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai";
 const VC_EXPIRATION_PERIOD_NS: u64 = 15 * MINUTE_NS;
-// Authorized Civic Principal 
-const AUTHORIZED_PRINCIPAL: &str = "6beoo-sm76t-7hhld-tncbp-zu7ud-inrlb-3cxrx-t4vpl-jmhyn-vjbgq-aqe";
+// Authorized Civic Principal - get this from the frontend
+const AUTHORIZED_PRINCIPAL: &str = "tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae";
 
 lazy_static! {
     // Seed and public key used for signing the credentials.
