@@ -9,7 +9,7 @@ use canister_sig_util::signature_map::{SignatureMap, LABEL_SIG};
 
 use ic_cdk::api::{caller, set_certified_data, time};
 use ic_cdk_macros::{init, query, update};
-use ic_certification::{fork_hash, labeled_hash, Hash};
+use ic_certification::{fork_hash, labeled_hash, Hash, pruned};
 
 use std::collections::{HashSet,HashMap};
 use ic_stable_structures::storable::Bound;
@@ -25,13 +25,15 @@ use std::cell::RefCell;
 use asset_util::{collect_assets, CertifiedAssets};
 use vc_util::issuer_api::{
     CredentialSpec, GetCredentialRequest, IssueCredentialError, IssuedCredentialData,
-    PrepareCredentialRequest, PreparedCredentialData, SignedIdAlias,
+    PrepareCredentialRequest, PreparedCredentialData, SignedIdAlias, DerivationOriginData, DerivationOriginError,
+    DerivationOriginRequest
 };
 use vc_util::{ did_for_principal, get_verified_id_alias_from_jws, vc_jwt_to_jws,
     vc_signing_input, vc_signing_input_hash, AliasTuple,
 };
 use ic_cdk::api;
 use lazy_static::lazy_static;
+use ic_cdk_macros::post_upgrade;
 use identity_credential::credential::{CredentialBuilder};
 use identity_core::common::{Timestamp, Url};
 
@@ -45,6 +47,8 @@ type ConfigCell = StableCell<IssuerConfig, Memory>;
 const MINUTE_NS: u64 = 60 * 1_000_000_000;
 const PROD_II_CANISTER_ID: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai";
 const VC_EXPIRATION_PERIOD_NS: u64 = 15 * MINUTE_NS;
+// Authorized Civic Principal - get this from the frontend
+const AUTHORIZED_PRINCIPAL: &str = "tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae";
 
 lazy_static! {
     // Seed and public key used for signing the credentials.
@@ -59,7 +63,7 @@ pub enum SupportedCredentialType {
 impl fmt::Display for SupportedCredentialType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SupportedCredentialType::VerifiedAdult => write!(f, "VerifiedEmployee"),
+            SupportedCredentialType::VerifiedAdult => write!(f, "VerifiedAdult"),
         }
     }
 }
@@ -156,10 +160,10 @@ fn init(init_arg: Option<IssuerInit>) {
     init_assets();
 }
 
-// #[post_upgrade]
-// fn post_upgrade(init_arg: Option<IssuerInit>) {
-//     init(init_arg);
-// }
+#[post_upgrade]
+fn post_upgrade(init_arg: Option<IssuerInit>) {
+    init(init_arg);
+}
 
 #[update]
 #[candid_method]
@@ -411,15 +415,45 @@ fn verify_credential_spec(spec: &CredentialSpec) -> Result<SupportedCredentialTy
     }
 }
 
+#[update]
+#[candid_method]
+async fn derivation_origin(
+    req: DerivationOriginRequest,
+) -> Result<DerivationOriginData, DerivationOriginError> {
+    get_derivation_origin(&req.frontend_hostname)
+}
+
+fn get_derivation_origin(hostname: &str) -> Result<DerivationOriginData, DerivationOriginError> {
+    CONFIG.with_borrow(|config| {
+        let config = config.get();
+
+        // We don't currently rely on the value provided, so if it doesn't match
+        // we just print a warning
+        if hostname != config.frontend_hostname {
+            println!("*** achtung! bad frontend hostname {}", hostname,);
+        }
+
+        Ok(DerivationOriginData {
+            origin: config.derivation_origin.clone(),
+        })
+    })
+}
+
 
 #[update]
 #[candid_method]
 fn add_credentials(principal: Principal, new_credentials: Vec<StoredCredential>) -> String {
+    // Check if the caller is the authorized principal
+    if caller().to_text() != AUTHORIZED_PRINCIPAL {
+        return "Unauthorized: You do not have permission to add credentials.".to_string();
+    }
+
     CREDENTIALS.with_borrow_mut(|credentials| {
             let entry = credentials.entry(principal).or_insert_with(Vec::new);
-            entry.extend(new_credentials);    
+            entry.extend(new_credentials.clone());    
         });
-    format!("Added credentials")
+    let credential_info = format!("Added credentials: \n{:?}", new_credentials);
+    credential_info
 }
 
 
@@ -435,6 +469,38 @@ fn get_all_credentials(principal: Principal) -> Result<Vec<StoredCredential>, Cr
         Err(CredentialError::NoCredentialsFound(format!("No credentials found for principal {}", principal.to_text())))
     }
 }
+
+// To solve the CORS error during the vc-flow 
+#[query]
+#[candid_method(query)]
+pub fn http_request(req: HttpRequest) -> HttpResponse {
+    let parts: Vec<&str> = req.url.split('?').collect();
+    let path = parts[0];
+    let sigs_root_hash =
+        SIGNATURES.with_borrow(|sigs| pruned(labeled_hash(LABEL_SIG, &sigs.root_hash())));
+    let maybe_asset = ASSETS.with_borrow(|assets| {
+        assets.get_certified_asset(path, req.certificate_version, Some(sigs_root_hash))
+    });
+
+    let mut headers = static_headers();
+    match maybe_asset {
+        Some(asset) => {
+            headers.extend(asset.headers);
+            HttpResponse {
+                status_code: 200,
+                body: ByteBuf::from(asset.content),
+                headers,
+            }
+        }
+        None => HttpResponse {
+            status_code: 404,
+            headers,
+            body: ByteBuf::from(format!("Asset {} not found.", path)),
+        },
+    }
+}
+
+
 
 fn hash_bytes(value: impl AsRef<[u8]>) -> Hash {
     let mut hasher = Sha256::new();
@@ -487,6 +553,24 @@ pub fn build_credential_jwt(params: CredentialParams) -> String {
 
     let credential = credential.build().unwrap();
     credential.serialize_jwt().unwrap()
+}
+
+
+
+#[derive(Clone, Debug, CandidType, Deserialize)]
+pub struct HttpRequest {
+    pub method: String,
+    pub url: String,
+    pub headers: Vec<HeaderField>,
+    pub body: ByteBuf,
+    pub certificate_version: Option<u16>,
+}
+
+#[derive(Clone, Debug, CandidType, Deserialize)]
+pub struct HttpResponse {
+    pub status_code: u16,
+    pub headers: Vec<HeaderField>,
+    pub body: ByteBuf,
 }
 
 ic_cdk::export_candid!();

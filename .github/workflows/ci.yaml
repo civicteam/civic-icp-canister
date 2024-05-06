@@ -46,6 +46,7 @@ jobs:
     - name: Install canisters and start local ICP replica
       run: |
         mkdir src/civic_canister_backend/dist
+        mkdir src/relying_canister_frontend/dist
         dfx start --clean --background
         dfx canister create --all
     - name: Build canisters

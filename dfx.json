@@ -43,8 +43,17 @@
       ],
       "type": "assets",
       "__6": "NOTE: the 'frontend' signals dfx that it is useful to print out the front-end URL of this canister when deploying. It is not strictly required."
-    }
+    },
 
+    "relying_canister_frontend": {
+      "frontend": {
+        "entrypoint": "src/relying_canister_frontend/src/index.html"
+      },
+      "source": [
+        "src/relying_canister_frontend/dist"
+      ],
+      "type": "assets"
+    }
 
   },
   "defaults": {
