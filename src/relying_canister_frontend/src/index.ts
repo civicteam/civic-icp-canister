@@ -1,14 +1,9 @@
 import { requestVerifiablePresentation } from "@dfinity/verifiable-credentials/request-verifiable-presentation";
-
-import { HttpAgent } from "@dfinity/agent";
 import { AuthClient } from "@dfinity/auth-client";
 import type { Principal } from "@dfinity/principal";
-import {  createActor, CreateActorOptions } from "../../declarations/civic_canister_backend/index";
 import {_SERVICE} from "../../declarations/civic_canister_backend/civic_canister_backend.did"
 
-const canisterId = "b77ix-eeaaa-aaaaa-qaada-cai" //hardcoded civic canister id
-// get it using dfx canister id civic_canister_backend
-// process.env.CIVIC_CANISTER_BACKEND_ID;
+const canisterId = "b77ix-eeaaa-aaaaa-qaada-cai" //hardcoded civic canister id, get it using dfx canister id civic_canister_backend
 
 const local_ii_url = `http://${process.env.INTERNET_IDENTITY_CANISTER_ID}.localhost:4943`;
 
@@ -48,19 +43,6 @@ document.getElementById("loginBtn")?.addEventListener("click", async () => {
 });
 
 document.getElementById("credentialBtn")?.addEventListener("click", async () => {
-  // // Open the II window 
-  // const vcUrl = document.querySelector<HTMLInputElement>("#iiUrl")!.value + '/vc-flow';
-  // const iiWindow = window.open(vcUrl, "_blank");
-
-  // // Listen for the JSON-RPC notification from the II window to indicate the vc flow is ready 
-  // window.addEventListener('message', (event) => {
-
-  //   if (event.origin !== new URL(vcUrl).origin) {
-  //     console.log("Origin mismatch:", event.origin, "expected:", new URL(vcUrl).origin);
-  //     return; // Security check
-  //   }
-
-
   // Define the credential data
 const credentialData = {
   credentialSpec: {
@@ -103,53 +85,4 @@ const displayCredential = (credential) => {
   // Update the DOM or state with the credential information
   document.getElementById('credentialStatus')!.textContent = JSON.stringify(credential, null, 2);
 };
-    // const data = event.data;
-//     if (data.jsonrpc === "2.0" && data.method === "vc-flow-ready") {
-//       console.log("VC Flow is ready");
-
-//     // attempt to send a credential request to the II window
-//       const json = {
-//         "id": 1,
-//         "jsonrpc": "2.0",
-//         "method": "request_credential",
-//         "params": {
-//           "issuer": {
-//             "origin": "http://127.0.0.1:4943/?canisterId=avqkn-guaaa-aaaaa-qaaea-cai&id=bkyz2-fmaaa-aaaaa-qaaaq-cai",
-//             "canisterId": "bkyz2-fmaaa-aaaaa-qaaaq-cai"
-//           },
-//           "credentialSpec": {
-//             "credentialType": "VerifiedAdult",
-//           },
-//           "credentialSubject": "r2hdh-fwdj2-u2l6t-hsprj-zbb2a-6xqm5-keuie-cyz53-hzv4r-5fsgv-eae",
-//         }
-//       };
-
-//       // Send the JSON-RPC request to the II window
-//       fetch(vcUrl, {
-//         method: 'POST',
-//         headers: {
-//           'Content-Type': 'application/json'
-//         },
-//         // mode: 'no-cors', // This disables CORS checks but also makes the response opaque
-//         body: JSON.stringify(json)
-//       }).then(response => {
-//         if (!response.ok) {
-//           console.log(response);
-//           throw new Error('Network response was not ok');
-//         }
-//         return response.text(); // Using text() to inspect the raw response
-//       }).then(text => {
-//         console.log("Raw response:", text);
-//         try {
-//           const result = JSON.parse(text); // Manually parsing the text to JSON
-//           console.log("Parsed JSON response:", result);
-//         } catch (parseError) {
-//           console.error("Error parsing JSON:", parseError);
-//         }
-//       }).catch(error => {
-//         console.error("Failed to send credential request:", error);
-//       });    }
-//   });
-
-// });
 });

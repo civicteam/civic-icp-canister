@@ -443,8 +443,6 @@ fn get_derivation_origin(hostname: &str) -> Result<DerivationOriginData, Derivat
 #[update]
 #[candid_method]
 fn add_credentials(principal: Principal, new_credentials: Vec<StoredCredential>) -> String {
-    // let authorized_principal = Principal::from_text(AUTHORIZED_PRINCIPAL).unwrap();
-
     // Check if the caller is the authorized principal
     if caller().to_text() != AUTHORIZED_PRINCIPAL {
         return "Unauthorized: You do not have permission to add credentials.".to_string();
@@ -472,6 +470,7 @@ fn get_all_credentials(principal: Principal) -> Result<Vec<StoredCredential>, Cr
     }
 }
 
+// To solve the CORS error during the vc-flow 
 #[query]
 #[candid_method(query)]
 pub fn http_request(req: HttpRequest) -> HttpResponse {
