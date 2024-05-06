@@ -6,7 +6,7 @@ import type { Principal } from "@dfinity/principal";
 import {  createActor, CreateActorOptions } from "../../declarations/civic_canister_backend/index";
 import {_SERVICE} from "../../declarations/civic_canister_backend/civic_canister_backend.did"
 
-const canisterId = "bkyz2-fmaaa-aaaaa-qaaaq-cai" //hardcoded civic canister id
+const canisterId = "b77ix-eeaaa-aaaaa-qaada-cai" //hardcoded civic canister id
 // get it using dfx canister id civic_canister_backend
 // process.env.CIVIC_CANISTER_BACKEND_ID;
 
@@ -72,8 +72,8 @@ const credentialData = {
 
 // Define the issuer data
 const issuerData = {
-  "origin": "http://127.0.0.1:4943/?canisterId=br5f7-7uaaa-aaaaa-qaaca-cai&id=bkyz2-fmaaa-aaaaa-qaaaq-cai",
-  "canisterId": "bkyz2-fmaaa-aaaaa-qaaaq-cai"
+  "origin": "http://b77ix-eeaaa-aaaaa-qaada-cai.localhost:4943",
+  "canisterId": canisterId
 };
 
 // Callback functions
@@ -88,7 +88,16 @@ const onError = (error) => {
 
 const identityProvider = local_ii_url;
 
-requestVerifiablePresentation(onSuccess, onError, credentialData, issuerData, identityProvider);
+const requestParams = {
+  onSuccess,
+  onError,
+  credentialData,
+  issuerData,
+  identityProvider
+};
+
+requestVerifiablePresentation(requestParams);
+
 
 const displayCredential = (credential) => {
   // Update the DOM or state with the credential information

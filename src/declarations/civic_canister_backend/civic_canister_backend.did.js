@@ -23,8 +23,20 @@ export const idlFactory = ({ IDL }) => {
     'claim' : IDL.Vec(Claim),
     'issuer' : IDL.Text,
   });
-  const CredentialError = IDL.Variant({ 'NoCredentialsFound' : IDL.Text });
+  const DerivationOriginRequest = IDL.Record({
+    'frontend_hostname' : IDL.Text,
+  });
+  const DerivationOriginData = IDL.Record({ 'origin' : IDL.Text });
+  const DerivationOriginError = IDL.Variant({
+    'Internal' : IDL.Text,
+    'UnsupportedOrigin' : IDL.Text,
+  });
   const Result = IDL.Variant({
+    'Ok' : DerivationOriginData,
+    'Err' : DerivationOriginError,
+  });
+  const CredentialError = IDL.Variant({ 'NoCredentialsFound' : IDL.Text });
+  const Result_1 = IDL.Variant({
     'Ok' : IDL.Vec(StoredCredential),
     'Err' : CredentialError,
   });
@@ -48,7 +60,7 @@ export const idlFactory = ({ IDL }) => {
     'UnknownSubject' : IDL.Text,
     'UnsupportedCredentialSpec' : IDL.Text,
   });
-  const Result_1 = IDL.Variant({
+  const Result_2 = IDL.Variant({
     'Ok' : IssuedCredentialData,
     'Err' : IssueCredentialError,
   });
@@ -71,7 +83,7 @@ export const idlFactory = ({ IDL }) => {
   const PreparedCredentialData = IDL.Record({
     'prepared_context' : IDL.Opt(IDL.Vec(IDL.Nat8)),
   });
-  const Result_2 = IDL.Variant({
+  const Result_3 = IDL.Variant({
     'Ok' : PreparedCredentialData,
     'Err' : IssueCredentialError,
   });
@@ -82,10 +94,11 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'configure' : IDL.Func([IssuerInit], [], []),
-    'get_all_credentials' : IDL.Func([IDL.Principal], [Result], ['query']),
-    'get_credential' : IDL.Func([GetCredentialRequest], [Result_1], ['query']),
+    'derivation_origin' : IDL.Func([DerivationOriginRequest], [Result], []),
+    'get_all_credentials' : IDL.Func([IDL.Principal], [Result_1], ['query']),
+    'get_credential' : IDL.Func([GetCredentialRequest], [Result_2], ['query']),
     'http_request' : IDL.Func([HttpRequest], [HttpResponse], ['query']),
-    'prepare_credential' : IDL.Func([PrepareCredentialRequest], [Result_2], []),
+    'prepare_credential' : IDL.Func([PrepareCredentialRequest], [Result_3], []),
   });
 };
 export const init = ({ IDL }) => {

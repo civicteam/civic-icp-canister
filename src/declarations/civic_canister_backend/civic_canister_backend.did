@@ -12,6 +12,12 @@ type CredentialSpec = record {
   arguments : opt vec record { text; ArgumentValue };
   credential_type : text;
 };
+type DerivationOriginData = record { origin : text };
+type DerivationOriginError = variant {
+  Internal : text;
+  UnsupportedOrigin : text;
+};
+type DerivationOriginRequest = record { frontend_hostname : text };
 type GetCredentialRequest = record {
   signed_id_alias : SignedIdAlias;
   prepared_context : opt blob;
@@ -49,12 +55,16 @@ type PrepareCredentialRequest = record {
   credential_spec : CredentialSpec;
 };
 type PreparedCredentialData = record { prepared_context : opt blob };
-type Result = variant { Ok : vec StoredCredential; Err : CredentialError };
-type Result_1 = variant {
+type Result = variant {
+  Ok : DerivationOriginData;
+  Err : DerivationOriginError;
+};
+type Result_1 = variant { Ok : vec StoredCredential; Err : CredentialError };
+type Result_2 = variant {
   Ok : IssuedCredentialData;
   Err : IssueCredentialError;
 };
-type Result_2 = variant {
+type Result_3 = variant {
   Ok : PreparedCredentialData;
   Err : IssueCredentialError;
 };
@@ -69,8 +79,9 @@ type StoredCredential = record {
 service : (opt IssuerInit) -> {
   add_credentials : (principal, vec StoredCredential) -> (text);
   configure : (IssuerInit) -> ();
-  get_all_credentials : (principal) -> (Result) query;
-  get_credential : (GetCredentialRequest) -> (Result_1) query;
+  derivation_origin : (DerivationOriginRequest) -> (Result);
+  get_all_credentials : (principal) -> (Result_1) query;
+  get_credential : (GetCredentialRequest) -> (Result_2) query;
   http_request : (HttpRequest) -> (HttpResponse) query;
-  prepare_credential : (PrepareCredentialRequest) -> (Result_2);
+  prepare_credential : (PrepareCredentialRequest) -> (Result_3);
 }

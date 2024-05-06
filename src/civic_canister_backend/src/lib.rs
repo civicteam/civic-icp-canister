@@ -25,13 +25,15 @@ use std::cell::RefCell;
 use asset_util::{collect_assets, CertifiedAssets};
 use vc_util::issuer_api::{
     CredentialSpec, GetCredentialRequest, IssueCredentialError, IssuedCredentialData,
-    PrepareCredentialRequest, PreparedCredentialData, SignedIdAlias,
+    PrepareCredentialRequest, PreparedCredentialData, SignedIdAlias, DerivationOriginData, DerivationOriginError,
+    DerivationOriginRequest
 };
 use vc_util::{ did_for_principal, get_verified_id_alias_from_jws, vc_jwt_to_jws,
     vc_signing_input, vc_signing_input_hash, AliasTuple,
 };
 use ic_cdk::api;
 use lazy_static::lazy_static;
+use ic_cdk_macros::post_upgrade;
 use identity_credential::credential::{CredentialBuilder};
 use identity_core::common::{Timestamp, Url};
 
@@ -158,10 +160,10 @@ fn init(init_arg: Option<IssuerInit>) {
     init_assets();
 }
 
-// #[post_upgrade]
-// fn post_upgrade(init_arg: Option<IssuerInit>) {
-//     init(init_arg);
-// }
+#[post_upgrade]
+fn post_upgrade(init_arg: Option<IssuerInit>) {
+    init(init_arg);
+}
 
 #[update]
 #[candid_method]
@@ -411,6 +413,30 @@ fn verify_credential_spec(spec: &CredentialSpec) -> Result<SupportedCredentialTy
         }
         other => Err(format!("Credential {} is not supported", other)),
     }
+}
+
+#[update]
+#[candid_method]
+async fn derivation_origin(
+    req: DerivationOriginRequest,
+) -> Result<DerivationOriginData, DerivationOriginError> {
+    get_derivation_origin(&req.frontend_hostname)
+}
+
+fn get_derivation_origin(hostname: &str) -> Result<DerivationOriginData, DerivationOriginError> {
+    CONFIG.with_borrow(|config| {
+        let config = config.get();
+
+        // We don't currently rely on the value provided, so if it doesn't match
+        // we just print a warning
+        if hostname != config.frontend_hostname {
+            println!("*** achtung! bad frontend hostname {}", hostname,);
+        }
+
+        Ok(DerivationOriginData {
+            origin: config.derivation_origin.clone(),
+        })
+    })
 }
 
 

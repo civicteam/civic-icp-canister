@@ -15,6 +15,10 @@ export interface CredentialSpec {
   'arguments' : [] | [Array<[string, ArgumentValue]>],
   'credential_type' : string,
 }
+export interface DerivationOriginData { 'origin' : string }
+export type DerivationOriginError = { 'Internal' : string } |
+  { 'UnsupportedOrigin' : string };
+export interface DerivationOriginRequest { 'frontend_hostname' : string }
 export interface GetCredentialRequest {
   'signed_id_alias' : SignedIdAlias,
   'prepared_context' : [] | [Uint8Array | number[]],
@@ -52,11 +56,13 @@ export interface PrepareCredentialRequest {
 export interface PreparedCredentialData {
   'prepared_context' : [] | [Uint8Array | number[]],
 }
-export type Result = { 'Ok' : Array<StoredCredential> } |
+export type Result = { 'Ok' : DerivationOriginData } |
+  { 'Err' : DerivationOriginError };
+export type Result_1 = { 'Ok' : Array<StoredCredential> } |
   { 'Err' : CredentialError };
-export type Result_1 = { 'Ok' : IssuedCredentialData } |
+export type Result_2 = { 'Ok' : IssuedCredentialData } |
   { 'Err' : IssueCredentialError };
-export type Result_2 = { 'Ok' : PreparedCredentialData } |
+export type Result_3 = { 'Ok' : PreparedCredentialData } |
   { 'Err' : IssueCredentialError };
 export interface SignedIdAlias { 'credential_jws' : string }
 export interface StoredCredential {
@@ -69,10 +75,11 @@ export interface StoredCredential {
 export interface _SERVICE {
   'add_credentials' : ActorMethod<[Principal, Array<StoredCredential>], string>,
   'configure' : ActorMethod<[IssuerInit], undefined>,
-  'get_all_credentials' : ActorMethod<[Principal], Result>,
-  'get_credential' : ActorMethod<[GetCredentialRequest], Result_1>,
+  'derivation_origin' : ActorMethod<[DerivationOriginRequest], Result>,
+  'get_all_credentials' : ActorMethod<[Principal], Result_1>,
+  'get_credential' : ActorMethod<[GetCredentialRequest], Result_2>,
   'http_request' : ActorMethod<[HttpRequest], HttpResponse>,
-  'prepare_credential' : ActorMethod<[PrepareCredentialRequest], Result_2>,
+  'prepare_credential' : ActorMethod<[PrepareCredentialRequest], Result_3>,
 }
 export declare const idlFactory: IDL.InterfaceFactory;
 export declare const init: (args: { IDL: typeof IDL }) => IDL.Type[];
