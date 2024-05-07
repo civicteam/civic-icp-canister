@@ -1,6 +1,8 @@
 pub mod types;
 use types::{Claim, StoredCredential, CredentialError, add_context, build_claims_into_credentialSubjects};
 
+mod consent_message;
+use consent_message::{get_vc_consent_message, SupportedLanguage};
 use std::fmt;
 use candid::{candid_method, CandidType, Deserialize, Principal};
 // use ic_cdk::candid::candid_method;
@@ -26,12 +28,13 @@ use asset_util::{collect_assets, CertifiedAssets};
 use vc_util::issuer_api::{
     CredentialSpec, GetCredentialRequest, IssueCredentialError, IssuedCredentialData,
     PrepareCredentialRequest, PreparedCredentialData, SignedIdAlias, DerivationOriginData, DerivationOriginError,
-    DerivationOriginRequest
+    DerivationOriginRequest, Icrc21ConsentInfo, Icrc21Error,
+    Icrc21VcConsentMessageRequest
 };
 use vc_util::{ did_for_principal, get_verified_id_alias_from_jws, vc_jwt_to_jws,
     vc_signing_input, vc_signing_input_hash, AliasTuple,
 };
-use ic_cdk::api;
+use ic_cdk::{api, print};
 use lazy_static::lazy_static;
 use ic_cdk_macros::post_upgrade;
 use identity_credential::credential::{CredentialBuilder};
@@ -49,6 +52,7 @@ const PROD_II_CANISTER_ID: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai";
 const VC_EXPIRATION_PERIOD_NS: u64 = 15 * MINUTE_NS;
 // Authorized Civic Principal - get this from the frontend
 const AUTHORIZED_PRINCIPAL: &str = "tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae";
+const LOCAL_II_CANISTER_ID: &str = "be2us-64aaa-aaaaa-qaabq-cai";
 
 lazy_static! {
     // Seed and public key used for signing the credentials.
@@ -91,6 +95,7 @@ fn config_memory() -> Memory {
 use ic_cdk::println;
 
 #[derive(CandidType, Deserialize)]
+#[derive(Debug)]
 struct IssuerConfig {
     /// Root of trust for checking canister signatures.
     ic_root_key_raw: Vec<u8>,
@@ -114,13 +119,14 @@ impl Storable for IssuerConfig {
 
 impl Default for IssuerConfig {
     fn default() -> Self {
-        let derivation_origin = format!("https://{}.icp0.io", ic_cdk::id().to_text());
+        let derivation_origin = format!("http://{}.localhost:4943", ic_cdk::id().to_text());
+        println!("derivation origin: {:?}", derivation_origin);
         Self {
             ic_root_key_raw: extract_raw_root_pk_from_der(IC_ROOT_PK_DER)
                 .expect("failed to extract raw root pk from der"),
             idp_canister_ids: vec![Principal::from_text(PROD_II_CANISTER_ID).unwrap()],
             derivation_origin: derivation_origin.clone(),
-            frontend_hostname: derivation_origin, // by default, use DERIVATION_ORIGIN as frontend-hostname
+            frontend_hostname: derivation_origin,
         }
     }
 }
@@ -136,6 +142,7 @@ impl From<IssuerInit> for IssuerConfig {
             frontend_hostname: init.frontend_hostname,
         }
     }
+
 }
 
 #[derive(CandidType, Deserialize)]
@@ -178,6 +185,7 @@ fn apply_config(init: IssuerInit) {
 }
 
 fn authorize_vc_request(
+
     alias: &SignedIdAlias,
     expected_vc_subject: &Principal,
     current_time_ns: u128,
@@ -414,6 +422,18 @@ fn verify_credential_spec(spec: &CredentialSpec) -> Result<SupportedCredentialTy
         other => Err(format!("Credential {} is not supported", other)),
     }
 }
+
+#[update]
+#[candid_method]
+async fn vc_consent_message(
+    req: Icrc21VcConsentMessageRequest,
+) -> Result<Icrc21ConsentInfo, Icrc21Error> {
+    get_vc_consent_message(
+        &req.credential_spec,
+        &SupportedLanguage::from(req.preferences),
+    )
+}
+
 
 #[update]
 #[candid_method]
