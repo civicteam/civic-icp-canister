@@ -16,6 +16,8 @@ Install the dependencies in `src/civic_canister_frontend`:
 ```
 yarn install
 ```
+
+As well as in `src/relying_canister_frontend`.
  
 
 Building and deploying the canisters:
@@ -23,17 +25,20 @@ Building and deploying the canisters:
 dfx start --clean --background #start the local replica
 dfx canister create --all
 mkdir src/civic_canister_backend/dist
+mkdir src/relying_canister_frontend/dist
 dfx build
 dfx canister install --all
 dfx deploy 
 ```
 
-This deploys the ```civic_canister_backeaddnd```, ```internet_identity``` and the frontend canister to the local replica.
+This deploys the ```civic_canister_backend```, ```internet_identity``` and the frontend canisters to the local replica.
 
 To run the tests:
 ```
 cargo test --test integration_tests
 ```
+## Demo Flow
+Start the Civic Canister and Relying party UIs with `yarn dev` inside `src/civic_canister_backend` and `src/relying_canister_frontend`, respectively. Login using the Internet Identity and issue the example credential / request the VC through Internet Identity. 
 
 ## ICP Notes
 
