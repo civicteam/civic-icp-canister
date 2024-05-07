@@ -95,7 +95,6 @@ fn config_memory() -> Memory {
 use ic_cdk::println;
 
 #[derive(CandidType, Deserialize)]
-#[derive(Debug)]
 struct IssuerConfig {
     /// Root of trust for checking canister signatures.
     ic_root_key_raw: Vec<u8>,
@@ -124,7 +123,7 @@ impl Default for IssuerConfig {
         Self {
             ic_root_key_raw: extract_raw_root_pk_from_der(IC_ROOT_PK_DER)
                 .expect("failed to extract raw root pk from der"),
-            idp_canister_ids: vec![Principal::from_text(PROD_II_CANISTER_ID).unwrap()],
+            idp_canister_ids: vec![Principal::from_text(LOCAL_II_CANISTER_ID).unwrap()],
             derivation_origin: derivation_origin.clone(),
             frontend_hostname: derivation_origin,
         }
@@ -185,14 +184,13 @@ fn apply_config(init: IssuerInit) {
 }
 
 fn authorize_vc_request(
-
     alias: &SignedIdAlias,
     expected_vc_subject: &Principal,
     current_time_ns: u128,
 ) -> Result<AliasTuple, IssueCredentialError> {
     CONFIG.with_borrow(|config| {
         let config = config.get();
-
+        
         // check if the ID alias is legitimate and was issued by the internet identity canister    
         for idp_canister_id in &config.idp_canister_ids {
             if let Ok(alias_tuple) = get_verified_id_alias_from_jws(
@@ -216,12 +214,13 @@ fn authorize_vc_request(
 async fn prepare_credential(
     req: PrepareCredentialRequest,
 ) -> Result<PreparedCredentialData, IssueCredentialError> {
+
+    println!("req: {:?}", req);
     // here we need to acquire the user principal and use it instead of caller
     let alias_tuple = match authorize_vc_request(&req.signed_id_alias, &caller(), time().into()) {
         Ok(alias_tuple) => alias_tuple,
         Err(err) => return Err(err),
     };
-
 
     let credential_jwt = match prepare_credential_jwt(&req.credential_spec, &alias_tuple) {
         Ok(credential) => credential,
@@ -236,6 +235,8 @@ async fn prepare_credential(
         sigs.add_signature(&CANISTER_SIG_SEED, msg_hash);
     });
     update_root_hash();
+
+    println!("returning");
 
     // return a prepared context 
     Ok(PreparedCredentialData {
