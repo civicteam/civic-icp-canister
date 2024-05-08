@@ -119,7 +119,6 @@ impl Storable for IssuerConfig {
 impl Default for IssuerConfig {
     fn default() -> Self {
         let derivation_origin = format!("http://{}.localhost:4943", ic_cdk::id().to_text());
-        println!("derivation origin: {:?}", derivation_origin);
         Self {
             ic_root_key_raw: extract_raw_root_pk_from_der(IC_ROOT_PK_DER)
                 .expect("failed to extract raw root pk from der"),
@@ -214,8 +213,6 @@ fn authorize_vc_request(
 async fn prepare_credential(
     req: PrepareCredentialRequest,
 ) -> Result<PreparedCredentialData, IssueCredentialError> {
-
-    println!("req: {:?}", req);
     // here we need to acquire the user principal and use it instead of caller
     let alias_tuple = match authorize_vc_request(&req.signed_id_alias, &caller(), time().into()) {
         Ok(alias_tuple) => alias_tuple,
@@ -235,9 +232,6 @@ async fn prepare_credential(
         sigs.add_signature(&CANISTER_SIG_SEED, msg_hash);
     });
     update_root_hash();
-
-    println!("returning");
-
     // return a prepared context 
     Ok(PreparedCredentialData {
         prepared_context: Some(ByteBuf::from(credential_jwt.as_bytes())),
@@ -394,6 +388,7 @@ fn verify_authorized_principal(
     // get the credentials of this user
     if let Some(credentials) = CREDENTIALS.with(|credentials| {
         let credentials = credentials.borrow();
+        println!("credentials: {:?}", credentials);
         credentials.get(&alias_tuple.id_dapp).cloned()
     }) {
         for c in credentials {

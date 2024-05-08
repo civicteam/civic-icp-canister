@@ -128,6 +128,5 @@ echo "Using II canister: $II_CANISTER_ID" >&2
 # rm ./ii-alternative-origins-template
 
 dfx deploy civic_canister_backend --network "$DFX_NETWORK" --argument '(opt record { idp_canister_ids = vec{ principal "'"$II_CANISTER_ID"'" }; ic_root_key_der = vec '"$rootkey_did"'; derivation_origin = "'"$ISSUER_DERIVATION_ORIGIN"'"; frontend_hostname = "'"$ISSUER_FRONTEND_HOSTNAME"'"; })'
-
 # Revert changes
 # git checkout ./issuer/frontend/static/.well-known/ii-alternative-origins
