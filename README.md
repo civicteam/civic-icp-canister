@@ -1,6 +1,6 @@
 [comment]: # Webapp adapted from: https://internetcomputer.org/docs/current/developer-docs/integrations/internet-identity/integrate-identity/
 
-## Usage
+## Prerequisites
 Make sure to install dfx: 
 ```bash
 sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
@@ -12,33 +12,88 @@ cargo install ic-wasm
 ```
 
 
-Install the dependencies in `src/civic_canister_frontend`: 
+
+## Usage
+### Setup
+Initialize/Update the submodule with 
 ```
-yarn install
+git submodule init
+git submodule update 
+```
+(alternatively clone with `--recurse-submodules`)
+
+Start the local ICP replica (if needed) 
+```
+dfx start --clean --background 
 ```
 
-As well as in `src/relying_canister_frontend`.
- 
-
-Building and deploying the canisters:
+Create the canisters 
 ```
-dfx start --clean --background #start the local replica
 dfx canister create --all
-mkdir src/civic_canister_backend/dist
-mkdir src/relying_canister_frontend/dist
-dfx build
-dfx canister install --all
-dfx deploy 
 ```
 
-This deploys the ```civic_canister_backend```, ```internet_identity``` and the frontend canisters to the local replica.
+### Configure the correct Alternative Frontends
+Get the ID of the Civic Backend canister
+```
+dfx canister id civic_canister_backend
+```
 
+Put this as the `canisterId` inside the `src/civic_canister_frontend/index.ts` AND `src/relying_canister_frontend/src/index.ts`:
+```
+const canisterId = "canister-id-here" 
+```
+This sets up the canister login with the correct `derivationOrigin` that the vc-flow call inside `src/relying_canister_frontend/src/index.ts` will later be pointed to
+
+Get the ID of the civic frontend canister 
+```
+dfx canister id civic_canister_frontend
+```
+write it into the `src/civic_canister_backend/dist/.well-known/ii-alternative-origins` file:
+```
+{
+    "alternativeOrigins": ["http://${ID-here}.localhost:4943"]
+}
+```
+
+### Deploying 
+Deploy II
+```
+dfx deploy internet_identity
+```
+
+Now build & deploy the Civic Frontend:
+```
+cd src/civic_canister_frontend
+yarn install
+yarn build
+dfx deploy civic_canister_frontend
+cd ../..
+```
+
+Build & Deploy Civic Backend Canister (using the local `ic_rootkey`):
+```
+src/civic_canister_backend/deploy-civic.sh
+```
+
+
+RP Frontend: 
+```
+cd src/relying_canister_frontend
+yarn install
+yarn build
+./deploy-rp.sh
+```
+
+### Tests
 To run the tests:
 ```
 cargo test --test integration_tests
 ```
+
 ## Demo Flow
-Start the Civic Canister and Relying party UIs with `yarn dev` inside `src/civic_canister_backend` and `src/relying_canister_frontend`, respectively. Login using the Internet Identity and issue the example credential / request the VC through Internet Identity. 
+
+1. Open the ```civic_canister_frontend``` using the second URL (looks like so: `http://${canister-id}.localhost:4943/`). Login & issue the credential. The credential is now stored against the principal that's printed. 
+2. Open the ```relying_canister_frontend``` using the second URL again. Login and request the VC through Internet Identity. 
 
 ## ICP Notes
 
