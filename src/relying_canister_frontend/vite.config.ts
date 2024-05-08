@@ -7,13 +7,13 @@ export default defineConfig(
     build: {
       outDir: "../dist",
       emptyOutDir: true,
-      commonjsOptions: {
-        // Source: https://github.com/rollup/plugins/issues/1425#issuecomment-1465626736
-        strictRequires: true,
-      },
-      rollupOptions: {
-        external: ['@dfinity/agent'],
-      },
+      // commonjsOptions: {
+      //   // Source: https://github.com/rollup/plugins/issues/1425#issuecomment-1465626736
+      //   // strictRequires: true,
+      // },
+      // rollupOptions: {
+      //   external: ['@dfinity/agent'],
+      // },
   
     },
     define: {
