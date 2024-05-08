@@ -32,14 +32,13 @@
       "__3": "NOTE: dfx will run 'npm run build' when the canister is to be built (dfx build or dfx deploy)",
       "__4": "(which in this case populates 'dist/', see package.json).",
       "__5": "source must be a directory, otherwise we get a cryptic error.",
-      "dependencies": [
-        "civic_canister_backend"
-      ],
       "frontend": {
-        "entrypoint": "src/civic_canister_frontend/src/index.html"
+        "entrypoint": "src/civic_canister_frontend/dist/index.html"
+        
       },
       "source": [
         "src/civic_canister_frontend/dist"
+      
       ],
       "type": "assets",
       "__6": "NOTE: the 'frontend' signals dfx that it is useful to print out the front-end URL of this canister when deploying. It is not strictly required."

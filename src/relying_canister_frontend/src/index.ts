@@ -1,14 +1,11 @@
 import { requestVerifiablePresentation } from "@dfinity/verifiable-credentials/request-verifiable-presentation";
 import { AuthClient } from "@dfinity/auth-client";
 import type { Principal } from "@dfinity/principal";
-import {_SERVICE} from "../../declarations/civic_canister_backend/civic_canister_backend.did"
-
-const canisterId = "b77ix-eeaaa-aaaaa-qaada-cai" //hardcoded civic canister id, get it using dfx canister id civic_canister_backend
+import {_SERVICE} from "../../civic_canister_frontend/src/civic_canister_backend/civic_canister_backend.did"
 
 const local_ii_url = `http://${process.env.INTERNET_IDENTITY_CANISTER_ID}.localhost:4943`;
 
-let principal: Principal | undefined;
-let authClient: AuthClient;
+let principal: Principal;
 
 document.body.onload = () => {
   let iiUrl;
@@ -24,7 +21,7 @@ document.body.onload = () => {
 };
 
 document.getElementById("loginBtn")?.addEventListener("click", async () => {
-  authClient = await AuthClient.create();
+  const authClient = await AuthClient.create();
   const iiUrl = document.querySelector<HTMLInputElement>("#iiUrl")!.value;
   await new Promise<void>((resolve, reject) => {
     authClient.login({
@@ -49,39 +46,41 @@ const credentialData = {
     credentialType: 'VerifiedAdult',
     arguments: {}
   },
-  credentialSubject: 'r2hdh-fwdj2-u2l6t-hsprj-zbb2a-6xqm5-keuie-cyz53-hzv4r-5fsgv-eae'
+  credentialSubject: principal.toText()
 };
 
 // Define the issuer data
 const issuerData = {
-  "origin": "http://b77ix-eeaaa-aaaaa-qaada-cai.localhost:4943",
-  "canisterId": canisterId
+  "origin": "http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:4943", // this has to point to the derivationOrigin of the canister login (in the frontend)
 };
 
 // Callback functions
-const onSuccess = (response) => {
+const onSuccess = (response: any) => {
   console.log('VC Request Successful:', response);
   displayCredential(response);
 };
 
-const onError = (error) => {
+const onError = (error: any) => {
   console.error('VC Request Failed:', error);
 };
 
 const identityProvider = local_ii_url;
+
+const derivationOrigin = undefined;
 
 const requestParams = {
   onSuccess,
   onError,
   credentialData,
   issuerData,
-  identityProvider
+  identityProvider,
+  derivationOrigin
 };
 
 requestVerifiablePresentation(requestParams);
 
 
-const displayCredential = (credential) => {
+const displayCredential = (credential: any) => {
   // Update the DOM or state with the credential information
   document.getElementById('credentialStatus')!.textContent = JSON.stringify(credential, null, 2);
 };
