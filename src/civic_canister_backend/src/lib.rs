@@ -388,7 +388,6 @@ fn verify_authorized_principal(
     // get the credentials of this user
     if let Some(credentials) = CREDENTIALS.with(|credentials| {
         let credentials = credentials.borrow();
-        println!("credentials: {:?}", credentials);
         credentials.get(&alias_tuple.id_dapp).cloned()
     }) {
         for c in credentials {

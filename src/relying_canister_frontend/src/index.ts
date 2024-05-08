@@ -3,8 +3,6 @@ import { AuthClient } from "@dfinity/auth-client";
 import type { Principal } from "@dfinity/principal";
 import {_SERVICE} from "../../civic_canister_frontend/src/civic_canister_backend/civic_canister_backend.did"
 
-// const canisterId = "bkyz2-fmaaa-aaaaa-qaaaq-cai" //hardcoded civic canister id, get it using dfx canister id civic_canister_backend
-
 const local_ii_url = `http://${process.env.INTERNET_IDENTITY_CANISTER_ID}.localhost:4943`;
 
 let principal: Principal;
@@ -53,8 +51,7 @@ const credentialData = {
 
 // Define the issuer data
 const issuerData = {
-  "origin": "http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:4943",
-  // "canisterId": canisterId
+  "origin": "http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:4943", // this has to point to the derivationOrigin of the canister login (in the frontend)
 };
 
 // Callback functions
