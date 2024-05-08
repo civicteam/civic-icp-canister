@@ -1,9 +1,10 @@
 import { requestVerifiablePresentation } from "@dfinity/verifiable-credentials/request-verifiable-presentation";
 import { AuthClient } from "@dfinity/auth-client";
 import type { Principal } from "@dfinity/principal";
-import {_SERVICE} from "../../civic_canister_frontend/src/civic_canister_backend/civic_canister_backend.did"
 
 const local_ii_url = `http://${process.env.INTERNET_IDENTITY_CANISTER_ID}.localhost:4943`;
+
+const canisterId = "insert-id-here" //hardcoded civic canister id, get it using dfx canister id civic_canister_backend
 
 let principal: Principal;
 
@@ -51,7 +52,7 @@ const credentialData = {
 
 // Define the issuer data
 const issuerData = {
-  "origin": "http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:4943", // this has to point to the derivationOrigin of the canister login (in the frontend)
+  "origin": `http://${canisterId}.localhost:4943`, // this has to point to the derivationOrigin of the canister login (in the frontend)
 };
 
 // Callback functions
