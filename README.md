@@ -44,6 +44,8 @@ const canisterId = "canister-id-here"
 ```
 This sets up the canister login with the correct `derivationOrigin` that the vc-flow call inside `src/relying_canister_frontend/src/index.ts` will later be pointed to
 
+(NOTE: You should be able to get these IDs from environmental variables as well, like ```const local_ii_url = `http://${process.env.INTERNET_IDENTITY_CANISTER_ID}.localhost:4943`;``` but that's not working for the `CIVIC_CANISTER_BACKEND_ID`)
+
 Get the ID of the civic frontend canister 
 ```
 dfx canister id civic_canister_frontend
