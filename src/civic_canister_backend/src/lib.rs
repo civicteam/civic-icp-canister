@@ -60,6 +60,8 @@ lazy_static! {
     static ref CANISTER_SIG_PK: CanisterSigPublicKey = CanisterSigPublicKey::new(ic_cdk::id(), CANISTER_SIG_SEED.clone());
 }
 
+
+
 #[derive(Debug)]
 pub enum SupportedCredentialType {
     VerifiedAdult,
