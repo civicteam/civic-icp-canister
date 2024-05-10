@@ -1,0 +1,11 @@
+type Claim = record { value : text; claim_type : text };
+type Credential = record {
+  id : text;
+  claims : vec Claim;
+  context : vec text;
+  issuer : text;
+};
+service : {
+  add_credential : (principal, Credential) -> (text);
+  get_credentials : (principal) -> (vec Credential) query;
+}
