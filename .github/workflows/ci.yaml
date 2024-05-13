@@ -41,7 +41,7 @@ jobs:
       run: rustup target add wasm32-unknown-unknown
     - name: Install dependencies
       run: |
-        yarn install 
+        npm install 
         cargo install ic-wasm
     - name: Create canisters and start local ICP replica
       run: |
