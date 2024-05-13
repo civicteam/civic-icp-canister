@@ -41,7 +41,7 @@ jobs:
       run: rustup target add wasm32-unknown-unknown
     - name: Install dependencies
       run: |
-        # npm install 
+        npm install 
         cargo install ic-wasm
     - name: Create canisters and start local ICP replica
       run: |
@@ -56,7 +56,6 @@ jobs:
     - name: Deploy Canisters
       run: |
         src/civic_canister_backend/deploy-civic.sh
-        npm install
         dfx deploy
     - name: Run tests
       run: |
