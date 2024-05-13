@@ -35,15 +35,13 @@ export class CredentialService {
     });
   }
 
-  // Add a credential to the canister
-  async addCredential(principal: Principal, credential: Credential): Promise<string | null> {
+  // Retrieve all credentials for a given principal
+  async getCredentials(principal: Principal): Promise<Credential[] | null> {
     try {
-      console.log("Adding credential:", credential);
-      const result = await this.credentialActor.add_credentials(principal, [credential]);
-      console.log("Credential added:", result);
-      return result as string;
+      const credentials = await this.credentialActor.get_credentials(principal);
+      return credentials as Credential[];
     } catch (error) {
-      console.error("Error adding credential:", error);
+      console.error("Error getting credentials:", error);
       return null;
     }
   }

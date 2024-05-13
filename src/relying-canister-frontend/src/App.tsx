@@ -21,7 +21,7 @@ function App() {
   const handleLogin = useCallback(async () => {
     const principalService = new PrincipalService({
       identityProvider: config.internetIdentityUrl,
-      derivationOrigin: config.civicBackendCanisterUrl,
+      derivationOrigin: config.relyingFrontendCanisterUrl,
     });
 
     try {
@@ -35,10 +35,10 @@ function App() {
     }
   }, []);
 
-  const storeCredential = useCallback(async () => {
+  const retrieveCredential = useCallback(async () => {
     if (principal && credentialService) {
       try {
-        const result = await credentialService.addCredential(principal, credential);
+        const result = await credentialService.getCredentials(principal);
         console.log('Credential stored successfully:', result);
       } catch (error) {
         console.error('Error storing credential:', error);
@@ -51,37 +51,12 @@ function App() {
   return (
     <main>
       <img src="/logo2.svg" alt="DFINITY logo" />
-      {isLoggedIn && <h1>Welcome to the ICP Civic Canister</h1>}
+      {isLoggedIn && <h1>Welcome to the ICP Relying Canister</h1>}
       {isLoggedIn && <p>Logged in as {principal?.toText()}</p>}
-      {isLoggedIn && <button onClick={storeCredential}>Store Credential</button>}
+      {isLoggedIn && <button onClick={retrieveCredential}>Retrieve Credential</button>}
       {!isLoggedIn && <button onClick={handleLogin}>Login</button>}
     </main>
   );
 }
-
-const id = ["id", {Text: "did:example:c276e12ec21ebfeb1f712ebc6f1"}]
-const name = ["name", {Text: "Example University"}]
-const degreeType = ["degreeType", {Text: "MBA"}]
-// Example Credential with mixed claims
-const alumniOfClaim = {
-  claims: [id, name, degreeType]
-}
-
-const mixedClaim = {
-  claims: [
-    ["Is over 18", { Boolean: true }], 
-    ["name", { Text: "Max Mustermann"}], 
-    ["alumniOf", {Claim: alumniOfClaim}]
-  ]
-};
-
-
-const credential = {
-  id: "urn:uuid:6a9c92a9-2530-4e2b-9776-530467e9bbe0",
-  type_: ["VerifiableCredential", "VerifiedAdult"],
-  context: ["https://www.w3.org/2018/credentials/v1", "https://www.w3.org/2018/credentials/examples/v1"],
-  issuer: "https://civic.com",
-  claim: [mixedClaim]
-};
 
 export default App;
