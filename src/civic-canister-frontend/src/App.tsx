@@ -21,7 +21,7 @@ function App() {
   const handleLogin = useCallback(async () => {
     const principalService = new PrincipalService({
       identityProvider: config.internetIdentityUrl,
-      derivationOrigin: config.civicFrontendCanisterUrl,
+      derivationOrigin: config.civicBackendCanisterUrl,
     });
 
     try {
@@ -66,7 +66,7 @@ const degreeType = ["degreeType", {Text: "MBA"}]
 const alumniOfClaim = {
   claims: [id, name, degreeType]
 }
-  
+
 const mixedClaim = {
   claims: [
     ["Is over 18", { Boolean: true }], 

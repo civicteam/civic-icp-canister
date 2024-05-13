@@ -152,7 +152,8 @@ mod api {
         adult_id: Principal,
         credential: StoredCredential,
     ) -> Result<String, CallError> {
-        call_candid(env, canister_id, "add_credentials", (adult_id, vec!(credential), )).map(|(x,)| x)
+        let civic_issuer = Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae").unwrap();
+        call_candid_as(env, canister_id, civic_issuer, "add_credentials", (adult_id, vec!(credential), )).map(|(x,)| x)
     }
 
     pub fn prepare_credential(
@@ -458,8 +459,9 @@ fn should_issue_credential_e2e() -> Result<(), CallError> {
             env.time().duration_since(UNIX_EPOCH).unwrap().as_nanos(),
         )
         .expect("credential verification failed");
-        // println!("{:?}", claims);
-        // let vc_claims = claims.vc().expect("missing VC claims");
+        let vc_claims = claims.vc().expect("missing VC claims");
+        println!("{:?}", vc_claims);
+
         // validate_claims_match_spec(vc_claims, &credential_spec).expect("Clam validation failed");
 
     }
