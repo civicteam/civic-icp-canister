@@ -59,29 +59,29 @@ function App() {
   );
 }
 
-const id = ["id", {Text: "did:example:c276e12ec21ebfeb1f712ebc6f1"}]
-  const name = ["name", {Text: "Example University"}]
-  const degreeType = ["degreeType", {Text: "MBA"}]
-  // Example Credential with mixed claims
-  const alumniOfClaim = {
-    claims: [id, name, degreeType]
-  }
-    
-  const mixedClaim = {
-    claims: [
-      ["Is over 18", { Boolean: true }], 
-      ["name", { Text: "Max Mustermann"}], 
-      ["alumniOf", {Claim: alumniOfClaim}]
+const id = ["id", { Text: "did:example:c276e12ec21ebfeb1f712ebc6f1" }]
+const name = ["name", { Text: "Example University" }]
+const degreeType = ["degreeType", { Text: "MBA" }]
+// Example Credential with mixed claims
+const alumniOfClaim = {
+  claims: [id, name, degreeType]
+}
+
+const mixedClaim = {
+  claims: [
+    ["Is over 18", { Boolean: true }], 
+      ["name", { Text: "Max Mustermann" }],
+      ["alumniOf", { Claim: alumniOfClaim }]
     ]
   };
 
 
-  const credential = {
-    id: "urn:uuid:6a9c92a9-2530-4e2b-9776-530467e9bbe0",
-    type_: ["VerifiableCredential", "VerifiedAdult"],
-    context: ["https://www.w3.org/2018/credentials/v1", "https://www.w3.org/2018/credentials/examples/v1"],
-    issuer: "https://civic.com",
-    claim: [mixedClaim]
-  };
+const credential = {
+  id: "urn:uuid:6a9c92a9-2530-4e2b-9776-530467e9bbe0",
+  type_: ["VerifiableCredential", "VerifiedAdult"],
+  context: ["https://www.w3.org/2018/credentials/v1", "https://www.w3.org/2018/credentials/examples/v1"],
+  issuer: "https://civic.com",
+  claim: [mixedClaim]
+};
 
 export default App;
