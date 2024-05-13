@@ -56,7 +56,9 @@ jobs:
     - name: Deploy Canisters
       run: |
         src/civic_canister_backend/deploy-civic.sh
-        dfx deploy
+        dfx deploy internet_identity
+        dfx deploy civic_canister_frontend
+        dfx deploy relying_canister_frontend
     - name: Run tests
       run: |
         chmod +x ic-test-state-machine
