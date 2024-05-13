@@ -24,6 +24,12 @@
       "source": ["src/civic-canister-frontend/dist"],
       "type": "assets",
       "workspace": "civic-canister-frontend"
+    },
+
+    "relying-canister-frontend": {
+      "source": ["src/relying-canister-frontend/dist"],
+      "type": "assets",
+      "workspace": "relying-canister-frontend"
     }
   },
   "defaults": {
