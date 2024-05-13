@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-source .env.local 
+# source .env.local 
 
 #########
 # USAGE #
@@ -77,6 +77,7 @@ cd "$SCRIPTS_DIR/.."
 DFX_NETWORK="${DFX_NETWORK:-local}"
 II_CANISTER_ID="${II_CANISTER_ID:-$(dfx canister id internet_identity --network "$DFX_NETWORK")}"
 ISSUER_CANISTER_ID="${ISSUER_CANISTER_ID:-$(dfx canister id civic_canister_backend --network "$DFX_NETWORK")}"
+CIVIC_FRONTEND_CANISTER_ID="${CIVIC_FRONTEND_CANISTER_ID:-$(dfx canister id civic-canister-frontend --network "$DFX_NETWORK")}"
 if [ "$DFX_NETWORK" = "local" ]; then
   REPLICA_SERVER_PORT=$(dfx info webserver-port)
   ISSUER_DERIVATION_ORIGIN="http://${ISSUER_CANISTER_ID}.localhost:${REPLICA_SERVER_PORT}"
@@ -109,17 +110,18 @@ echo "Parsed rootkey: ${rootkey_did:0:20}..." >&2
 
 # Add also dev server to alternative origins when deploying locally
 if [ "$DFX_NETWORK" = "local" ]; then
-  ALTERNATIVE_ORIGINS="\"$CIVIC_FRONTEND_CANISTER_ID.localhost:4943\","
+  ALTERNATIVE_ORIGINS="\"http://$CIVIC_FRONTEND_CANISTER_ID.localhost:4943\""
   else
-  ALTERNATIVE_ORIGINS="\"$CIVIC_FRONTEND_CANISTER_ID.icp0.io\","
+  ALTERNATIVE_ORIGINS="\"http://$CIVIC_FRONTEND_CANISTER_ID.icp0.io\","
 fi
+
+echo "Using Alternative Origin: $ALTERNATIVE_ORIGINS"
 
 # Adjust issuer's .well-known/ii-alternative-origins to contain FE-hostname of local/dev deployments.
 # We had a problem with `sed` command in CI. This is a hack to make it work locally and in CI.
 mv ./civic_canister_backend/dist/.well-known/ii-alternative-origins ./ii-alternative-origins-template
 cat ./ii-alternative-origins-template | sed "s+ISSUER_FE_HOSTNAME_PLACEHOLDER+$ALTERNATIVE_ORIGINS+g"  > ./civic_canister_backend/dist/.well-known/ii-alternative-origins
 rm ./ii-alternative-origins-template
-
 
 dfx deploy civic_canister_backend --network "$DFX_NETWORK" --argument '(opt record { idp_canister_ids = vec{ principal "'"$II_CANISTER_ID"'" }; ic_root_key_der = vec '"$rootkey_did"'; derivation_origin = "'"$ISSUER_DERIVATION_ORIGIN"'"; frontend_hostname = "'"$ISSUER_FRONTEND_HOSTNAME"'"; })'
 # Revert changes

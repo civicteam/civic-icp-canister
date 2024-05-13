@@ -69,11 +69,11 @@ const alumniOfClaim = {
 
 const mixedClaim = {
   claims: [
-    ["Is over 18", { Boolean: true }], 
-      ["name", { Text: "Max Mustermann" }],
-      ["alumniOf", { Claim: alumniOfClaim }]
-    ]
-  };
+    ["Is over 18", { Boolean: true }],
+    ["name", { Text: "Max Mustermann" }],
+    ["alumniOf", { Claim: alumniOfClaim }]
+  ]
+};
 
 
 const credential = {
