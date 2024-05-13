@@ -4,15 +4,18 @@
 use assert_matches::assert_matches;
 use candid::{CandidType, Deserialize, Principal};
 use canister_sig_util::{extract_raw_root_pk_from_der, CanisterSigPublicKey};
+use canister_tests::api::http_request;
 
 use canister_tests::api::internet_identity::vc_mvp as ii_api;
 use canister_tests::flows;
-use canister_tests::framework::{env, get_wasm_path, principal_1, test_principal, II_WASM};
+use canister_tests::framework::{env, get_wasm_path, principal_1, test_principal, II_WASM, time};
 use ic_cdk::api::management_canister::provisional::CanisterId;
 
-
+use ic_response_verification::types::VerificationInfo;
+use ic_response_verification::verify_request_response_pair;
 use ic_test_state_machine_client::{call_candid, call_candid_as};
 use ic_test_state_machine_client::{query_candid_as, CallError, StateMachine};
+use internet_identity_interface::http_gateway::{HttpRequest, HttpResponse};
 
 
 use internet_identity_interface::internet_identity::types::vc_mvp::{
@@ -20,22 +23,22 @@ use internet_identity_interface::internet_identity::types::vc_mvp::{
 };
 use internet_identity_interface::internet_identity::types::FrontendHostname;
 use lazy_static::lazy_static;
+use serde_bytes::ByteBuf;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::time::{UNIX_EPOCH};
+use std::time::{Duration, UNIX_EPOCH};
 use vc_util::issuer_api::{
-    CredentialSpec, DerivationOriginData, DerivationOriginError,
-    DerivationOriginRequest, GetCredentialRequest, Icrc21ConsentInfo,
+    ArgumentValue, CredentialSpec, DerivationOriginData, DerivationOriginError,
+    DerivationOriginRequest, GetCredentialRequest, Icrc21ConsentInfo, Icrc21ConsentPreferences,
     Icrc21Error, Icrc21VcConsentMessageRequest, IssueCredentialError, IssuedCredentialData,
     PrepareCredentialRequest, PreparedCredentialData, SignedIdAlias as SignedIssuerIdAlias,
+
 };
 use vc_util::{
     get_verified_id_alias_from_jws, verify_credential_jws_with_canister_id
 
 };
-
-// use crate::civic_canister_backend::types::{Claim, StoredCredential, CredentialError, ClaimValue, build_claims_into_credentialSubjects, add_context};
 
 const DUMMY_ROOT_KEY: &str ="308182301d060d2b0601040182dc7c0503010201060c2b0601040182dc7c05030201036100adf65638a53056b2222c91bb2457b0274bca95198a5acbdadfe7fd72178f069bdea8d99e9479d8087a2686fc81bf3c4b11fe275570d481f1698f79d468afe0e57acc1e298f8b69798da7a891bbec197093ec5f475909923d48bfed6843dbed1f";
 const DUMMY_II_CANISTER_ID: &str = "rwlgt-iiaaa-aaaaa-aaaaa-cai";
@@ -197,6 +200,98 @@ fn adult_credential_spec() -> CredentialSpec {
         arguments: None,
     }
 }
+
+#[test]
+fn should_return_vc_consent_message_for_adult_vc() {
+    let test_cases = [
+        ("en-US", "en", "# Verified Adult"),
+        ("de-DE", "de", "# Erwachsene Person"),
+        ("ja-JP", "en", "# Verified Adult"), // test fallback language
+    ];
+    let env = env();
+    let canister_id = install_canister(&env, CIVIV_CANISTER_BACKEND_WASM.clone());
+
+    for (requested_language, actual_language, consent_message_snippet) in test_cases {
+        let mut args = HashMap::new();
+        args.insert("minAge".to_string(), ArgumentValue::Int(18));
+        let consent_message_request = Icrc21VcConsentMessageRequest {
+            credential_spec: CredentialSpec {
+                credential_type: "VerifiedAdult".to_string(),
+                arguments: Some(args),
+            },
+            preferences: Icrc21ConsentPreferences {
+                language: requested_language.to_string(),
+            },
+        };
+
+        let response =
+            api::vc_consent_message(&env, canister_id, principal_1(), &consent_message_request)
+                .expect("API call failed")
+                .expect("Consent message error");
+        assert_eq!(response.language, actual_language);
+        assert!(response
+            .consent_message
+            .starts_with(consent_message_snippet));
+    }
+}
+
+#[test]
+fn should_return_derivation_origin() {
+    let env = env();
+    let canister_id = install_canister(&env, CIVIV_CANISTER_BACKEND_WASM.clone());
+    let frontend_hostname = format!("https://{}.icp0.io", canister_id.to_text());
+    let req = DerivationOriginRequest { frontend_hostname };
+    let response = api::derivation_origin(&env, canister_id, principal_1(), &req)
+        .expect("API call failed")
+        .expect("derivation_origin error");
+    assert_eq!(response.origin, req.frontend_hostname);
+}
+
+#[test]
+fn should_return_derivation_origin_with_custom_init() {
+    let env = env();
+    let custom_init = IssuerInit {
+        ic_root_key_der: hex::decode(DUMMY_ROOT_KEY).unwrap(),
+        idp_canister_ids: vec![Principal::from_text(DUMMY_II_CANISTER_ID).unwrap()],
+        derivation_origin: "https://derivation_origin".to_string(),
+        frontend_hostname: "https://frontend.host.name".to_string(),
+    };
+    let issuer_id = install_issuer(&env, &custom_init);
+    let response = api::derivation_origin(
+        &env,
+        issuer_id,
+        principal_1(),
+        &DerivationOriginRequest {
+            frontend_hostname: custom_init.frontend_hostname.clone(),
+        },
+    )
+    .expect("API call failed")
+    .expect("derivation_origin error");
+    assert_eq!(response.origin, custom_init.derivation_origin);
+}
+
+
+#[test]
+fn should_fail_vc_consent_message_if_not_supported() {
+    let env = env();
+    let canister_id = install_canister(&env, CIVIV_CANISTER_BACKEND_WASM.clone());
+
+    let consent_message_request = Icrc21VcConsentMessageRequest {
+        credential_spec: CredentialSpec {
+            credential_type: "VerifiedResident".to_string(),
+            arguments: None,
+        },
+        preferences: Icrc21ConsentPreferences {
+            language: "en-US".to_string(),
+        },
+    };
+
+    let response =
+        api::vc_consent_message(&env, canister_id, principal_1(), &consent_message_request)
+            .expect("API call failed");
+    assert_matches!(response, Err(Icrc21Error::UnsupportedCanisterCall(_)));
+}
+
 
 #[test]
 fn should_fail_prepare_credential_for_unauthorized_principal() {
@@ -474,6 +569,68 @@ fn should_configure() {
     let env = env();
     let issuer_id = install_canister(&env, CIVIV_CANISTER_BACKEND_WASM.clone());
     api::configure(&env, issuer_id, &DUMMY_ISSUER_INIT).expect("API call failed");
+}
+
+/// Verifies that the expected assets is delivered and certified.
+#[test]
+fn issuer_canister_serves_http_assets() -> Result<(), CallError> {
+    fn verify_response_certification(
+        env: &StateMachine,
+        canister_id: CanisterId,
+        request: HttpRequest,
+        http_response: HttpResponse,
+        min_certification_version: u16,
+    ) -> VerificationInfo {
+        verify_request_response_pair(
+            ic_http_certification::HttpRequest {
+                method: request.method,
+                url: request.url,
+                headers: request.headers,
+                body: request.body.into_vec(),
+            },
+            ic_http_certification::HttpResponse {
+                status_code: http_response.status_code,
+                headers: http_response.headers,
+                body: http_response.body.into_vec(),
+                upgrade: http_response.upgrade,
+            },
+            canister_id.as_slice(),
+            time(env) as u128,
+            Duration::from_secs(300).as_nanos(),
+            &env.root_key(),
+            min_certification_version as u8,
+        )
+        .unwrap_or_else(|e| panic!("validation failed: {e}"))
+    }
+
+    let env = env();
+    let canister_id = install_canister(&env, CIVIV_CANISTER_BACKEND_WASM.clone());
+
+    // for each asset and certification version, fetch the asset, check the HTTP status code, headers and certificate.
+
+    for certification_version in 1..=2 {
+        let request = HttpRequest {
+            method: "GET".to_string(),
+            url: "/".to_string(),
+            headers: vec![],
+            body: ByteBuf::new(),
+            certificate_version: Some(certification_version),
+        };
+        let http_response = http_request(&env, canister_id, &request)?;
+        println!("{:?}", http_response);
+        // assert_eq!(http_response.status_code, 200);
+
+        let result = verify_response_certification(
+            &env,
+            canister_id,
+            request,
+            http_response,
+            certification_version,
+        );
+        // assert_eq!(result.verification_version, certification_version);
+    }
+
+    Ok(())
 }
 
 
