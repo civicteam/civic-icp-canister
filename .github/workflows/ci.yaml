@@ -1,10 +1,10 @@
-name: CI Build and Test
+name: CI Build and Test (Local setup)
 
 on: [push, pull_request]
-  # push:
-  #   branches: [ "gh-actions" ]
-  # pull_request:
-  #   branches: [ "gh-actions" ]
+  push:
+    branches: [ "develop" ]
+  pull_request:
+    branches: [ "develop" ]
 
 
 env:
@@ -43,18 +43,23 @@ jobs:
       run: |
         yarn install 
         cargo install ic-wasm
-    - name: Install canisters and start local ICP replica
+    - name: Create canisters and start local ICP replica
       run: |
-        mkdir src/civic_canister_backend/dist
-        mkdir src/relying_canister_frontend/dist
         dfx start --clean --background
         dfx canister create --all
-    - name: Build canisters
-      run: dfx build
-    - name: Deploy canisters
-      run: dfx canister install --all && dfx deploy 
+    - name: Deploy Civic Canister
+      run: src/civic_canister_backend/deploy-civic.sh
+    - name: Set env variables
+      run: |
+        export VITE_LOCAL_CIVIC_FRONTEND_CANISTER_ID=$(dfx canister id civic-canister-frontend)
+        export VITE_LOCAL_INTERNET_IDENTITY_CANISTER_ID=$(dfx canister id internet_identity)
+        export VITE_LOCAL_CIVIC_BACKEND_CANISTER_ID=$(dfx canister id civic_canister_backend)
+    - name: Deploy Canisters
+      run: |
+        dfx deploy internet_identity
+        dfx deploy civic-canister-frontend
     - name: Run tests
       run: |
         chmod +x ic-test-state-machine
-        # cargo test --test integration_tests --verbose
+        cargo test --test integration_tests
     - run: echo "🐧 This job's status is ${{ job.status }}."
