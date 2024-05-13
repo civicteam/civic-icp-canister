@@ -97,6 +97,16 @@ cargo test --test integration_tests
 1. Open the ```civic_canister_frontend``` using the second URL (looks like so: `http://${canister-id}.localhost:4943/`). Login & issue the credential. The credential is now stored against the principal that's printed. 
 2. Open the ```relying_canister_frontend``` using the second URL again. Login and request the VC through Internet Identity. 
 
+## Alternative Frontends 
+
+Setting the correct derivationOrigin/Alternative Frontends of the canisters allows the II backend to correctly convert the principals from the civic POV to the RP POV. The key point is that the the `origin` of the issuer inside the vc-flow call should match the `derivationOrigin` in the login process to the issuer (ie in the civic frontend canister).
+
+1. In the civic frontend, the user logs into the canister using the civic canister backend as `derivationOrigin`. This allows the user's principal to be the same for civic canister backend (since the user is using the _frontend_ canister and they are two separate canisters, II would otherwise use different principals)
+2. In the RP, the user wants to request from the issuer of the credentials, namely the civic canister backend. Therefore, the `origin` in the call to the start the vc-flow is set as the civic canister backend. 
+
+3. II must map the generated alias between the RP Canister and the Issuing Canister (in order to provide unlinkability of the user's identities). In the vc-flow, when II is sending a `request_credential` to the backend, the principal that it's using must be the one that the civic canister backend stored the credentials under. By specifying a `derivationOrigin` during the login, II knows to use the same principal as in the login to send to the backend and check for stored credentials. Otherwise there will be an `unauthorized principal` error. 
+
+   
 ## ICP Notes
 
 ### Flow for the user sign-in 
