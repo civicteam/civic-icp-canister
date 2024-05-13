@@ -16,7 +16,7 @@
   },
   "type": "module",
   "workspaces": [
-    "src/civic-canister-frontend",
-    "src/relying-canister-frontend"
+    "src/civic_canister_frontend",
+    "src/relying_canister_frontend"
   ]
 }

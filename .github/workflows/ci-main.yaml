@@ -1,64 +1,64 @@
-name: CI Build and Test (Mainnet setup)
+# name: CI Build and Test (Mainnet setup)
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+# on:
+#   push:
+#     branches: [ "main" ]
+#   pull_request:
+#     branches: [ "main" ]
 
-env:
-  CARGO_TERM_COLOR: always
+# env:
+#   CARGO_TERM_COLOR: always
 
-jobs:
+# jobs:
 
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        include: 
-          - os: ubuntu-latest
-            file_suffix: "-linux"
-          - os: macos-latest
-            file_suffix: "-mac"
+#   build:
+#     runs-on: ${{ matrix.os }}
+#     strategy:
+#       matrix:
+#         os: [ubuntu-latest, macos-latest]
+#         include: 
+#           - os: ubuntu-latest
+#             file_suffix: "-linux"
+#           - os: macos-latest
+#             file_suffix: "-mac"
      
-    steps:
-    - name: Check out repository code
-      uses: actions/checkout@v4
-      with:
-        submodules: 'recursive'
-    - name: Set up environment
-      run: |
-        echo "Setting up on ${{ matrix.os }}"
-        mv ic-test-machine-binaries/ic-test-state-machine${{ matrix.file_suffix }} ic-test-state-machine
+#     steps:
+#     - name: Check out repository code
+#       uses: actions/checkout@v4
+#       with:
+#         submodules: 'recursive'
+#     - name: Set up environment
+#       run: |
+#         echo "Setting up on ${{ matrix.os }}"
+#         mv ic-test-machine-binaries/ic-test-state-machine${{ matrix.file_suffix }} ic-test-state-machine
 
-    - name: Install dfx  
-      uses: dfinity/setup-dfx@main
-    - name: Confirm successful installation
-      run: dfx --version
-    - name: Install Rust target
-      run: rustup target add wasm32-unknown-unknown
-    - name: Install dependencies
-      run: |
-        npm install 
-        cargo install ic-wasm
-    - name: Create canisters and start local ICP replica
-      run: |
-        dfx start --clean --background
-        dfx canister create --all
-    - name: Deploy Civic Canister
-      run: src/civic_canister_backend/deploy-civic.sh --network ic
-    - name: Set env variables
-      run: |
-        # export VITE_LOCAL_CIVIC_FRONTEND_CANISTER_ID=$(dfx canister id civic-canister-frontend)
-        # export VITE_LOCAL_INTERNET_IDENTITY_CANISTER_ID=$(dfx canister id internet_identity)
-        # export VITE_LOCAL_CIVIC_BACKEND_CANISTER_ID=$(dfx canister id civic_canister_backend)
-    - name: Deploy Canisters
-      run: |
-        dfx deploy internet_identity
-        dfx deploy civic-canister-frontend
-    - name: Run tests
-      run: |
-        chmod +x ic-test-state-machine
-        cargo test --test integration_tests
-    - run: echo "🐧 This job's status is ${{ job.status }}."
+#     - name: Install dfx  
+#       uses: dfinity/setup-dfx@main
+#     - name: Confirm successful installation
+#       run: dfx --version
+#     - name: Install Rust target
+#       run: rustup target add wasm32-unknown-unknown
+#     - name: Install dependencies
+#       run: |
+#         npm install 
+#         cargo install ic-wasm
+#     - name: Create canisters and start local ICP replica
+#       run: |
+#         dfx start --clean --background
+#         dfx canister create --all
+#     - name: Deploy Civic Canister
+#       run: src/civic_canister_backend/deploy-civic.sh --network ic
+#     - name: Set env variables
+#       run: |
+#         # export VITE_LOCAL_CIVIC_FRONTEND_CANISTER_ID=$(dfx canister id civic_canister_frontend)
+#         # export VITE_LOCAL_INTERNET_IDENTITY_CANISTER_ID=$(dfx canister id internet_identity)
+#         # export VITE_LOCAL_CIVIC_BACKEND_CANISTER_ID=$(dfx canister id civic_canister_backend)
+#     - name: Deploy Canisters
+#       run: |
+#         dfx deploy internet_identity
+#         dfx deploy civic_canister_frontend
+#     - name: Run tests
+#       run: |
+#         chmod +x ic-test-state-machine
+#         cargo test --test integration_tests
+#     - run: echo "🐧 This job's status is ${{ job.status }}."

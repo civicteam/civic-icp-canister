@@ -77,7 +77,7 @@ cd "$SCRIPTS_DIR/.."
 DFX_NETWORK="${DFX_NETWORK:-local}"
 II_CANISTER_ID="${II_CANISTER_ID:-$(dfx canister id internet_identity --network "$DFX_NETWORK")}"
 ISSUER_CANISTER_ID="${ISSUER_CANISTER_ID:-$(dfx canister id civic_canister_backend --network "$DFX_NETWORK")}"
-CIVIC_FRONTEND_CANISTER_ID="${CIVIC_FRONTEND_CANISTER_ID:-$(dfx canister id civic-canister-frontend --network "$DFX_NETWORK")}"
+CIVIC_FRONTEND_CANISTER_ID="${CIVIC_FRONTEND_CANISTER_ID:-$(dfx canister id civic_canister_frontend --network "$DFX_NETWORK")}"
 if [ "$DFX_NETWORK" = "local" ]; then
   REPLICA_SERVER_PORT=$(dfx info webserver-port)
   ISSUER_DERIVATION_ORIGIN="http://${ISSUER_CANISTER_ID}.localhost:${REPLICA_SERVER_PORT}"

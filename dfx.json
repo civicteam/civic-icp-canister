@@ -20,16 +20,20 @@
       "type": "rust"
     },
 
-    "civic-canister-frontend": {
-      "source": ["src/civic-canister-frontend/dist"],
+    "civic_canister_frontend": {
+      "source": [
+        "src/civic_canister_frontend/dist"
+      ],
       "type": "assets",
-      "workspace": "civic-canister-frontend"
+      "workspace": "civic_canister_frontend"
     },
 
-    "relying-canister-frontend": {
-      "source": ["src/relying-canister-frontend/dist"],
+    "relying_canister_frontend": {
+      "source": [
+        "src/relying_canister_frontend/dist"
+      ],
       "type": "assets",
-      "workspace": "relying-canister-frontend"
+      "workspace": "relying_canister_frontend"
     }
   },
   "defaults": {

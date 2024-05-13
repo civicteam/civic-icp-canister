@@ -47,17 +47,16 @@ jobs:
       run: |
         dfx start --clean --background
         dfx canister create --all
-    - name: Deploy Civic Canister
-      run: src/civic_canister_backend/deploy-civic.sh
     - name: Set env variables
       run: |
-        export VITE_LOCAL_CIVIC_FRONTEND_CANISTER_ID=$(dfx canister id civic-canister-frontend)
+        export VITE_LOCAL_CIVIC_FRONTEND_CANISTER_ID=$(dfx canister id civic_canister_frontend)
         export VITE_LOCAL_INTERNET_IDENTITY_CANISTER_ID=$(dfx canister id internet_identity)
         export VITE_LOCAL_CIVIC_BACKEND_CANISTER_ID=$(dfx canister id civic_canister_backend)
+        export VITE_LOCAL_RELYING_FRONTEND_CANISTER_ID=$(dfx canister id relying_canister_frontend)
     - name: Deploy Canisters
       run: |
-        dfx deploy internet_identity
-        dfx deploy civic-canister-frontend
+        dfx deploy
+        src/civic_canister_backend/deploy-civic.sh
     - name: Run tests
       run: |
         chmod +x ic-test-state-machine
