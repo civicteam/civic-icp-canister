@@ -55,9 +55,9 @@ jobs:
         export VITE_LOCAL_RELYING_FRONTEND_CANISTER_ID=$(dfx canister id relying_canister_frontend)
     - name: Deploy Canisters
       run: |
+        src/civic_canister_backend/deploy-civic.sh
         npm install
         dfx deploy
-        src/civic_canister_backend/deploy-civic.sh
     - name: Run tests
       run: |
         chmod +x ic-test-state-machine
