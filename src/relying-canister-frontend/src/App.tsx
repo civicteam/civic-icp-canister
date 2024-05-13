@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Principal } from '@dfinity/principal';
-import { CredentialService, Credential } from './service/CredentialService';
-import { PrincipalService } from './service/PrincipalService';
-import { config } from './config';
+import { CredentialService } from './service/CredentialService.js';
+import { PrincipalService } from './service/PrincipalService.js';
+import { config } from './config.js';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -10,11 +10,7 @@ function App() {
   const [credentialService, setCredentialService] = useState<CredentialService>();
 
   useEffect(() => {
-    const { civicBackendCanisterId, dummyCivicSampleKey } = config;
-    const service = new CredentialService({
-      civicBackendCanisterId,
-      dummyCivicSampleKey,
-    });
+    const service = new CredentialService(config);
     setCredentialService(service);
   }, []);
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Principal } from '@dfinity/principal';
-import { CredentialService, Credential } from './service/CredentialService';
+import { CredentialService } from './service/CredentialService';
 import { PrincipalService } from './service/PrincipalService';
 import { config } from './config';
 

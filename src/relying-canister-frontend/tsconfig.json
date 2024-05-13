@@ -11,8 +11,8 @@
       "DOM.Iterable",
       "ESNext"
     ],
-    "module": "ESNext",
-    "moduleResolution": "Node",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "noEmit": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,

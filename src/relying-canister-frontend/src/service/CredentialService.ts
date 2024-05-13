@@ -4,18 +4,13 @@ import { Actor, HttpAgent } from "@dfinity/agent";
 import { idlFactory as civic } from "../../../declarations/civic_canister_backend/civic_canister_backend.did.js";
 import { Secp256k1KeyIdentity } from "@dfinity/identity-secp256k1";
 import type { Principal } from "@dfinity/principal";
-
-export interface Credential {
-  id: string;
-  type_: string[];
-  context: string[];
-  issuer: string;
-  claim: any; // Array of claims
-}
+import { requestVerifiablePresentation } from "@dfinity/verifiable-credentials/request-verifiable-presentation";
 
 export type CredentialConfig = {
-  civicBackendCanisterId: string;
+  civicBackendCanisterUrl: string;
   dummyCivicSampleKey: Uint8Array;
+  relyingFrontendCanisterUrl: string;
+  internetIdentityUrl: string;
 }
 
 export class CredentialService {
@@ -23,26 +18,43 @@ export class CredentialService {
 
   constructor(private config: CredentialConfig) {}
 
-  private get credentialActor() {
-    if (!this._agent) {
-      const identity = Secp256k1KeyIdentity.fromSecretKey(this.config.dummyCivicSampleKey);
-      this._agent = new HttpAgent({ identity });
-    }
-    this._agent.fetchRootKey();
-    return Actor.createActor(civic, {
-      agent: this._agent,
-      canisterId: this.config.civicBackendCanisterId,
-    });
-  }
-
   // Retrieve all credentials for a given principal
-  async getCredentials(principal: Principal): Promise<Credential[] | null> {
+  async getCredentials(principal: Principal): Promise<void> {
     try {
-      const credentials = await this.credentialActor.get_credentials(principal);
-      return credentials as Credential[];
+      const issuerData = {
+        "origin": this.config.civicBackendCanisterUrl,
+      };
+
+      const credentialData = {
+        credentialSpec: {
+          credentialType: 'VerifiedAdult',
+          arguments: {}
+        },
+        credentialSubject: principal.toText()
+      };
+
+      const onSuccess = (response: any) => 
+        console.log('VC Request Successful:', response);
+      
+      const onError = (error: any) =>
+        console.error('VC Request Failed:', error);
+      
+      const identityProvider = this.config.internetIdentityUrl;
+      
+      const derivationOrigin = undefined;
+      
+      const requestParams = {
+        onSuccess,
+        onError,
+        credentialData,
+        issuerData,
+        identityProvider,
+        derivationOrigin
+      };
+      
+      requestVerifiablePresentation(requestParams);
     } catch (error) {
       console.error("Error getting credentials:", error);
-      return null;
     }
   }
 }
