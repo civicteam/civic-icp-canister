@@ -26,19 +26,17 @@ jobs:
     steps:
     - name: Check out repository code
       uses: actions/checkout@v4
-      with:
-        submodules: 'recursive'
     - name: Set up environment
       run: |
         echo "Setting up on ${{ matrix.os }}"
         mv ic-test-machine-binaries/ic-test-state-machine${{ matrix.file_suffix }} ic-test-state-machine
-
     - name: Install dfx  
       uses: dfinity/setup-dfx@main
     - name: Confirm successful installation
       run: dfx --version
     - name: Install Rust target
       run: rustup target add wasm32-unknown-unknown
+
     - name: Install dependencies
       run: |
         npm install 
@@ -47,18 +45,27 @@ jobs:
       run: |
         dfx start --clean --background
         dfx canister create --all
-        src/civic_canister_backend/deploy-civic.sh
     - name: Set env variables
       run: |
         export VITE_LOCAL_CIVIC_FRONTEND_CANISTER_ID=$(dfx canister id civic_canister_frontend)
         export VITE_LOCAL_INTERNET_IDENTITY_CANISTER_ID=$(dfx canister id internet_identity)
         export VITE_LOCAL_CIVIC_BACKEND_CANISTER_ID=$(dfx canister id civic_canister_backend)
         export VITE_LOCAL_RELYING_FRONTEND_CANISTER_ID=$(dfx canister id relying_canister_frontend)
-    - name: Deploy Canisters
+    - name: Deploy Civic Canister and Internet Identity
       run: |
+        src/civic_canister_backend/deploy-civic.sh
         dfx deploy internet_identity
+    - name: Deploy RP 
+      id: deploy_rp
+      continue-on-error: true
+      run: |
         dfx deploy relying_canister_frontend
-        dfx deploy civic_canister_frontend
+    - name: Deploy Civic FE
+      run: dfx deploy civic_canister_frontend
+    - name: Try again to deploy RP if it previously failed
+      if:  steps.deploy_rp.outcome == 'failure'
+      run: dfx deploy relying_canister_frontend
+ 
     - name: Run tests
       run: |
         chmod +x ic-test-state-machine
