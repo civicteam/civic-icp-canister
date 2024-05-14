@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Principal } from '@dfinity/principal';
-import { CredentialService } from './service/CredentialService';
+import { CredentialService, Credential } from './service/CredentialService';
 import { PrincipalService } from './service/PrincipalService';
 import { config } from './config';
 
@@ -59,9 +59,9 @@ function App() {
   );
 }
 
-const id = ["id", {Text: "did:example:c276e12ec21ebfeb1f712ebc6f1"}]
-const name = ["name", {Text: "Example University"}]
-const degreeType = ["degreeType", {Text: "MBA"}]
+const id = ["id", { Text: "did:example:c276e12ec21ebfeb1f712ebc6f1" }]
+const name = ["name", { Text: "Example University" }]
+const degreeType = ["degreeType", { Text: "MBA" }]
 // Example Credential with mixed claims
 const alumniOfClaim = {
   claims: [id, name, degreeType]
@@ -69,9 +69,9 @@ const alumniOfClaim = {
 
 const mixedClaim = {
   claims: [
-    ["Is over 18", { Boolean: true }], 
-    ["name", { Text: "Max Mustermann"}], 
-    ["alumniOf", {Claim: alumniOfClaim}]
+    ["Is over 18", { Boolean: true }],
+    ["name", { Text: "Max Mustermann" }],
+    ["alumniOf", { Claim: alumniOfClaim }]
   ]
 };
 

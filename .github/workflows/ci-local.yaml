@@ -47,6 +47,7 @@ jobs:
       run: |
         dfx start --clean --background
         dfx canister create --all
+        src/civic_canister_backend/deploy-civic.sh
     - name: Set env variables
       run: |
         export VITE_LOCAL_CIVIC_FRONTEND_CANISTER_ID=$(dfx canister id civic_canister_frontend)
@@ -55,7 +56,6 @@ jobs:
         export VITE_LOCAL_RELYING_FRONTEND_CANISTER_ID=$(dfx canister id relying_canister_frontend)
     - name: Deploy Canisters
       run: |
-        src/civic_canister_backend/deploy-civic.sh
         dfx deploy internet_identity
         dfx deploy relying_canister_frontend
         dfx deploy civic_canister_frontend
