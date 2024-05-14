@@ -620,7 +620,7 @@ fn issuer_canister_serves_http_assets() -> Result<(), CallError> {
         println!("{:?}", http_response);
         // assert_eq!(http_response.status_code, 200);
 
-        let result = verify_response_certification(
+        let _result = verify_response_certification(
             &env,
             canister_id,
             request,

@@ -1,23 +1,22 @@
-use canister_sig_util::CanisterSigPublicKey;
+
 use std::cell::RefCell;
-use std::collections::{HashSet,HashMap};
+use std::collections::HashMap;
 use canister_sig_util::signature_map::{SignatureMap, LABEL_SIG};
-use crate::credential::{Claim, StoredCredential, CredentialError, add_context, build_claims_into_credentialSubjects, update_root_hash};
+use crate::credential::{StoredCredential, update_root_hash};
 
 use crate::consent_message::{get_vc_consent_message, SupportedLanguage};
-use std::fmt;
+
 use candid::{candid_method, CandidType, Deserialize, Principal};
 // use ic_cdk::candid::candid_method;
 use canister_sig_util::{extract_raw_root_pk_from_der, IC_ROOT_PK_DER};
 
-use ic_cdk::api::{caller, set_certified_data, time};
+
 use ic_cdk_macros::{init, query, update};
-use ic_certification::{fork_hash, labeled_hash, Hash, pruned};
+use ic_certification::{labeled_hash, pruned};
 
 use ic_stable_structures::storable::Bound;
 use ic_stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableCell, Storable};
 use include_dir::{include_dir, Dir};
-use sha2::{Digest, Sha256};
 
 use serde_bytes::ByteBuf;
 
@@ -25,19 +24,16 @@ use serde_bytes::ByteBuf;
 use std::borrow::Cow;
 use asset_util::{collect_assets, CertifiedAssets};
 use vc_util::issuer_api::{
-    CredentialSpec, GetCredentialRequest, IssueCredentialError, IssuedCredentialData,
-    PrepareCredentialRequest, PreparedCredentialData, SignedIdAlias, DerivationOriginData, DerivationOriginError,
+    DerivationOriginData, DerivationOriginError,
     DerivationOriginRequest, Icrc21ConsentInfo, Icrc21Error,
     Icrc21VcConsentMessageRequest
 };
-use vc_util::{ did_for_principal, get_verified_id_alias_from_jws, vc_jwt_to_jws,
-    vc_signing_input, vc_signing_input_hash, AliasTuple,
-};
-use ic_cdk::{api, print};
-use lazy_static::lazy_static;
+
+use ic_cdk::api;
+
 use ic_cdk_macros::post_upgrade;
-use identity_credential::credential::{CredentialBuilder};
-use identity_core::common::{Timestamp, Url};
+
+
 
 
 const PROD_II_CANISTER_ID: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai";

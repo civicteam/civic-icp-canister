@@ -2,36 +2,34 @@ use std::fmt;
 use candid::{CandidType, Deserialize, Principal};
 use candid::candid_method;
 
-use serde::{Serialize};
+use serde::Serialize;
 use serde_json::Value;
 use std::collections::{HashMap, BTreeMap};
 use identity_credential::credential::{CredentialBuilder, Subject};
 use identity_core::common::Url;
 use std::iter::repeat;
-use canister_sig_util::signature_map::{SignatureMap, LABEL_SIG};
+use canister_sig_util::signature_map::LABEL_SIG;
 use sha2::{Digest, Sha256};
 
 use ic_cdk::api::{caller, set_certified_data, time};
 use ic_cdk_macros::{update, query};
 use vc_util::issuer_api::{
     CredentialSpec, GetCredentialRequest, IssueCredentialError, IssuedCredentialData,
-    PrepareCredentialRequest, PreparedCredentialData, SignedIdAlias, DerivationOriginData, DerivationOriginError,
-    DerivationOriginRequest, Icrc21ConsentInfo, Icrc21Error,
-    Icrc21VcConsentMessageRequest
+    PrepareCredentialRequest, PreparedCredentialData, SignedIdAlias
 };
 
 use vc_util::{did_for_principal, get_verified_id_alias_from_jws, vc_jwt_to_jws, vc_signing_input, vc_signing_input_hash, AliasTuple};
-use canister_sig_util::{CanisterSigPublicKey, IC_ROOT_PK_DER, extract_raw_root_pk_from_der};
-use ic_certification::{Hash, fork_hash, labeled_hash, pruned};
+use canister_sig_util::CanisterSigPublicKey;
+use ic_certification::{Hash, fork_hash, labeled_hash};
 use serde_bytes::ByteBuf;
-use std::cell::RefCell;
+
 use lazy_static::lazy_static;
 
 // Assuming these are defined in the same or another module that needs to be imported
 extern crate asset_util;
-use asset_util::{collect_assets, CertifiedAssets};
+
 use crate::utils::{CONFIG, CREDENTIALS, SIGNATURES, ASSETS};
-use identity_core::common::{Timestamp};
+use identity_core::common::Timestamp;
 
 // The expiration of issued verifiable credentials.
 const MINUTE_NS: u64 = 60 * 1_000_000_000;
@@ -118,7 +116,7 @@ pub(crate) enum CredentialError {
 /// otherData
 ///  }
 
-pub(crate) fn build_claims_into_credentialSubjects(claims: Vec<Claim>, subject: String) -> Vec<Subject> {
+pub(crate) fn build_claims_into_credential_subjects(claims: Vec<Claim>, subject: String) -> Vec<Subject> {
     claims.into_iter().zip(repeat(subject)).map(|(c, id )|{
         let mut sub = c.into();
         sub.id = Url::parse(id).ok();
@@ -376,7 +374,7 @@ pub (crate) fn verify_credential_spec(spec: &CredentialSpec) -> Result<Supported
 
 
 /// Builds a verifiable credential with the given parameters and returns the credential as a JWT-string.
-pub fn build_credential_jwt(params: CredentialParams) -> String {
+fn build_credential_jwt(params: CredentialParams) -> String {
     // let mut subject_json = json!({"id": params.subject_id});
     // subject_json.as_object_mut().unwrap().insert(
     //     params.spec.credential_type.clone(),
@@ -385,7 +383,7 @@ pub fn build_credential_jwt(params: CredentialParams) -> String {
     // let subject = Subject::from_json_value(subject_json).unwrap();
 
     // build "credentialSubject" objects
-    let subjects = build_claims_into_credentialSubjects(params.claims, params.subject_id); 
+    let subjects = build_claims_into_credential_subjects(params.claims, params.subject_id); 
     let expiration_date = Timestamp::from_unix(params.expiration_timestamp_s as i64)
         .expect("internal: failed computing expiration timestamp");
 
