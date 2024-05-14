@@ -52,6 +52,7 @@ jobs:
     - name: Deploy Civic Canister and Internet Identity
       run: |
         scripts/deploy-civic.sh
+        dfx deploy internet_identity
     - name: Deploy RP 
       id: deploy_rp
       continue-on-error: true
