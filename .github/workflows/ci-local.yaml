@@ -48,7 +48,7 @@ jobs:
     - name: Set env variables
       run: |
         chmod +x scripts/set-env-vars.sh
-        scripts/set-env-vars.sh
+        . scripts/set-env-vars.sh
     - name: Deploy Civic Canister and Internet Identity
       run: |
         scripts/deploy-civic.sh
