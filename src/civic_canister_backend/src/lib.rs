@@ -52,13 +52,14 @@ const PROD_II_CANISTER_ID: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai";
 const VC_EXPIRATION_PERIOD_NS: u64 = 15 * MINUTE_NS;
 // Authorized Civic Principal - get this from the frontend
 const AUTHORIZED_PRINCIPAL: &str = "tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae";
-const LOCAL_II_CANISTER_ID: &str = "be2us-64aaa-aaaaa-qaabq-cai";
 
 lazy_static! {
     // Seed and public key used for signing the credentials.
     static ref CANISTER_SIG_SEED: Vec<u8> = hash_bytes("some_random_seed").to_vec();
     static ref CANISTER_SIG_PK: CanisterSigPublicKey = CanisterSigPublicKey::new(ic_cdk::id(), CANISTER_SIG_SEED.clone());
 }
+
+
 
 #[derive(Debug)]
 pub enum SupportedCredentialType {
@@ -118,11 +119,11 @@ impl Storable for IssuerConfig {
 
 impl Default for IssuerConfig {
     fn default() -> Self {
-        let derivation_origin = format!("http://{}.localhost:4943", ic_cdk::id().to_text());
+        let derivation_origin = format!("http://{}.icp0.io", ic_cdk::id().to_text());
         Self {
             ic_root_key_raw: extract_raw_root_pk_from_der(IC_ROOT_PK_DER)
                 .expect("failed to extract raw root pk from der"),
-            idp_canister_ids: vec![Principal::from_text(LOCAL_II_CANISTER_ID).unwrap()],
+            idp_canister_ids: vec![Principal::from_text(PROD_II_CANISTER_ID).unwrap()],
             derivation_origin: derivation_origin.clone(),
             frontend_hostname: derivation_origin,
         }
