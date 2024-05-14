@@ -47,14 +47,10 @@ jobs:
         dfx canister create --all
     - name: Set env variables
       run: |
-        export VITE_LOCAL_CIVIC_FRONTEND_CANISTER_ID=$(dfx canister id civic_canister_frontend)
-        export VITE_LOCAL_INTERNET_IDENTITY_CANISTER_ID=$(dfx canister id internet_identity)
-        export VITE_LOCAL_CIVIC_BACKEND_CANISTER_ID=$(dfx canister id civic_canister_backend)
-        export VITE_LOCAL_RELYING_FRONTEND_CANISTER_ID=$(dfx canister id relying_canister_frontend)
+        scripts/set-env-vars.sh
     - name: Deploy Civic Canister and Internet Identity
       run: |
-        src/civic_canister_backend/deploy-civic.sh
-        dfx deploy internet_identity
+        scripts/deploy-civic.sh
     - name: Deploy RP 
       id: deploy_rp
       continue-on-error: true
@@ -70,4 +66,3 @@ jobs:
       run: |
         chmod +x ic-test-state-machine
         cargo test --test integration_tests
-    - run: echo "🐧 This job's status is ${{ job.status }}."
