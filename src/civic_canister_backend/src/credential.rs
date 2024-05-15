@@ -103,7 +103,7 @@ pub(crate) struct StoredCredential {
     pub(crate)  issuer: String,
     pub(crate)  claim: Vec<Claim>,
 }
-#[derive(CandidType)]
+#[derive(CandidType, Deserialize, Debug)]
 pub(crate) enum CredentialError {
     NoCredentialFound(String),
     UnauthorizedSubject(String),
