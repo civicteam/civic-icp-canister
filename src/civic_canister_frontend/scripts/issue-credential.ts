@@ -46,6 +46,8 @@ const credential = {
 const storeCredential = async () => {
   const identity = Secp256k1KeyIdentity.fromSecretKey(dummyCivicSampleKey);
   const agent = new HttpAgent({ identity, host: "http://127.0.0.1:4943" });
+  console.log('#### Using Civic Principal:', identity.getPrincipal().toText());
+
   agent.fetchRootKey();
   const actor = Actor.createActor(civic, {
     agent: agent,
