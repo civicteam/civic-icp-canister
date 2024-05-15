@@ -50,16 +50,12 @@ type ConfigCell = StableCell<IssuerConfig, Memory>;
 const MINUTE_NS: u64 = 60 * 1_000_000_000;
 const PROD_II_CANISTER_ID: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai";
 const VC_EXPIRATION_PERIOD_NS: u64 = 15 * MINUTE_NS;
-// Authorized Civic Principal - get this from the frontend
-const AUTHORIZED_PRINCIPAL: &str = "tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae";
 
 lazy_static! {
     // Seed and public key used for signing the credentials.
     static ref CANISTER_SIG_SEED: Vec<u8> = hash_bytes("some_random_seed").to_vec();
     static ref CANISTER_SIG_PK: CanisterSigPublicKey = CanisterSigPublicKey::new(ic_cdk::id(), CANISTER_SIG_SEED.clone());
 }
-
-
 
 #[derive(Debug)]
 pub enum SupportedCredentialType {
@@ -95,7 +91,7 @@ fn config_memory() -> Memory {
 #[cfg(target_arch = "wasm32")]
 use ic_cdk::println;
 
-#[derive(CandidType, Deserialize)]
+#[derive(Clone, Debug, CandidType, Deserialize)]
 struct IssuerConfig {
     /// Root of trust for checking canister signatures.
     ic_root_key_raw: Vec<u8>,
@@ -105,6 +101,10 @@ struct IssuerConfig {
     derivation_origin: String,
     /// Frontend hostname to be used by the issuer.
     frontend_hostname: String,
+    // Admin who can add authorized issuers
+    admin: Principal,                
+    // List of authorized issuers who can issue credentials 
+    authorized_issuers: Vec<Principal>,
 }
 
 impl Storable for IssuerConfig {
@@ -126,6 +126,8 @@ impl Default for IssuerConfig {
             idp_canister_ids: vec![Principal::from_text(PROD_II_CANISTER_ID).unwrap()],
             derivation_origin: derivation_origin.clone(),
             frontend_hostname: derivation_origin,
+            admin: ic_cdk::api::caller(),
+            authorized_issuers: [ic_cdk::api::caller()],
         }
     }
 }
@@ -139,6 +141,8 @@ impl From<IssuerInit> for IssuerConfig {
             idp_canister_ids: init.idp_canister_ids,
             derivation_origin: init.derivation_origin,
             frontend_hostname: init.frontend_hostname,
+            admin: init.admin,
+            authorized_issuers: init.authorized_issuers,
         }
     }
 
@@ -154,6 +158,10 @@ struct IssuerInit {
     derivation_origin: String,
     /// Frontend hostname be used by the issuer.
     frontend_hostname: String,
+    // Admin who can add authorized issuers
+    admin: Principal,
+    // List of authorized issuers who can issue credentials
+    authorized_issuers: Vec<Principal>,
 }
 
 #[init]
@@ -161,9 +169,54 @@ struct IssuerInit {
 fn init(init_arg: Option<IssuerInit>) {
     if let Some(init) = init_arg {
         apply_config(init);
-    };
-
+    } else {
+        // Initialize with default values and a specified admin
+        let default_config = IssuerConfig::default();
+        CONFIG.with(|config_cell| {
+            let mut config = config_cell.borrow_mut();
+            *config = ConfigCell::init(config_memory(), default_config).expect("Failed to initialize config");
+        });
+    }
     init_assets();
+}
+
+#[update]
+#[candid_method(update)]
+fn add_issuer(new_issuer: Principal) {
+    let caller = ic_cdk::api::caller();
+    CONFIG.with(|config_cell| {
+        let mut config = config_cell.borrow_mut();
+        // Retrieve the current configuration
+        let mut current_config = config.get().clone(); // Clone into a mutable local variable
+
+        // Check if the caller is the admin and modify the config
+        if caller == current_config.admin {
+            current_config.authorized_issuers.insert(new_issuer);
+            // Save the updated configuration
+            let _ = config.set(current_config); // Pass the modified IssuerConfig back to set
+        } else {
+            ic_cdk::api::trap("Caller is not authorized as admin.");
+        }
+    });
+}
+
+#[update]
+#[candid_method(update)]
+fn remove_issuer(issuer: Principal) {
+    let caller = ic_cdk::api::caller();
+    CONFIG.with(|config_cell| {
+        let mut config = config_cell.borrow_mut();
+        // Retrieve the current configuration
+        let mut current_config = config.get().clone(); // Clone into a mutable local variable
+
+        if caller == current_config.admin {
+            current_config.authorized_issuers.remove(&issuer);
+            // Save the updated configuration
+            let _ = config.set(current_config); // Pass the modified IssuerConfig back to set
+        } else {
+            ic_cdk::api::trap("Caller is not authorized as admin.");
+        }
+    });
 }
 
 #[post_upgrade]
@@ -455,24 +508,30 @@ fn get_derivation_origin(hostname: &str) -> Result<DerivationOriginData, Derivat
     })
 }
 
-
 #[update]
-#[candid_method]
+#[candid_method(update)]
 fn add_credentials(principal: Principal, new_credentials: Vec<StoredCredential>) -> String {
-    // Check if the caller is the authorized principal
-    if caller().to_text() != AUTHORIZED_PRINCIPAL {
+    let caller = ic_cdk::api::caller();
+
+    // Access the configuration and check if the caller is an authorized issuer
+    let is_authorized = CONFIG.with(|config_cell| {
+        let config = config_cell.borrow();
+        let current_config = config.get();
+        current_config.authorized_issuers.contains(&caller)
+    });
+
+    if !is_authorized {
         return "Unauthorized: You do not have permission to add credentials.".to_string();
     }
 
+    // If authorized, proceed to add credentials
     CREDENTIALS.with_borrow_mut(|credentials| {
-            let entry = credentials.entry(principal).or_insert_with(Vec::new);
-            entry.extend(new_credentials.clone());    
-        });
-    let credential_info = format!("Added credentials: \n{:?}", new_credentials);
-    credential_info
+        let entry = credentials.entry(principal).or_insert_with(Vec::new);
+        entry.extend(new_credentials.clone());
+    });
+
+    format!("Added credentials: \n{:?}", new_credentials)
 }
-
-
 
 #[query]
 #[candid_method(query)]

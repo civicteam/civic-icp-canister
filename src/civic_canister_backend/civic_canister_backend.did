@@ -49,6 +49,8 @@ type IssuerInit = record {
   idp_canister_ids : vec principal;
   ic_root_key_der : blob;
   frontend_hostname : text;
+  admin: principal;
+  authorized_issuers: vec principal;
 };
 type PrepareCredentialRequest = record {
   signed_id_alias : SignedIdAlias;
@@ -77,6 +79,7 @@ type StoredCredential = record {
   issuer : text;
 };
 service : (opt IssuerInit) -> {
+  init: (opt IssuerConfig) -> ();
   add_credentials : (principal, vec StoredCredential) -> (text);
   configure : (IssuerInit) -> ();
   derivation_origin : (DerivationOriginRequest) -> (Result);
