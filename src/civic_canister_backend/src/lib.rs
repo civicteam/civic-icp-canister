@@ -1,5 +1,5 @@
 pub mod types;
-use types::{Claim, StoredCredential, CredentialError, add_context, build_claims_into_credentialSubjects};
+use types::{Claim, StoredCredential, CredentialError, add_context, build_claims_into_credential_subjects};
 
 mod consent_message;
 use consent_message::{get_vc_consent_message, SupportedLanguage};
@@ -37,7 +37,7 @@ use vc_util::{ did_for_principal, get_verified_id_alias_from_jws, vc_jwt_to_jws,
 use ic_cdk::{api, print};
 use lazy_static::lazy_static;
 use ic_cdk_macros::post_upgrade;
-use identity_credential::credential::{CredentialBuilder};
+use identity_credential::credential::CredentialBuilder;
 use identity_core::common::{Timestamp, Url};
 
 
@@ -550,7 +550,7 @@ pub fn build_credential_jwt(params: CredentialParams) -> String {
     // let subject = Subject::from_json_value(subject_json).unwrap();
 
     // build "credentialSubject" objects
-    let subjects = build_claims_into_credentialSubjects(params.claims, params.subject_id); 
+    let subjects = build_claims_into_credential_subjects(params.claims, params.subject_id); 
     let expiration_date = Timestamp::from_unix(params.expiration_timestamp_s as i64)
         .expect("internal: failed computing expiration timestamp");
 

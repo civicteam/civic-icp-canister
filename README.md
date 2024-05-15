@@ -15,14 +15,6 @@ cargo install ic-wasm
 
 ## Usage
 ### Setup
-Initialize/Update the submodule with 
-```
-git submodule init
-git submodule update 
-```
-(alternatively clone with `--recurse-submodules`)
-
-Start the local ICP replica (if needed) 
 ```
 dfx start --clean --background 
 ```

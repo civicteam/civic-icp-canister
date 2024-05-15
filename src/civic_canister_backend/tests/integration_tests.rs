@@ -23,19 +23,15 @@ use lazy_static::lazy_static;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::time::{UNIX_EPOCH};
+use std::time::UNIX_EPOCH;
 use vc_util::issuer_api::{
-    CredentialSpec, DerivationOriginData, DerivationOriginError,
-    DerivationOriginRequest, GetCredentialRequest, Icrc21ConsentInfo,
-    Icrc21Error, Icrc21VcConsentMessageRequest, IssueCredentialError, IssuedCredentialData,
+    CredentialSpec, GetCredentialRequest, IssueCredentialError, IssuedCredentialData,
     PrepareCredentialRequest, PreparedCredentialData, SignedIdAlias as SignedIssuerIdAlias,
 };
 use vc_util::{
     get_verified_id_alias_from_jws, verify_credential_jws_with_canister_id
 
 };
-
-// use crate::civic_canister_backend::types::{Claim, StoredCredential, CredentialError, ClaimValue, build_claims_into_credentialSubjects, add_context};
 
 const DUMMY_ROOT_KEY: &str ="308182301d060d2b0601040182dc7c0503010201060c2b0601040182dc7c05030201036100adf65638a53056b2222c91bb2457b0274bca95198a5acbdadfe7fd72178f069bdea8d99e9479d8087a2686fc81bf3c4b11fe275570d481f1698f79d468afe0e57acc1e298f8b69798da7a891bbec197093ec5f475909923d48bfed6843dbed1f";
 const DUMMY_II_CANISTER_ID: &str = "rwlgt-iiaaa-aaaaa-aaaaa-cai";
@@ -112,38 +108,6 @@ mod api {
         config: &IssuerInit,
     ) -> Result<(), CallError> {
         call_candid(env, canister_id, "configure", (config,))
-    }
-
-    pub fn vc_consent_message(
-        env: &StateMachine,
-        canister_id: CanisterId,
-        sender: Principal,
-        consent_message_request: &Icrc21VcConsentMessageRequest,
-    ) -> Result<Result<Icrc21ConsentInfo, Icrc21Error>, CallError> {
-        call_candid_as(
-            env,
-            canister_id,
-            sender,
-            "vc_consent_message",
-            (consent_message_request,),
-        )
-        .map(|(x,)| x)
-    }
-
-    pub fn derivation_origin(
-        env: &StateMachine,
-        canister_id: CanisterId,
-        sender: Principal,
-        derivation_origin_req: &DerivationOriginRequest,
-    ) -> Result<Result<DerivationOriginData, DerivationOriginError>, CallError> {
-        call_candid_as(
-            env,
-            canister_id,
-            sender,
-            "derivation_origin",
-            (derivation_origin_req,),
-        )
-        .map(|(x,)| x)
     }
 
     pub fn add_adult(
@@ -501,9 +465,9 @@ fn construct_adult_credential () -> StoredCredential {
 // ==================================================
 
 
-use std::collections::{ BTreeMap};
+use std::collections::BTreeMap;
 use identity_credential::credential::{CredentialBuilder, Subject};
-use serde::{Serialize};
+use serde::Serialize;
 pub use serde_json::Value;
 // use candid::CandidType;
 use identity_core::common::Url;
@@ -567,7 +531,7 @@ pub enum CredentialError {
 /// id: SubjectId, 
 /// otherData
 ///  }
-pub fn build_claims_into_credentialSubjects(claims: Vec<Claim>, subject: String) -> Vec<Subject> {
+pub fn build_claims_into_credential_subjects(claims: Vec<Claim>, subject: String) -> Vec<Subject> {
     claims.into_iter().zip(repeat(subject)).map(|(c, id )|{
         let mut sub = c.into();
         sub.id = Url::parse(id).ok();
