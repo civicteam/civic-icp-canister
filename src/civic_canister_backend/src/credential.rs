@@ -28,7 +28,7 @@ use lazy_static::lazy_static;
 // Assuming these are defined in the same or another module that needs to be imported
 extern crate asset_util;
 
-use crate::utils::{CONFIG, CREDENTIALS, SIGNATURES, ASSETS};
+use crate::config::{CONFIG, CREDENTIALS, SIGNATURES, ASSETS};
 use identity_core::common::Timestamp;
 
 // The expiration of issued verifiable credentials.
@@ -105,7 +105,8 @@ pub(crate) struct StoredCredential {
 }
 #[derive(CandidType)]
 pub(crate) enum CredentialError {
-    NoCredentialsFound(String),
+    NoCredentialFound(String),
+    UnauthorizedSubject(String),
 }
 
 
@@ -162,10 +163,10 @@ fn authorize_vc_request(
 
 #[update]
 #[candid_method]
-fn add_credentials(principal: Principal, new_credentials: Vec<StoredCredential>) -> String {
+fn add_credentials(principal: Principal, new_credentials: Vec<StoredCredential>) -> Result<String, CredentialError>  {
     // Check if the caller is the authorized principal
     if caller().to_text() != AUTHORIZED_PRINCIPAL {
-        return "Unauthorized: You do not have permission to add credentials.".to_string();
+        return Err(CredentialError::UnauthorizedSubject("Unauthorized: You do not have permission to add credentials.".to_string()));
     }
 
     CREDENTIALS.with_borrow_mut(|credentials| {
@@ -173,9 +174,28 @@ fn add_credentials(principal: Principal, new_credentials: Vec<StoredCredential>)
             entry.extend(new_credentials.clone());    
         });
     let credential_info = format!("Added credentials: \n{:?}", new_credentials);
-    credential_info
+    Ok(credential_info)
 }
 
+#[update]
+#[candid_method]
+fn update_credential(principal: Principal, credential_id: String, updated_credential: StoredCredential) -> Result<String, CredentialError> {
+    // Check if the caller is the authorized principal
+    if caller().to_text() != AUTHORIZED_PRINCIPAL {
+        return Err(CredentialError::UnauthorizedSubject("Unauthorized: You do not have permission to update credentials.".to_string()));
+    }
+
+    // Access the credentials storage and attempt to update the specified credential
+    CREDENTIALS.with_borrow_mut(|credentials| {
+        if let Some(creds) = credentials.get_mut(&principal) {
+            if let Some(pos) = creds.iter().position(|c| c.id == credential_id) {
+                creds[pos] = updated_credential.clone();
+                return Ok(format!("Credential updated successfully: {:?}", updated_credential));
+            }
+        }
+        Err(CredentialError::NoCredentialFound(format!("No credential found with ID {} for principal {}", credential_id, principal.to_text())))
+    })
+}
 
 #[update]
 #[candid_method]
@@ -413,7 +433,7 @@ fn get_all_credentials(principal: Principal) -> Result<Vec<StoredCredential>, Cr
     }) {
         Ok(c)
     } else {
-        Err(CredentialError::NoCredentialsFound(format!("No credentials found for principal {}", principal.to_text())))
+        Err(CredentialError::NoCredentialFound(format!("No credentials found for principal {}", principal.to_text())))
     }
 }
 
@@ -427,6 +447,7 @@ fn hash_bytes(value: impl AsRef<[u8]>) -> Hash {
 fn exp_timestamp_s() -> u32 {
     ((time() + VC_EXPIRATION_PERIOD_NS) / 1_000_000_000) as u32
 }
+
 
 
 // pub fn add_types(mut credential: CredentialBuilder, types: Vec<String>) -> CredentialBuilder {
