@@ -127,7 +127,7 @@ impl Default for IssuerConfig {
             derivation_origin: derivation_origin.clone(),
             frontend_hostname: derivation_origin,
             admin: ic_cdk::api::caller(),
-            authorized_issuers: [ic_cdk::api::caller()],
+            authorized_issuers: vec![ic_cdk::api::caller()],
         }
     }
 }
@@ -191,7 +191,10 @@ fn add_issuer(new_issuer: Principal) {
 
         // Check if the caller is the admin and modify the config
         if caller == current_config.admin {
-            current_config.authorized_issuers.insert(new_issuer);
+            // Ensure no duplicates if that's intended
+            if !current_config.authorized_issuers.contains(&new_issuer) {
+                current_config.authorized_issuers.push(new_issuer);
+            }
             // Save the updated configuration
             let _ = config.set(current_config); // Pass the modified IssuerConfig back to set
         } else {
@@ -210,7 +213,8 @@ fn remove_issuer(issuer: Principal) {
         let mut current_config = config.get().clone(); // Clone into a mutable local variable
 
         if caller == current_config.admin {
-            current_config.authorized_issuers.remove(&issuer);
+            // Remove the issuer if they exist in the list
+            current_config.authorized_issuers.retain(|x| *x != issuer);
             // Save the updated configuration
             let _ = config.set(current_config); // Pass the modified IssuerConfig back to set
         } else {
