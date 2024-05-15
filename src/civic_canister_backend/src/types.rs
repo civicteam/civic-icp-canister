@@ -57,15 +57,7 @@ pub(crate) enum CredentialError {
     NoCredentialsFound(String),
 }
 
-
-// Helper functions for constructing the credential that is returned from the canister 
-
-/// Build a credentialSubject {
-/// id: SubjectId, 
-/// otherData
-///  }
-
-pub(crate) fn build_claims_into_credentialSubjects(claims: Vec<Claim>, subject: String) -> Vec<Subject> {
+pub(crate) fn build_claims_into_credential_subjects(claims: Vec<Claim>, subject: String) -> Vec<Subject> {
     claims.into_iter().zip(repeat(subject)).map(|(c, id )|{
         let mut sub = c.into();
         sub.id = Url::parse(id).ok();
@@ -80,10 +72,3 @@ pub(crate) fn add_context(mut credential: CredentialBuilder, context: Vec<String
     }
     credential
 }
-
-// pub fn add_types(mut credential: CredentialBuilder, types: Vec<String>) -> CredentialBuilder {
-//     for t in types {
-//      credential = credential.type_(t);
-//     }
-//     credential
-// }

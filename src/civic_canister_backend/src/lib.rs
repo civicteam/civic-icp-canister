@@ -34,7 +34,7 @@ use vc_util::issuer_api::{
 use vc_util::{ did_for_principal, get_verified_id_alias_from_jws, vc_jwt_to_jws,
     vc_signing_input, vc_signing_input_hash, AliasTuple,
 };
-use ic_cdk::{api, print};
+use ic_cdk::api;
 use lazy_static::lazy_static;
 use ic_cdk_macros::post_upgrade;
 use identity_credential::credential::CredentialBuilder;
@@ -529,7 +529,7 @@ fn exp_timestamp_s() -> u32 {
 }
 
 
- struct CredentialParams {
+ pub struct CredentialParams {
      spec: CredentialSpec,
      subject_id: String,
      credential_id_url: String, 
@@ -539,17 +539,7 @@ fn exp_timestamp_s() -> u32 {
      expiration_timestamp_s: u32,
 }
 
-
-/// Builds a verifiable credential with the given parameters and returns the credential as a JWT-string.
 pub fn build_credential_jwt(params: CredentialParams) -> String {
-    // let mut subject_json = json!({"id": params.subject_id});
-    // subject_json.as_object_mut().unwrap().insert(
-    //     params.spec.credential_type.clone(),
-    //     credential_spec_args_to_json(&params.spec),
-    // );
-    // let subject = Subject::from_json_value(subject_json).unwrap();
-
-    // build "credentialSubject" objects
     let subjects = build_claims_into_credential_subjects(params.claims, params.subject_id); 
     let expiration_date = Timestamp::from_unix(params.expiration_timestamp_s as i64)
         .expect("internal: failed computing expiration timestamp");
@@ -562,10 +552,7 @@ pub fn build_credential_jwt(params: CredentialParams) -> String {
         .subjects(subjects) // add objects to the credentialSubject 
         .expiration_date(expiration_date);
 
-    // add all the context 
     credential = add_context(credential, params.context);
-    // //add all the type data 
-    // credential = add_types(credential, params.types_);
 
     let credential = credential.build().unwrap();
     credential.serialize_jwt().unwrap()
@@ -590,30 +577,3 @@ pub struct HttpResponse {
 }
 
 ic_cdk::export_candid!();
-
-
-// candid::export_service!();
-
-// #[cfg(test)]
-// mod test {
-//     use crate::__export_service;
-//     use candid_parser::utils::{service_equal, CandidSource};
-//     use std::path::Path;
-
-//     /// Checks candid interface type equality by making sure that the service in the did file is
-//     /// a subtype of the generated interface and vice versa.
-//     #[test]
-//     fn check_candid_interface_compatibility() {
-//         let canister_interface = __export_service();
-//         service_equal(
-//             CandidSource::Text(&canister_interface),
-//             CandidSource::File(Path::new("civic_canister_backend.did")),
-//         )
-//         .unwrap_or_else(|e| {
-//             panic!(
-//                 "the canister code interface is not equal to the did file: {:?}",
-//                 e
-//             )
-//         });
-//     }
-// }
