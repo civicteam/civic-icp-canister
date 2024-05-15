@@ -16,8 +16,8 @@ const dummyCivicSampleKey = new Uint8Array([
   179, 125, 33, 172, 58, 152, 14, 160, 114, 17, 22, 118, 0, 41, 243,
 ]);
 
-// Dummy principal for testing purposes
-const principal = Principal.fromText("76y74-qa4vu-2cdd6-typ2d-4c57m-jixbc-dmusq-uvl3n-635df-if7wp-qae");
+// Dummy principal for testing purposes - this is the principal from the vc-flows that represents the user id from the civic POV (the same user that logs into the demo RP)
+const principal = Principal.fromText("vf76i-nmrzf-fiv3u-tnduz-litud-n6xqn-yw4em-c32vp-m55jf-fgsys-3ae");
 
 // Define the dummy credential
 const id = ["id", { Text: "did:example:c276e12ec21ebfeb1f712ebc6f1" }];
@@ -45,7 +45,7 @@ const credential = {
 // Function to store the credential
 const storeCredential = async () => {
   const identity = Secp256k1KeyIdentity.fromSecretKey(dummyCivicSampleKey);
-  const agent = new HttpAgent({ identity });
+  const agent = new HttpAgent({ identity, host: "http://127.0.0.1:4943" });
   agent.fetchRootKey();
   const actor = Actor.createActor(civic, {
     agent: agent,
@@ -55,6 +55,8 @@ const storeCredential = async () => {
   console.log("Adding credential:", credential);
   const result = await actor.add_credentials(principal, [credential]);
   console.log("Credential added:", result);
+  const vc = await actor.get_all_credentials(principal);
+  console.log("Credential fetched:", vc);
 };
 
 // Run the function
