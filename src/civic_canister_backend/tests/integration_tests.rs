@@ -8,7 +8,7 @@ use canister_tests::api::http_request;
 
 use canister_tests::api::internet_identity::vc_mvp as ii_api;
 use canister_tests::flows;
-use canister_tests::framework::{env, get_wasm_path, principal_1, test_principal, II_WASM, time};
+use canister_tests::framework::{env, get_wasm_path, principal, principal_1, test_principal, time, II_WASM};
 use ic_cdk::api::management_canister::provisional::CanisterId;
 
 use ic_response_verification::types::VerificationInfo;
@@ -300,7 +300,7 @@ fn should_return_derivation_origin_with_custom_init() {
 fn should_update_credential_successfully() {
     let env = env();
     let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
-    let principal = Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae").unwrap();
+    let principal = principal_1();
     let original_credential = construct_adult_credential();
     let mut updated_credential = construct_adult_credential();
     updated_credential.claim[0].claims.entry("Is over 18".to_string()).and_modify(|x| *x = ClaimValue::Boolean(false));
@@ -331,35 +331,11 @@ fn should_update_credential_successfully() {
 
 }
 
-// #[test]
-// fn should_fail_update_credential_if_not_authorized() {
-//     let env = env();
-//     let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
-//     let principal = Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae").unwrap();
-//     let unauthorized_principal = test_principal(2);
-//     let credential = construct_adult_credential();
-
-//         // Add a credential first to update it later
-//     api::add_credentials(&env, issuer_id, principal, credential.clone()).expect("failed to add credential");
-
-//     // Attempt to update a credential with an unauthorized principal
-//     let response = api::update_credential(
-//         &env,
-//         issuer_id,
-//         principal,
-//         credential.id.clone(),
-//         credential,
-//     )
-//     .expect("API call should fail");
-
-//     assert_matches!(response, Err(CredentialError::UnauthorizedSubject(_)));
-// }
-
 #[test]
 fn should_fail_update_credential_if_not_found() {
     let env = env();
     let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
-    let principal = Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae").unwrap();
+    let principal = principal_1();
     let credential = construct_adult_credential();
 
     // Attempt to update a non-existing credential
