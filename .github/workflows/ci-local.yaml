@@ -1,11 +1,6 @@
 name: CI Build and Test (Local setup)
 
 on: [push, pull_request]
-  # push:
-  #   branches: [ "develop" ]
-  # pull_request:
-  #   branches: [ "develop" ]
-
 
 env:
   CARGO_TERM_COLOR: always
