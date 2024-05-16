@@ -240,6 +240,15 @@ fn apply_config(init: IssuerInit) {
         .expect("failed to apply issuer config");
 }
 
+#[query]
+fn get_admin() -> Principal {
+    CONFIG.with(|config| {
+        let config_borrowed = config.borrow(); // Obtain a read-only borrow
+        // Now you can access the config
+        return config_borrowed.get().admin;
+    })
+}
+
 fn authorize_vc_request(
     alias: &SignedIdAlias,
     expected_vc_subject: &Principal,
@@ -247,6 +256,7 @@ fn authorize_vc_request(
 ) -> Result<AliasTuple, IssueCredentialError> {
     CONFIG.with_borrow(|config| {
         let config = config.get();
+        config.admin;
         
         // check if the ID alias is legitimate and was issued by the internet identity canister    
         for idp_canister_id in &config.idp_canister_ids {
@@ -455,15 +465,15 @@ fn verify_authorized_principal(
         }
     } 
     // no (matching) credential found for this user 
-        println!(
-            "*** principal {} it is not authorized for credential type {:?}",
-            alias_tuple.id_dapp.to_text(),
-            credential_type
-        );
-        Err(IssueCredentialError::UnauthorizedSubject(format!(
-            "unauthorized principal {}",
-            alias_tuple.id_dapp.to_text()
-        )))
+    println!(
+        "*** principal {} it is not authorized for credential type {:?}",
+        alias_tuple.id_dapp.to_text(),
+        credential_type
+    );
+    Err(IssueCredentialError::UnauthorizedSubject(format!(
+        "unauthorized principal {}",
+        alias_tuple.id_dapp.to_text()
+    )))
 }
 
 
