@@ -25,6 +25,7 @@
     "useDefineForClassFields": true
   },
   "include": [
-    "src"
+    "./src",
+    "./scripts"
   ]
 }

@@ -739,9 +739,9 @@ fn construct_adult_credential () -> StoredCredential {
 // ==================================================
 
 
-use std::collections::{ BTreeMap};
+use std::collections::BTreeMap;
 use identity_credential::credential::{CredentialBuilder, Subject};
-use serde::{Serialize};
+use serde::Serialize;
 pub use serde_json::Value;
 // use candid::CandidType;
 use identity_core::common::Url;
@@ -806,7 +806,7 @@ pub enum CredentialError {
 /// id: SubjectId, 
 /// otherData
 ///  }
-pub fn build_claims_into_credentialSubjects(claims: Vec<Claim>, subject: String) -> Vec<Subject> {
+pub fn build_claims_into_credential_subjects(claims: Vec<Claim>, subject: String) -> Vec<Subject> {
     claims.into_iter().zip(repeat(subject)).map(|(c, id )|{
         let mut sub = c.into();
         sub.id = Url::parse(id).ok();
