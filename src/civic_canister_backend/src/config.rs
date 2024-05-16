@@ -1,26 +1,15 @@
-
 use std::cell::RefCell;
 use std::collections::HashMap;
 use canister_sig_util::signature_map::{SignatureMap, LABEL_SIG};
-use crate::credential::{StoredCredential, update_root_hash};
-
-use crate::consent_message::{get_vc_consent_message, SupportedLanguage};
-
 use candid::{candid_method, CandidType, Deserialize, Principal};
-// use ic_cdk::candid::candid_method;
 use canister_sig_util::{extract_raw_root_pk_from_der, IC_ROOT_PK_DER};
-
-
-use ic_cdk_macros::{init, query, update};
+use ic_cdk_macros::{init, query, update, post_upgrade};
+use ic_cdk::api;
 use ic_certification::{labeled_hash, pruned};
-
 use ic_stable_structures::storable::Bound;
 use ic_stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableCell, Storable};
 use include_dir::{include_dir, Dir};
-
 use serde_bytes::ByteBuf;
-
-
 use std::borrow::Cow;
 use asset_util::{collect_assets, CertifiedAssets};
 use vc_util::issuer_api::{
@@ -28,16 +17,11 @@ use vc_util::issuer_api::{
     DerivationOriginRequest, Icrc21ConsentInfo, Icrc21Error,
     Icrc21VcConsentMessageRequest
 };
-
-use ic_cdk::api;
-
-use ic_cdk_macros::post_upgrade;
-
-
+use crate::credential::{StoredCredential, update_root_hash};
+use crate::consent_message::{get_vc_consent_message, SupportedLanguage};
 
 
 const PROD_II_CANISTER_ID: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai";
-
 
 thread_local! {
     /// Static configuration of the canister set by init() or post_upgrade().
@@ -53,7 +37,6 @@ thread_local! {
 /// and the managed memory for potential other data of the canister.
 type Memory = RestrictedMemory<DefaultMemoryImpl>;
 type ConfigCell = StableCell<IssuerConfig, Memory>;
-
 
 
 /// Reserve the first stable memory page for the configuration stable cell.
@@ -98,7 +81,6 @@ impl Default for IssuerConfig {
         }
     }
 }
-
 
 impl From<IssuerInit> for IssuerConfig {
     fn from(init: IssuerInit) -> Self {
@@ -215,9 +197,6 @@ fn get_derivation_origin(hostname: &str) -> Result<DerivationOriginData, Derivat
         })
     })
 }
-
-
-
 
 // To solve the CORS error during the vc-flow 
 #[query]

@@ -1,35 +1,29 @@
 use std::fmt;
-use candid::{CandidType, Deserialize, Principal};
-use candid::candid_method;
-
+use std::collections::{HashMap, BTreeMap};
+use std::iter::repeat;
+use candid::{CandidType, Deserialize, Principal, candid_method};
 use serde::Serialize;
 use serde_json::Value;
-use std::collections::{HashMap, BTreeMap};
 use identity_credential::credential::{CredentialBuilder, Subject};
 use identity_core::common::Url;
-use std::iter::repeat;
 use canister_sig_util::signature_map::LABEL_SIG;
 use sha2::{Digest, Sha256};
-
 use ic_cdk::api::{caller, set_certified_data, time};
 use ic_cdk_macros::{update, query};
 use vc_util::issuer_api::{
     CredentialSpec, GetCredentialRequest, IssueCredentialError, IssuedCredentialData,
     PrepareCredentialRequest, PreparedCredentialData, SignedIdAlias
 };
-
 use vc_util::{did_for_principal, get_verified_id_alias_from_jws, vc_jwt_to_jws, vc_signing_input, vc_signing_input_hash, AliasTuple};
 use canister_sig_util::CanisterSigPublicKey;
 use ic_certification::{Hash, fork_hash, labeled_hash};
 use serde_bytes::ByteBuf;
-
 use lazy_static::lazy_static;
+use identity_core::common::Timestamp;
 
-// Assuming these are defined in the same or another module that needs to be imported
 extern crate asset_util;
 
 use crate::config::{CONFIG, CREDENTIALS, SIGNATURES, ASSETS};
-use identity_core::common::Timestamp;
 
 // The expiration of issued verifiable credentials.
 const MINUTE_NS: u64 = 60 * 1_000_000_000;
@@ -109,30 +103,6 @@ pub(crate) enum CredentialError {
     UnauthorizedSubject(String),
 }
 
-
-// Helper functions for constructing the credential that is returned from the canister 
-
-/// Build a credentialSubject {
-/// id: SubjectId, 
-/// otherData
-///  }
-
-pub(crate) fn build_claims_into_credential_subjects(claims: Vec<Claim>, subject: String) -> Vec<Subject> {
-    claims.into_iter().zip(repeat(subject)).map(|(c, id )|{
-        let mut sub = c.into();
-        sub.id = Url::parse(id).ok();
-        sub
-    }).collect()
-}
-
-
-pub(crate) fn add_context(mut credential: CredentialBuilder, context: Vec<String>) -> CredentialBuilder {
-    for c in context {
-     credential = credential.context(Url::parse(c).unwrap());
-    }
-    credential
-}
-
 fn authorize_vc_request(
     alias: &SignedIdAlias,
     expected_vc_subject: &Principal,
@@ -202,7 +172,6 @@ fn update_credential(principal: Principal, credential_id: String, updated_creden
 async fn prepare_credential(
     req: PrepareCredentialRequest,
 ) -> Result<PreparedCredentialData, IssueCredentialError> {
-    // here we need to acquire the user principal and use it instead of caller
     let alias_tuple = match authorize_vc_request(&req.signed_id_alias, &caller(), time().into()) {
         Ok(alias_tuple) => alias_tuple,
         Err(err) => return Err(err),
@@ -395,13 +364,6 @@ pub (crate) fn verify_credential_spec(spec: &CredentialSpec) -> Result<Supported
 
 /// Builds a verifiable credential with the given parameters and returns the credential as a JWT-string.
 fn build_credential_jwt(params: CredentialParams) -> String {
-    // let mut subject_json = json!({"id": params.subject_id});
-    // subject_json.as_object_mut().unwrap().insert(
-    //     params.spec.credential_type.clone(),
-    //     credential_spec_args_to_json(&params.spec),
-    // );
-    // let subject = Subject::from_json_value(subject_json).unwrap();
-
     // build "credentialSubject" objects
     let subjects = build_claims_into_credential_subjects(params.claims, params.subject_id); 
     let expiration_date = Timestamp::from_unix(params.expiration_timestamp_s as i64)
@@ -417,8 +379,6 @@ fn build_credential_jwt(params: CredentialParams) -> String {
 
     // add all the context 
     credential = add_context(credential, params.context);
-    // //add all the type data 
-    // credential = add_types(credential, params.types_);
 
     let credential = credential.build().unwrap();
     credential.serialize_jwt().unwrap()
@@ -449,10 +409,19 @@ fn exp_timestamp_s() -> u32 {
 }
 
 
+// Helper functions for constructing the credential that is returned from the canister 
+pub(crate) fn build_claims_into_credential_subjects(claims: Vec<Claim>, subject: String) -> Vec<Subject> {
+    claims.into_iter().zip(repeat(subject)).map(|(c, id )|{
+        let mut sub = c.into();
+        sub.id = Url::parse(id).ok();
+        sub
+    }).collect()
+}
 
-// pub fn add_types(mut credential: CredentialBuilder, types: Vec<String>) -> CredentialBuilder {
-//     for t in types {
-//      credential = credential.type_(t);
-//     }
-//     credential
-// }
+
+pub(crate) fn add_context(mut credential: CredentialBuilder, context: Vec<String>) -> CredentialBuilder {
+    for c in context {
+     credential = credential.context(Url::parse(c).unwrap());
+    }
+    credential
+}
