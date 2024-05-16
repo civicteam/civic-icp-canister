@@ -1,7 +1,6 @@
 //! This module contains the various consent messages that is displayed to the user when they are asked to consent to the issuance of a credential.
 
-use crate::verify_credential_spec;
-use crate::SupportedCredentialType;
+use crate::credential::{SupportedCredentialType, verify_credential_spec};
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};

@@ -4,15 +4,18 @@
 use assert_matches::assert_matches;
 use candid::{CandidType, Deserialize, Principal};
 use canister_sig_util::{extract_raw_root_pk_from_der, CanisterSigPublicKey};
+use canister_tests::api::http_request;
 
 use canister_tests::api::internet_identity::vc_mvp as ii_api;
 use canister_tests::flows;
-use canister_tests::framework::{env, get_wasm_path, principal_1, test_principal, II_WASM};
+use canister_tests::framework::{env, get_wasm_path, principal, principal_1, test_principal, time, II_WASM};
 use ic_cdk::api::management_canister::provisional::CanisterId;
 
-
+use ic_response_verification::types::VerificationInfo;
+use ic_response_verification::verify_request_response_pair;
 use ic_test_state_machine_client::{call_candid, call_candid_as};
 use ic_test_state_machine_client::{query_candid_as, CallError, StateMachine};
+use internet_identity_interface::http_gateway::{HttpRequest, HttpResponse};
 
 
 use internet_identity_interface::internet_identity::types::vc_mvp::{
@@ -20,13 +23,17 @@ use internet_identity_interface::internet_identity::types::vc_mvp::{
 };
 use internet_identity_interface::internet_identity::types::FrontendHostname;
 use lazy_static::lazy_static;
+use serde_bytes::ByteBuf;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::time::UNIX_EPOCH;
+use std::time::{Duration, UNIX_EPOCH};
 use vc_util::issuer_api::{
-    CredentialSpec, GetCredentialRequest, IssueCredentialError, IssuedCredentialData,
+    ArgumentValue, CredentialSpec, DerivationOriginData, DerivationOriginError,
+    DerivationOriginRequest, GetCredentialRequest, Icrc21ConsentInfo, Icrc21ConsentPreferences,
+    Icrc21Error, Icrc21VcConsentMessageRequest, IssueCredentialError, IssuedCredentialData,
     PrepareCredentialRequest, PreparedCredentialData, SignedIdAlias as SignedIssuerIdAlias,
+
 };
 use vc_util::{
     get_verified_id_alias_from_jws, verify_credential_jws_with_canister_id
@@ -110,14 +117,72 @@ mod api {
         call_candid(env, canister_id, "configure", (config,))
     }
 
-    pub fn add_adult(
+    pub fn vc_consent_message(
         env: &StateMachine,
         canister_id: CanisterId,
-        adult_id: Principal,
+        sender: Principal,
+        consent_message_request: &Icrc21VcConsentMessageRequest,
+    ) -> Result<Result<Icrc21ConsentInfo, Icrc21Error>, CallError> {
+        call_candid_as(
+            env,
+            canister_id,
+            sender,
+            "vc_consent_message",
+            (consent_message_request,),
+        )
+        .map(|(x,)| x)
+    }
+
+    pub fn derivation_origin(
+        env: &StateMachine,
+        canister_id: CanisterId,
+        sender: Principal,
+        derivation_origin_req: &DerivationOriginRequest,
+    ) -> Result<Result<DerivationOriginData, DerivationOriginError>, CallError> {
+        call_candid_as(
+            env,
+            canister_id,
+            sender,
+            "derivation_origin",
+            (derivation_origin_req,),
+        )
+        .map(|(x,)| x)
+    }
+
+    pub fn add_credentials(
+        env: &StateMachine,
+        canister_id: CanisterId,
+        user: Principal,
         credential: StoredCredential,
-    ) -> Result<String, CallError> {
+    ) -> Result<Result<String, CredentialError>, CallError> {
         let civic_issuer = Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae").unwrap();
-        call_candid_as(env, canister_id, civic_issuer, "add_credentials", (adult_id, vec!(credential), )).map(|(x,)| x)
+        call_candid_as(env, canister_id, civic_issuer, "add_credentials", (user, vec!(credential), ))
+        .map(|(x,)| x)
+    }
+
+    pub fn update_credential(
+        env: &StateMachine,
+        canister_id: CanisterId,
+        user: Principal,
+        credential_id: String,
+        updated_credential: StoredCredential
+    ) -> Result<Result<String, CredentialError>, CallError> {
+        let civic_issuer = Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae").unwrap();
+        call_candid_as(
+            env,
+            canister_id,
+            civic_issuer,
+            "update_credential",
+            (user, credential_id, updated_credential),
+        ).map(|(x,)| x)
+    }
+
+    pub fn get_all_credentials(
+        env: &StateMachine,
+        canister_id: CanisterId,
+        user: Principal,
+    ) -> Result<Result<Vec<StoredCredential>, CredentialError>, CallError> {
+        call_candid(env, canister_id, "get_all_credentials", (user,)).map(|(x,)| x)
     }
 
     pub fn prepare_credential(
@@ -163,6 +228,153 @@ fn adult_credential_spec() -> CredentialSpec {
 }
 
 #[test]
+fn should_return_vc_consent_message_for_adult_vc() {
+    let test_cases = [
+        ("en-US", "en", "# Verified Adult"),
+        ("de-DE", "de", "# Erwachsene Person"),
+        ("ja-JP", "en", "# Verified Adult"), // test fallback language
+    ];
+    let env = env();
+    let canister_id = install_canister(&env, CIVIV_CANISTER_BACKEND_WASM.clone());
+
+    for (requested_language, actual_language, consent_message_snippet) in test_cases {
+        let mut args = HashMap::new();
+        args.insert("minAge".to_string(), ArgumentValue::Int(18));
+        let consent_message_request = Icrc21VcConsentMessageRequest {
+            credential_spec: CredentialSpec {
+                credential_type: "VerifiedAdult".to_string(),
+                arguments: Some(args),
+            },
+            preferences: Icrc21ConsentPreferences {
+                language: requested_language.to_string(),
+            },
+        };
+
+        let response =
+            api::vc_consent_message(&env, canister_id, principal_1(), &consent_message_request)
+                .expect("API call failed")
+                .expect("Consent message error");
+        assert_eq!(response.language, actual_language);
+        assert!(response
+            .consent_message
+            .starts_with(consent_message_snippet));
+    }
+}
+
+#[test]
+fn should_return_derivation_origin() {
+    let env = env();
+    let canister_id = install_canister(&env, CIVIV_CANISTER_BACKEND_WASM.clone());
+    let frontend_hostname = format!("https://{}.icp0.io", canister_id.to_text());
+    let req = DerivationOriginRequest { frontend_hostname };
+    let response = api::derivation_origin(&env, canister_id, principal_1(), &req)
+        .expect("API call failed")
+        .expect("derivation_origin error");
+    assert_eq!(response.origin, req.frontend_hostname);
+}
+
+#[test]
+fn should_return_derivation_origin_with_custom_init() {
+    let env = env();
+    let custom_init = IssuerInit {
+        ic_root_key_der: hex::decode(DUMMY_ROOT_KEY).unwrap(),
+        idp_canister_ids: vec![Principal::from_text(DUMMY_II_CANISTER_ID).unwrap()],
+        derivation_origin: "https://derivation_origin".to_string(),
+        frontend_hostname: "https://frontend.host.name".to_string(),
+    };
+    let issuer_id = install_issuer(&env, &custom_init);
+    let response = api::derivation_origin(
+        &env,
+        issuer_id,
+        principal_1(),
+        &DerivationOriginRequest {
+            frontend_hostname: custom_init.frontend_hostname.clone(),
+        },
+    )
+    .expect("API call failed")
+    .expect("derivation_origin error");
+    assert_eq!(response.origin, custom_init.derivation_origin);
+}
+
+#[test]
+fn should_update_credential_successfully() {
+    let env = env();
+    let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
+    let principal = principal_1();
+    let original_credential = construct_adult_credential();
+    let mut updated_credential = construct_adult_credential();
+    updated_credential.claim[0].claims.entry("Is over 18".to_string()).and_modify(|x| *x = ClaimValue::Boolean(false));
+    let id = original_credential.id.clone();
+
+    // Add a credential first to update it later
+    api::add_credentials(&env, issuer_id, principal, original_credential).expect("failed to add credential");
+
+    // Update the credential
+    let response = api::update_credential(
+        &env,
+        issuer_id,
+        principal,
+        id.clone(),
+        updated_credential,
+    )
+    .expect("API call failed");
+
+    assert_matches!(response, Ok(_));
+
+    let stored_updated_credential = api::get_all_credentials(&env, issuer_id, principal).expect("API call failed").expect("get_all_credentials error");
+    // assert there is only one version of the VC 
+    assert_eq!(stored_updated_credential.len(), 1);
+    // that was changed to the updated_credential
+    assert_eq!(stored_updated_credential[0].id, id);
+    assert_matches!(stored_updated_credential[0].claim[0].claims.get("Is over 18").unwrap(), &ClaimValue::Boolean(false));
+
+
+}
+
+#[test]
+fn should_fail_update_credential_if_not_found() {
+    let env = env();
+    let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
+    let principal = principal_1();
+    let credential = construct_adult_credential();
+
+    // Attempt to update a non-existing credential
+    let response = api::update_credential(
+        &env,
+        issuer_id,
+        principal,
+        "non-existing-id".to_string(),
+        credential.clone(),
+    )
+    .expect("API call should fail");
+
+    assert_matches!(response, Err(CredentialError::NoCredentialFound(_)));
+}
+
+
+#[test]
+fn should_fail_vc_consent_message_if_not_supported() {
+    let env = env();
+    let canister_id = install_canister(&env, CIVIV_CANISTER_BACKEND_WASM.clone());
+
+    let consent_message_request = Icrc21VcConsentMessageRequest {
+        credential_spec: CredentialSpec {
+            credential_type: "VerifiedResident".to_string(),
+            arguments: None,
+        },
+        preferences: Icrc21ConsentPreferences {
+            language: "en-US".to_string(),
+        },
+    };
+
+    let response =
+        api::vc_consent_message(&env, canister_id, principal_1(), &consent_message_request)
+            .expect("API call failed");
+    assert_matches!(response, Err(Icrc21Error::UnsupportedCanisterCall(_)));
+}
+
+
+#[test]
 fn should_fail_prepare_credential_for_unauthorized_principal() {
     let env = env();
     let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
@@ -206,7 +418,7 @@ fn should_fail_get_credential_for_wrong_sender() {
     let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
     let signed_id_alias = DUMMY_SIGNED_ID_ALIAS.clone();
     let authorized_principal = Principal::from_text(DUMMY_ALIAS_ID_DAPP_PRINCIPAL).unwrap();
-    api::add_adult(&env, issuer_id, authorized_principal, construct_adult_credential()).expect("failed to add employee");
+    api::add_credentials(&env, issuer_id, authorized_principal, construct_adult_credential()).expect("failed to add employee");
     let unauthorized_principal = test_principal(2);
 
     let prepare_credential_response = api::prepare_credential(
@@ -312,7 +524,7 @@ fn should_prepare_adult_credential_for_authorized_principal() {
     let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
     let authorized_principal = Principal::from_text(DUMMY_ALIAS_ID_DAPP_PRINCIPAL).unwrap();
     let credential = construct_adult_credential();
-    api::add_adult(&env, issuer_id, authorized_principal, credential).expect("API call failed");
+    api::add_credentials(&env, issuer_id, authorized_principal, credential).expect("API call failed");
     let response = api::prepare_credential(
         &env,
         issuer_id,
@@ -380,7 +592,7 @@ fn should_issue_credential_e2e() -> Result<(), CallError> {
     )
     .expect("Invalid ID alias");
 
-    api::add_adult(&env, issuer_id, alias_tuple.id_dapp, construct_adult_credential())?;
+    api::add_credentials(&env, issuer_id, alias_tuple.id_dapp, construct_adult_credential())?;
 
     for credential_spec in [
         adult_credential_spec(),
@@ -439,6 +651,68 @@ fn should_configure() {
     let issuer_id = install_canister(&env, CIVIV_CANISTER_BACKEND_WASM.clone());
     api::configure(&env, issuer_id, &DUMMY_ISSUER_INIT).expect("API call failed");
 }
+
+// /// Verifies that the expected assets is delivered and certified.
+// #[test]
+// fn issuer_canister_serves_http_assets() -> Result<(), CallError> {
+//     fn verify_response_certification(
+//         env: &StateMachine,
+//         canister_id: CanisterId,
+//         request: HttpRequest,
+//         http_response: HttpResponse,
+//         min_certification_version: u16,
+//     ) -> VerificationInfo {
+//         verify_request_response_pair(
+//             ic_http_certification::HttpRequest {
+//                 method: request.method,
+//                 url: request.url,
+//                 headers: request.headers,
+//                 body: request.body.into_vec(),
+//             },
+//             ic_http_certification::HttpResponse {
+//                 status_code: http_response.status_code,
+//                 headers: http_response.headers,
+//                 body: http_response.body.into_vec(),
+//                 upgrade: http_response.upgrade,
+//             },
+//             canister_id.as_slice(),
+//             time(env) as u128,
+//             Duration::from_secs(300).as_nanos(),
+//             &env.root_key(),
+//             min_certification_version as u8,
+//         )
+//         .unwrap_or_else(|e| panic!("validation failed: {e}"))
+//     }
+
+//     let env = env();
+//     let canister_id = install_canister(&env, CIVIV_CANISTER_BACKEND_WASM.clone());
+
+//     // for each asset and certification version, fetch the asset, check the HTTP status code, headers and certificate.
+
+//     for certification_version in 1..=2 {
+//         let request = HttpRequest {
+//             method: "GET".to_string(),
+//             url: "/".to_string(),
+//             headers: vec![],
+//             body: ByteBuf::new(),
+//             certificate_version: Some(certification_version),
+//         };
+//         let http_response = http_request(&env, canister_id, &request)?;
+//         println!("{:?}", http_response);
+//         // assert_eq!(http_response.status_code, 200);
+
+//         let _result = verify_response_certification(
+//             &env,
+//             canister_id,
+//             request,
+//             http_response,
+//             certification_version,
+//         );
+//         // assert_eq!(result.verification_version, certification_version);
+//     }
+
+//     Ok(())
+// }
 
 
 ic_cdk::export_candid!();
@@ -519,9 +793,10 @@ pub struct StoredCredential {
     pub issuer: String,
     pub claim: Vec<Claim>,
 }
-#[derive(CandidType)]
+#[derive(CandidType, Deserialize, Debug)]
 pub enum CredentialError {
-    NoCredentialsFound(String),
+    NoCredentialFound(String),
+    UnauthorizedSubject(String),
 }
 
 
