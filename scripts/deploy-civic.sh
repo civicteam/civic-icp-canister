@@ -35,6 +35,7 @@ EOF
 
 II_CANISTER_ID=
 DFX_NETWORK=
+ADMIN_PRINCIPAL_ID=
 
 while [[ $# -gt 0  ]]
 do
