@@ -37,9 +37,6 @@ use identity_core::common::Timestamp;
 // The expiration of issued verifiable credentials.
 const MINUTE_NS: u64 = 60 * 1_000_000_000;
 const VC_EXPIRATION_PERIOD_NS: u64 = 15 * MINUTE_NS;
-// Authorized Civic Principal - get this from the frontend
-const AUTHORIZED_PRINCIPAL: &str =
-    "tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae";
 
 lazy_static! {
     // Seed and public key used for signing the credentials.
@@ -172,7 +169,7 @@ fn authorize_vc_request(
 
 #[update]
 #[candid_method(update)]
-fn add_credentials(principal: Principal, new_credentials: Vec<StoredCredential>) -> String {
+fn add_credentials(principal: Principal, new_credentials: Vec<StoredCredential>) -> Result<String, CredentialError> {
     let caller = ic_cdk::api::caller();
 
     // Access the configuration and check if the caller is an authorized issuer
@@ -183,16 +180,22 @@ fn add_credentials(principal: Principal, new_credentials: Vec<StoredCredential>)
     });
 
     if !is_authorized {
-        return "Unauthorized: You do not have permission to add credentials.".to_string();
+        return Err(CredentialError::UnauthorizedSubject(format!(
+            "Unauthorized issuer: {}",
+            caller.to_text()
+        )));
     }
 
     // If authorized, proceed to add credentials
     CREDENTIALS.with_borrow_mut(|credentials| {
-        let entry = credentials.entry(principal).or_insert_with(Vec::new);
+        let entry: &mut Vec<StoredCredential> = credentials.entry(principal).or_insert_with(Vec::new);
         entry.extend(new_credentials.clone());
     });
 
-    format!("Added credentials: \n{:?}", new_credentials)
+    return Ok(format!(
+        "Credentials added successfully: {:?}",
+        new_credentials
+    ));
 }
 
 #[update]
@@ -202,13 +205,21 @@ fn update_credential(
     credential_id: String,
     updated_credential: StoredCredential,
 ) -> Result<String, CredentialError> {
-    // Check if the caller is the authorized principal
-    if caller().to_text() != AUTHORIZED_PRINCIPAL {
-        return Err(CredentialError::UnauthorizedSubject(
-            "Unauthorized: You do not have permission to update credentials.".to_string(),
-        ));
-    }
+    let caller = ic_cdk::api::caller();
 
+    // Access the configuration and check if the caller is an authorized issuer
+    let is_authorized = CONFIG.with(|config_cell| {
+        let config = config_cell.borrow();
+        let current_config = config.get();
+        current_config.authorized_issuers.contains(&caller)
+    });
+
+    if !is_authorized {
+        return Err(CredentialError::UnauthorizedSubject(format!(
+            "Unauthorized issuer: {}",
+            caller.to_text()
+        )));
+    }
     // Access the credentials storage and attempt to update the specified credential
     CREDENTIALS.with_borrow_mut(|credentials| {
         if let Some(creds) = credentials.get_mut(&principal) {
