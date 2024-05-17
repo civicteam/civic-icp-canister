@@ -24,58 +24,24 @@ Create the canisters
 dfx canister create --all
 ```
 
-### Configure the correct Alternative Frontends
-Get the ID of the Civic Backend canister
+Set the environment variables before deploying the backend canister
 ```
-dfx canister id civic_canister_backend
-```
-
-Put this as the `canisterId` inside the `src/civic_canister_frontend/index.ts` AND `src/relying_canister_frontend/src/index.ts`:
-```
-const canisterId = "canister-id-here" 
-```
-This sets up the canister login with the correct `derivationOrigin` that the vc-flow call inside `src/relying_canister_frontend/src/index.ts` will later be pointed to
-
-(NOTE: You should be able to get these IDs from environmental variables as well, like ```const local_ii_url = `http://${process.env.INTERNET_IDENTITY_CANISTER_ID}.localhost:4943`;``` but that's not working for the `CIVIC_CANISTER_BACKEND_ID`)
-
-Get the ID of the civic frontend canister 
-```
-dfx canister id civic_canister_frontend
-```
-write it into the `src/civic_canister_backend/dist/.well-known/ii-alternative-origins` file:
-```
-{
-    "alternativeOrigins": ["http://${ID-here}.localhost:4943"]
-}
+scripts/set-env-vars.sh
 ```
 
-### Deploying 
-Deploy II
+Deploy the backend canister
+```
+scripts/deploy-civic.sh
+```
+
+Deploy the internet identity canister
 ```
 dfx deploy internet_identity
 ```
 
-Now build & deploy the Civic Frontend:
+Update the  that are printed in the CLI for the relying and civic dummy canister and then deploy them
 ```
-cd src/civic_canister_frontend
-yarn install
-yarn build
-dfx deploy civic_canister_frontend
-cd ../..
-```
-
-Build & Deploy Civic Backend Canister (using the local `ic_rootkey`):
-```
-src/civic_canister_backend/deploy-civic.sh
-```
-
-
-RP Frontend: 
-```
-cd src/relying_canister_frontend
-yarn install
-yarn build
-./deploy-rp.sh
+dfx deploy relying_canister_frontend && dfx deploy relying_canister_frontend
 ```
 
 ### Tests
@@ -142,5 +108,4 @@ https://internetcomputer.org/docs/current/developer-docs/web-apps/independently-
 
 ## Sequence Diagrams 
 ![canister drawio](https://github.com/civicteam/icp-civic-canister/assets/66886792/72ef5395-5751-4597-b25c-878b50ef8a85)
-
 
