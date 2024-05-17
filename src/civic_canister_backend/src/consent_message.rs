@@ -1,14 +1,16 @@
-//! This module contains the various consent messages that is displayed to the user when they are asked to consent to the issuance of a credential.
-
-use crate::credential::{SupportedCredentialType, verify_credential_spec};
-use lazy_static::lazy_static;
+//! Handles consent messages that are displayed to the user when they are asked to consent to the sharing of a VC by the Civic Canister.
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use candid::candid_method;
+use ic_cdk_macros::update;
+use lazy_static::lazy_static;
+use crate::credential::{SupportedCredentialType, verify_credential_spec};
 use vc_util::issuer_api::{
-    CredentialSpec, Icrc21ConsentInfo, Icrc21ConsentPreferences, Icrc21Error, Icrc21ErrorInfo,
+    CredentialSpec, Icrc21ConsentInfo,Icrc21VcConsentMessageRequest,  Icrc21ConsentPreferences, Icrc21Error, Icrc21ErrorInfo,
 };
 use SupportedLanguage::{English, German};
 
+/// Consent messages for the VerifiedAdult VC to be shown and approved to the user during the VC sharing flow 
 const ADULT_VC_DESCRIPTION_EN: &str = r###"# Verified Adult
 
 Credential that states that the holder's age is at least 18 years."###;
@@ -30,11 +32,13 @@ lazy_static! {
         ]);
 }
 
+/// Supported consent message types
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub enum CredentialTemplateType {
     VerifiedAdult,
 }
 
+/// Supported languages for consent messages
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub enum SupportedLanguage {
     English,
@@ -67,7 +71,21 @@ impl Display for SupportedLanguage {
     }
 }
 
-pub fn get_vc_consent_message(
+
+/// Get the consent message for the given credential spec to be used during the VC sharing flow
+#[update]
+#[candid_method]
+async fn vc_consent_message(
+    req: Icrc21VcConsentMessageRequest,
+) -> Result<Icrc21ConsentInfo, Icrc21Error> {
+    get_vc_consent_message(
+        &req.credential_spec,
+        &SupportedLanguage::from(req.preferences),
+    )
+}
+
+/// Retrieve the consent message for the given credential type and language.
+fn get_vc_consent_message(
     credential_spec: &CredentialSpec,
     language: &SupportedLanguage,
 ) -> Result<Icrc21ConsentInfo, Icrc21Error> {
@@ -77,6 +95,7 @@ pub fn get_vc_consent_message(
     })
 }
 
+/// Show the consent message with any arguments 
 fn render_consent_message(
     credential_spec: &CredentialSpec,
     language: &SupportedLanguage,

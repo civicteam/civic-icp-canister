@@ -1,33 +1,27 @@
 //! Tests related to issue_credential canister call.
 
-// use crate::types::{Claim, ClaimValue, StoredCredential};
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::time::{Duration, UNIX_EPOCH};
 use assert_matches::assert_matches;
 use candid::{CandidType, Deserialize, Principal};
 use canister_sig_util::{extract_raw_root_pk_from_der, CanisterSigPublicKey};
 use canister_tests::api::http_request;
-
 use canister_tests::api::internet_identity::vc_mvp as ii_api;
 use canister_tests::flows;
 use canister_tests::framework::{env, get_wasm_path, principal, principal_1, test_principal, time, II_WASM};
 use ic_cdk::api::management_canister::provisional::CanisterId;
-
 use ic_response_verification::types::VerificationInfo;
 use ic_response_verification::verify_request_response_pair;
 use ic_test_state_machine_client::{call_candid, call_candid_as};
 use ic_test_state_machine_client::{query_candid_as, CallError, StateMachine};
 use internet_identity_interface::http_gateway::{HttpRequest, HttpResponse};
-
-
 use internet_identity_interface::internet_identity::types::vc_mvp::{
     GetIdAliasRequest, PrepareIdAliasRequest,
 };
 use internet_identity_interface::internet_identity::types::FrontendHostname;
 use lazy_static::lazy_static;
 use serde_bytes::ByteBuf;
-
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::time::{Duration, UNIX_EPOCH};
 use vc_util::issuer_api::{
     ArgumentValue, CredentialSpec, DerivationOriginData, DerivationOriginError,
     DerivationOriginRequest, GetCredentialRequest, Icrc21ConsentInfo, Icrc21ConsentPreferences,
