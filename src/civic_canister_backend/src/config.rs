@@ -1,3 +1,11 @@
+//! Configuration management for the civic_canister_backend.
+//!
+//! This module handles:
+//! - Initialization and configuration of the canister settings.
+//! - Storing and updating issuer configurations.
+//! - Managing assets and their certification.
+//! - Handling HTTP requests with CORS support.
+
 use std::cell::RefCell;
 use std::collections::HashMap;
 use canister_sig_util::signature_map::{SignatureMap, LABEL_SIG};
@@ -47,6 +55,7 @@ fn config_memory() -> Memory {
 #[cfg(target_arch = "wasm32")]
 use ic_cdk::println;
 
+/// Configuration for the canister.
 #[derive(CandidType, Deserialize)]
 pub(crate) struct IssuerConfig {
     /// Root of trust for checking canister signatures.
@@ -95,6 +104,7 @@ impl From<IssuerInit> for IssuerConfig {
 
 }
 
+/// Initialization arguments for the canister.
 #[derive(CandidType, Deserialize)]
 struct IssuerInit {
     /// Root of trust for checking canister signatures.
@@ -107,6 +117,7 @@ struct IssuerInit {
     frontend_hostname: String,
 }
 
+/// Called when the canister is deployed.
 #[init]
 #[candid_method(init)]
 fn init(init_arg: Option<IssuerInit>) {
@@ -117,11 +128,13 @@ fn init(init_arg: Option<IssuerInit>) {
     init_assets();
 }
 
+/// Called when the canister is upgraded.
 #[post_upgrade]
 fn post_upgrade(init_arg: Option<IssuerInit>) {
     init(init_arg);
 }
 
+/// Called when the canister is configured.
 #[update]
 #[candid_method]
 fn configure(config: IssuerInit) {
@@ -138,7 +151,7 @@ fn static_headers() -> Vec<HeaderField> {
     vec![("Access-Control-Allow-Origin".to_string(), "*".to_string())]
 }
 
-// Assets
+/// Assets
 static ASSET_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/dist");
 pub fn init_assets() {
     ASSETS.with_borrow_mut(|assets| {
@@ -162,6 +175,7 @@ fn fixup_html(html: &str) -> String {
         )
 }
 
+/// Get the consent message for the given credential spec to be used during the VC sharing flow
 #[update]
 #[candid_method]
 async fn vc_consent_message(
@@ -173,7 +187,7 @@ async fn vc_consent_message(
     )
 }
 
-
+/// Get the derivation origin used by the issuer
 #[update]
 #[candid_method]
 async fn derivation_origin(
@@ -198,7 +212,7 @@ fn get_derivation_origin(hostname: &str) -> Result<DerivationOriginData, Derivat
     })
 }
 
-// To solve the CORS error during the vc-flow 
+/// Handle HTTP requests with CORS support.
 #[query]
 #[candid_method(query)]
 pub fn http_request(req: HttpRequest) -> HttpResponse {
@@ -227,7 +241,6 @@ pub fn http_request(req: HttpRequest) -> HttpResponse {
         },
     }
 }
-
 
 
 #[derive(Clone, Debug, CandidType, Deserialize)]

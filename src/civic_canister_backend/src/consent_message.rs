@@ -9,6 +9,7 @@ use vc_util::issuer_api::{
 };
 use SupportedLanguage::{English, German};
 
+/// Consent messages for the VerifiedAdult VC to be shown and approved to the user during the VC sharing flow 
 const ADULT_VC_DESCRIPTION_EN: &str = r###"# Verified Adult
 
 Credential that states that the holder's age is at least 18 years."###;
@@ -30,11 +31,13 @@ lazy_static! {
         ]);
 }
 
+/// Supported consent message types
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub enum CredentialTemplateType {
     VerifiedAdult,
 }
 
+/// Supported languages for consent messages
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub enum SupportedLanguage {
     English,
@@ -67,6 +70,7 @@ impl Display for SupportedLanguage {
     }
 }
 
+/// Retrieve the consent message for the given credential type and language.
 pub fn get_vc_consent_message(
     credential_spec: &CredentialSpec,
     language: &SupportedLanguage,
@@ -77,6 +81,7 @@ pub fn get_vc_consent_message(
     })
 }
 
+/// Show the consent message with any arguments 
 fn render_consent_message(
     credential_spec: &CredentialSpec,
     language: &SupportedLanguage,
