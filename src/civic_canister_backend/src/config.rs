@@ -1,4 +1,4 @@
-//! Configuration management for the civic_canister_backend.
+//! Configuration management for the Civic Canister
 //!
 //! This module handles:
 //! - Initialization and configuration of the canister settings.
@@ -26,7 +26,6 @@ use vc_util::issuer_api::{
     Icrc21VcConsentMessageRequest
 };
 use crate::credential::{StoredCredential, update_root_hash};
-use crate::consent_message::{get_vc_consent_message, SupportedLanguage};
 
 
 const PROD_II_CANISTER_ID: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai";
@@ -175,19 +174,7 @@ fn fixup_html(html: &str) -> String {
         )
 }
 
-/// Get the consent message for the given credential spec to be used during the VC sharing flow
-#[update]
-#[candid_method]
-async fn vc_consent_message(
-    req: Icrc21VcConsentMessageRequest,
-) -> Result<Icrc21ConsentInfo, Icrc21Error> {
-    get_vc_consent_message(
-        &req.credential_spec,
-        &SupportedLanguage::from(req.preferences),
-    )
-}
-
-/// Get the derivation origin used by the issuer
+/// Get the derivation origin used by the canister
 #[update]
 #[candid_method]
 async fn derivation_origin(

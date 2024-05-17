@@ -1,11 +1,12 @@
-//! This module contains the various consent messages that is displayed to the user when they are asked to consent to the issuance of a credential.
-
-use crate::credential::{SupportedCredentialType, verify_credential_spec};
-use lazy_static::lazy_static;
+//! Handles consent messages that are displayed to the user when they are asked to consent to the sharing of a VC by the Civic Canister.
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use candid::candid_method;
+use ic_cdk_macros::update;
+use lazy_static::lazy_static;
+use crate::credential::{SupportedCredentialType, verify_credential_spec};
 use vc_util::issuer_api::{
-    CredentialSpec, Icrc21ConsentInfo, Icrc21ConsentPreferences, Icrc21Error, Icrc21ErrorInfo,
+    CredentialSpec, Icrc21ConsentInfo,Icrc21VcConsentMessageRequest,  Icrc21ConsentPreferences, Icrc21Error, Icrc21ErrorInfo,
 };
 use SupportedLanguage::{English, German};
 
@@ -70,8 +71,21 @@ impl Display for SupportedLanguage {
     }
 }
 
+
+/// Get the consent message for the given credential spec to be used during the VC sharing flow
+#[update]
+#[candid_method]
+async fn vc_consent_message(
+    req: Icrc21VcConsentMessageRequest,
+) -> Result<Icrc21ConsentInfo, Icrc21Error> {
+    get_vc_consent_message(
+        &req.credential_spec,
+        &SupportedLanguage::from(req.preferences),
+    )
+}
+
 /// Retrieve the consent message for the given credential type and language.
-pub fn get_vc_consent_message(
+fn get_vc_consent_message(
     credential_spec: &CredentialSpec,
     language: &SupportedLanguage,
 ) -> Result<Icrc21ConsentInfo, Icrc21Error> {

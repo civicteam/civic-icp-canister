@@ -1,4 +1,4 @@
-//! Module for handling credentials within the civic_canister_backend.
+//! Handles adding, updating, and retrieving verifiable credentials within the Civic Canister.
 //!
 //! This module provides functionality to manage and manipulate verifiable credentials,
 //! including issuing, updating, and retrieving credentials. It also handles authorization
@@ -116,7 +116,7 @@ pub(crate) enum CredentialError {
 /// Adds new credentials to the canister for a given principal.
 #[update]
 #[candid_method]
-fn add_credentials(principal: Principal, new_credentials: Vec<StoredCredential>) -> Result<String, CredentialError>  {
+async fn add_credentials(principal: Principal, new_credentials: Vec<StoredCredential>) -> Result<String, CredentialError>  {
     // Check if the caller is the authorized principal
     if caller().to_text() != AUTHORIZED_PRINCIPAL {
         return Err(CredentialError::UnauthorizedSubject("Unauthorized: You do not have permission to add credentials.".to_string()));
@@ -130,10 +130,11 @@ fn add_credentials(principal: Principal, new_credentials: Vec<StoredCredential>)
     Ok(credential_info)
 }
 
+
 /// Updates an existing credential for a given principal.
 #[update]
 #[candid_method]
-fn update_credential(principal: Principal, credential_id: String, updated_credential: StoredCredential) -> Result<String, CredentialError> {
+async fn update_credential(principal: Principal, credential_id: String, updated_credential: StoredCredential) -> Result<String, CredentialError> {
     // Check if the caller is the authorized principal
     if caller().to_text() != AUTHORIZED_PRINCIPAL {
         return Err(CredentialError::UnauthorizedSubject("Unauthorized: You do not have permission to update credentials.".to_string()));
@@ -150,6 +151,7 @@ fn update_credential(principal: Principal, credential_id: String, updated_creden
     })
 }
 
+
 /// Retrieves all credentials for a given principal.
 #[query]
 #[candid_method(query)]
@@ -162,6 +164,7 @@ fn get_all_credentials(principal: Principal) -> Result<Vec<StoredCredential>, Cr
         Err(CredentialError::NoCredentialFound(format!("No credentials found for principal {}", principal.to_text())))
     }
 }
+
 
 /// Request to prepare a VC for issuance.
 #[update]
@@ -196,6 +199,7 @@ async fn prepare_credential(
         prepared_context: Some(ByteBuf::from(credential_jwt.as_bytes())),
     })
 }
+
 
 /// Obtain a VC from the canister after it was prepared.
 #[query]
