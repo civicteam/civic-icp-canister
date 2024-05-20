@@ -1,4 +1,4 @@
-const isProduction = import.meta.env.NODE_ENV === "production";
+const isProduction = process.env.NODE_ENV === 'production';
 
 const internetIdentityCanisterId = isProduction
   ? import.meta.env.VITE_PROD_INTERNET_IDENTITY_CANISTER_ID
@@ -16,9 +16,9 @@ const host = isProduction
   ? import.meta.env.VITE_PROD_HOST
   : import.meta.env.VITE_LOCAL_HOST;
 
-const internetIdentityUrl = `http://${internetIdentityCanisterId}.${host}`;
-const civicBackendCanisterUrl = `http://${civicBackendCanisterId}.${host}`;
-const civicFrontendCanisterUrl = `http://${civicFrontendCanisterId}.${host}`;
+const internetIdentityUrl = `https://identity.ic0.app`;
+const civicBackendCanisterUrl = `https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io`;
+const civicFrontendCanisterUrl = `https://d7wbq-nyaaa-aaaap-ahgiq-cai.icp0.io/`;
 
 // This is for demo purposes but should be replaced with a more secure method
 const dummyCivicSampleKey = new Uint8Array([

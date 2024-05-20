@@ -10,6 +10,10 @@ function App() {
   const [credentialService, setCredentialService] = useState<CredentialService>();
 
   useEffect(() => {
+    console.log('Config:', config);
+  }, [config]);
+
+  useEffect(() => {
     const { civicBackendCanisterId, dummyCivicSampleKey } = config;
     const service = new CredentialService({
       civicBackendCanisterId,
@@ -39,7 +43,7 @@ function App() {
     if (principal && credentialService) {
       try {
         const result = await credentialService.addCredential(principal, credential);
-        console.log('Credential stored successfully:', result);
+        console.log('Credentialss stored successfully:', result);
       } catch (error) {
         console.error('Error storing credential:', error);
       }

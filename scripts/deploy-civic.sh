@@ -112,10 +112,10 @@ echo "Parsed rootkey: ${rootkey_did:0:20}..." >&2
 if [ "$DFX_NETWORK" = "local" ]; then
   ALTERNATIVE_ORIGINS="\"http://$CIVIC_FRONTEND_CANISTER_ID.localhost:4943\""
   else
-  ALTERNATIVE_ORIGINS="\"http://$CIVIC_FRONTEND_CANISTER_ID.icp0.io\","
+  ALTERNATIVE_ORIGINS="\"https://$CIVIC_FRONTEND_CANISTER_ID.icp0.io\","
 fi
 
-echo "Using Alternative Origin: $ALTERNATIVE_ORIGINS"
+echo "Using Alternative Origin: $ALTERNATIVE_ORIGINS $ISSUER_FRONTEND_HOSTNAME"
 
 # Adjust issuer's .well-known/ii-alternative-origins to contain FE-hostname of local/dev deployments.
 # We had a problem with `sed` command in CI. This is a hack to make it work locally and in CI.
