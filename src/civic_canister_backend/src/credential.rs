@@ -232,7 +232,7 @@ async fn prepare_credential(
         sigs.add_signature(&CANISTER_SIG_SEED, msg_hash);
         // Add the msg hash to the stable storage to restore the signatures when the canister is upgraded
         MSG_HASHES.with(|hashes| {
-            let _ = hashes.borrow().push(&msg_hash);
+            let _ = hashes.borrow_mut().push(&msg_hash);
         });
     });
     update_root_hash();
@@ -315,7 +315,7 @@ fn authorize_vc_request(
     CONFIG.with_borrow(|config| {
         let config = config.get();
         
-        // heck if the ID alias is legitimate and was issued by the internet identity canister    
+        // check if the ID alias is legitimate and was issued by the internet identity canister    
         for idp_canister_id in &config.idp_canister_ids {
             if let Ok(alias_tuple) = get_verified_id_alias_from_jws(
                 &alias.credential_jws,
@@ -456,7 +456,7 @@ fn build_credential_jwt(params: CredentialParams) -> String {
     let expiration_date = Timestamp::from_unix(params.expiration_timestamp_s as i64)
         .expect("internal: failed computing expiration timestamp");
 
-    // Build the VC object
+    // Build the VC a
     let mut credential = CredentialBuilder::default()
         .id(Url::parse(params.credential_id_url).unwrap())
         .issuer(Url::parse(params.issuer_url).unwrap())

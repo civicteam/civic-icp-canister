@@ -155,7 +155,8 @@ fn post_upgrade(init_arg: Option<IssuerInit>) {
     SIGNATURES.with(|sigs| {    
         let mut sigs = sigs.borrow_mut();
         MSG_HASHES.with(|hashes| {
-        hashes.borrow().iter().for_each(|hash| sigs.add_signature(&CANISTER_SIG_SEED, hash))
+        hashes.borrow().iter().for_each(|hash| {sigs.add_signature(&CANISTER_SIG_SEED, hash);
+        })
         });
     });
 
