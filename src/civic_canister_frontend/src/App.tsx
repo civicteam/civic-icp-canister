@@ -43,7 +43,7 @@ function App() {
     if (principal && credentialService) {
       try {
         const result = await credentialService.addCredential(principal, credential);
-        console.log('Credentialss stored successfully:', result);
+        console.log('Credential stored successfully:', result);
       } catch (error) {
         console.error('Error storing credential:', error);
       }
