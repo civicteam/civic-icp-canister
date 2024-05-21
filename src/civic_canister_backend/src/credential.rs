@@ -156,7 +156,7 @@ async fn add_credentials(principal: Principal, new_credentials: CredentialList) 
         if credentials.contains_key(&principal) {
             // if yes, extend the vector with the vector of new credentials 
             let mut existing_credentials: Vec<StoredCredential> = credentials.get(&principal).unwrap().into();
-            existing_credentials.extend(new_credentials.0.clone());
+            existing_credentials.extend(<Vec<StoredCredential>>::from(new_credentials.clone()));
             credentials.insert(principal, CredentialList(existing_credentials));
         } else {
         // else insert the new entry 
