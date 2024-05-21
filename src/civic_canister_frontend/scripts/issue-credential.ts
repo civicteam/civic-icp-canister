@@ -7,7 +7,7 @@ import { idlFactory as civic } from "../../declarations/civic_canister_backend/c
 dotenv.config({ path: '.env.local' });
 
 // Configuration
-const civicBackendCanisterId = process.env.VITE_LOCAL_CIVIC_BACKEND_CANISTER_ID ?? "";
+const civicBackendCanisterId = process.env.VITE_CIVIC_BACKEND_CANISTER_ID ?? "";
 
 console.log('Civic backend canister ID:', civicBackendCanisterId);
 
@@ -17,7 +17,7 @@ const dummyCivicSampleKey = new Uint8Array([
 ]);
 
 // Dummy principal for testing purposes - this is the principal from the vc-flows that represents the user id from the civic POV (the same user that logs into the demo RP)
-const principal = Principal.fromText("vf76i-nmrzf-fiv3u-tnduz-litud-n6xqn-yw4em-c32vp-m55jf-fgsys-3ae");
+const principal = Principal.fromText("principal id here");
 
 // Define the dummy credential
 const id = ["id", { Text: "did:example:c276e12ec21ebfeb1f712ebc6f1" }];
@@ -45,7 +45,7 @@ const credential = {
 // Function to store the credential
 const storeCredential = async () => {
   const identity = Secp256k1KeyIdentity.fromSecretKey(dummyCivicSampleKey);
-  const agent = new HttpAgent({ identity, host: "http://127.0.0.1:4943" });
+  const agent = new HttpAgent({ identity });
   console.log('#### Using Civic Principal:', identity.getPrincipal().toText());
 
   agent.fetchRootKey();
