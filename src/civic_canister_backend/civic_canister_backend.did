@@ -64,6 +64,8 @@ type IssuerInit = record {
   idp_canister_ids : vec principal;
   ic_root_key_der : blob;
   frontend_hostname : text;
+  admin: principal;
+  authorized_issuers: vec principal;
 };
 type PrepareCredentialRequest = record {
   signed_id_alias : SignedIdAlias;
@@ -103,4 +105,7 @@ service : (opt IssuerInit) -> {
   prepare_credential : (PrepareCredentialRequest) -> (Result_4);
   update_credential : (principal, text, StoredCredential) -> (Result);
   vc_consent_message : (Icrc21VcConsentMessageRequest) -> (Result_5);
+  get_admin : () -> (principal) query;
+  add_issuer: (principal) -> ();
+  remove_issuer: (principal) -> ();
 }
