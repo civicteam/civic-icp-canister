@@ -109,8 +109,6 @@ pub(crate) struct StoredCredential {
     pub(crate)  claim: Vec<Claim>,
 }
 
-const MAX_VALUE_SIZE: u32 = 100;
-
 /// Define a wrapper type around a list of credentials so that we can store it inside Stable
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
 pub struct CredentialList(Vec<StoredCredential>);
@@ -125,11 +123,8 @@ impl Storable for CredentialList {
         CredentialList(Decode!(&bytes, Vec<StoredCredential>).expect("Failed to decode StoredCredential"))
     }
 
-    // at most 100 Credentials per user 
-    const BOUND: Bound = Bound::Bounded {
-        max_size: MAX_VALUE_SIZE,
-        is_fixed_size: false,
-    };
+    // this measures the size of the object in bytes 
+    const BOUND: Bound = Bound::Unbounded;
 }
 
 impl From<CredentialList> for Vec<StoredCredential> {
