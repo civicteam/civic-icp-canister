@@ -32,7 +32,7 @@ use ic_stable_structures::storable::{Storable, Bound};
 
 extern crate asset_util;
 
-use crate::config::{CONFIG, CREDENTIALS, SIGNATURES, ASSETS};
+use crate::config::{CONFIG, CREDENTIALS, SIGNATURES, ASSETS, MSG_HASHES};
 
 // The expiration of issued verifiable credentials.
 const MINUTE_NS: u64 = 60 * 1_000_000_000;
@@ -42,7 +42,7 @@ const AUTHORIZED_PRINCIPAL: &str = "tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj
 
 lazy_static! {
     /// Seed and public key used for signing the credentials.
-    static ref CANISTER_SIG_SEED: Vec<u8> = hash_bytes("some_random_seed").to_vec();
+    pub(crate) static ref CANISTER_SIG_SEED: Vec<u8> = hash_bytes("some_random_seed").to_vec();
     static ref CANISTER_SIG_PK: CanisterSigPublicKey = CanisterSigPublicKey::new(ic_cdk::id(), CANISTER_SIG_SEED.clone());
 }
 
@@ -230,6 +230,10 @@ async fn prepare_credential(
     SIGNATURES.with(|sigs| {
         let mut sigs = sigs.borrow_mut();
         sigs.add_signature(&CANISTER_SIG_SEED, msg_hash);
+        // Add the msg hash to the stable storage to restore the signatures when the canister is upgraded
+        MSG_HASHES.with(|hashes| {
+            let _ = hashes.borrow().push(&msg_hash);
+        });
     });
     update_root_hash();
     // Return a prepared context that includes the signed JWT
@@ -256,7 +260,7 @@ fn get_credential(req: GetCredentialRequest) -> Result<IssuedCredentialData, Iss
         Some(context) => context,
         None => {
             return Result::<IssuedCredentialData, IssueCredentialError>::Err(internal_error(
-                "missing prepared_context",
+                "Missing prepared_context",
             ))
         }
     };
@@ -264,7 +268,7 @@ fn get_credential(req: GetCredentialRequest) -> Result<IssuedCredentialData, Iss
         Ok(s) => s,
         Err(_) => {
             return Result::<IssuedCredentialData, IssueCredentialError>::Err(internal_error(
-                "invalid prepared_context",
+                "Invalid prepared_context",
             ))
         }
     };
@@ -289,7 +293,7 @@ fn get_credential(req: GetCredentialRequest) -> Result<IssuedCredentialData, Iss
             // If the signature is not found or has expired, return an error.
             return Result::<IssuedCredentialData, IssueCredentialError>::Err(
                 IssueCredentialError::SignatureNotFound(format!(
-                    "signature not prepared or expired: {}",
+                    "Signature not prepared or expired: {}",
                     e
                 )),
             );
@@ -324,7 +328,7 @@ fn authorize_vc_request(
             }
         }
         Err(IssueCredentialError::InvalidIdAlias(
-            "id alias could not be verified".to_string(),
+            "Id alias could not be verified".to_string(),
         ))
     })
 }
@@ -347,12 +351,12 @@ fn verify_authorized_principal(
     } 
     // No (matching) credential found for this user 
         println!(
-            "*** principal {} it is not authorized for credential type {:?}",
+            "*** Principal {} it is not authorized for credential type {:?}",
             alias_tuple.id_dapp.to_text(),
             credential_type
         );
         Err(IssueCredentialError::UnauthorizedSubject(format!(
-            "unauthorized principal {}",
+            "Unauthorized principal {}",
             alias_tuple.id_dapp.to_text()
         )))
 }

@@ -10,27 +10,26 @@ use std::cell::RefCell;
 use canister_sig_util::signature_map::{SignatureMap, LABEL_SIG};
 use candid::{candid_method, CandidType, Deserialize, Principal};
 use canister_sig_util::{extract_raw_root_pk_from_der, IC_ROOT_PK_DER};
-use ic_cdk_macros::{init, query, update, post_upgrade, pre_upgrade};
+use ic_cdk_macros::{init, query, update, post_upgrade};
 use ic_cdk::api;
 use ic_certification::{labeled_hash, pruned};
 use ic_stable_structures::storable::Bound;
-use ic_stable_structures::{DefaultMemoryImpl, RestrictedMemory, Memory, StableCell, Storable, StableBTreeMap, memory_manager::{MemoryManager, MemoryId, VirtualMemory}, writer::Writer};
+use ic_stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableVec, StableCell, Storable, StableBTreeMap, memory_manager::{MemoryManager, MemoryId, VirtualMemory}};
 use include_dir::{include_dir, Dir};
 use serde_bytes::ByteBuf;
-use ciborium;
 use std::borrow::Cow;
 use asset_util::{collect_assets, CertifiedAssets};
 use vc_util::issuer_api::{
     DerivationOriginData, DerivationOriginError,
     DerivationOriginRequest
 };
-use crate::credential::{CredentialList, update_root_hash};
+use crate::credential::{CredentialList, update_root_hash, CANISTER_SIG_SEED};
 
 
 const PROD_II_CANISTER_ID: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai";
 
 // A memory for upgrades, where data from the heap can be serialized/deserialized.
-const UPGRADES: MemoryId = MemoryId::new(0);
+const SIG: MemoryId = MemoryId::new(0);
 
 // A memory for the StableBTreeMap we're using. A new memory should be created for
 // every additional stable structure
@@ -49,17 +48,24 @@ thread_local! {
         )
     );
     // Assets for the management app
-    pub static ASSETS: RefCell<CertifiedAssets> = RefCell::new(CertifiedAssets::default());
+    pub(crate) static ASSETS: RefCell<CertifiedAssets> = RefCell::new(CertifiedAssets::default());
+
+    // Stable vector to restore the signatures when the canister is upgraded
+    pub(crate) static MSG_HASHES: RefCell<StableVec<[u8; 32], VirtualMemory<DefaultMemoryImpl>>> = RefCell::new(
+        StableVec::init(
+            MEMORY_MANAGER.with(|m| m.borrow().get(SIG))
+        ).expect("failed to initialize stable vector")
+    );
 }
 
 /// We use restricted memory in order to ensure the separation between non-managed config memory (first page)
 /// and the managed memory for the credential data of the canister.
-type RMemory= RestrictedMemory<DefaultMemoryImpl>;
-type ConfigCell = StableCell<IssuerConfig, RMemory>;
+type Memory= RestrictedMemory<DefaultMemoryImpl>;
+type ConfigCell = StableCell<IssuerConfig, Memory>;
 
 
 /// Reserve the first stable memory page for the configuration stable cell.
-fn config_memory() -> RMemory{
+fn config_memory() -> Memory{
     RestrictedMemory::new(DefaultMemoryImpl::default(), 0..1)
 }
 
@@ -139,72 +145,21 @@ fn init(init_arg: Option<IssuerInit>) {
     init_assets();
 }
 
-// A pre-upgrade hook for serializing the data stored on the heap.
-#[pre_upgrade]
-fn pre_upgrade() {
-    // Serialize the SIGNATURES
-    let mut sigs_bytes = vec![];
-    SIGNATURES.with(|s| ciborium::ser::into_writer(&*s.borrow(), &mut sigs_bytes))
-        .expect("failed to encode signatures");
-
-    // Write the length of the serialized SIGNATURES bytes to memory, followed by the bytes themselves.
-    let sigs_len = sigs_bytes.len() as u32;
-    let mut memory = MEMORY_MANAGER.with(|m| m.borrow().get(UPGRADES));
-    let mut writer = Writer::new(&mut memory, 0);
-    writer.write(&sigs_len.to_le_bytes()).unwrap();
-    writer.write(&sigs_bytes).unwrap();
-
-    // Serialize the ASSETS
-    let mut assets_bytes = vec![];
-    ASSETS.with(|a| ciborium::ser::into_writer(&*a.borrow(), &mut assets_bytes))
-        .expect("failed to encode assets");
-
-    // Write the length of the serialized ASSETS bytes to memory, starting after the SIGNATURES bytes.
-    let assets_len = assets_bytes.len() as u32;
-    let assets_offset = 4 + sigs_len as usize; // 4 bytes for the length of SIGNATURES
-    writer.set_position(assets_offset as u64);
-    writer.write(&assets_len.to_le_bytes()).unwrap();
-    writer.write(&assets_bytes).unwrap();
-}
-
-// A post-upgrade hook for configuring the canister and deserializing the data back into the heap.
+/// A post-upgrade hook for configuring the canister and deserializing the data back into the heap.
 #[post_upgrade]
 fn post_upgrade(init_arg: Option<IssuerInit>) {
     // Initialize the CONFIG
     init(init_arg);
 
-    let memory = MEMORY_MANAGER.with(|m| m.borrow().get(UPGRADES));
-
-    // Read and deserialize the state for SIGNATURES
-    let mut sigs_len_bytes = [0; 4];
-    memory.read(0, &mut sigs_len_bytes);
-    let sigs_len = u32::from_le_bytes(sigs_len_bytes) as usize;
-
-    let mut sigs_bytes = vec![0; sigs_len];
-    memory.read(4, &mut sigs_bytes);
-
-    let signatures = ciborium::de::from_reader(&*sigs_bytes).expect("failed to decode signatures");
-    
-    SIGNATURES.with(|s| {
-        *s.borrow_mut() = signatures
+    // Restore the signatures
+    SIGNATURES.with(|sigs| {    
+        let mut sigs = sigs.borrow_mut();
+        MSG_HASHES.with(|hashes| {
+        hashes.borrow().iter().for_each(|hash| sigs.add_signature(&CANISTER_SIG_SEED, hash))
+        });
     });
 
-    // Calculate the offset for ASSETS data
-    let assets_offset: u64 = 4 + sigs_len.try_into().unwrap();
-
-    // Read and deserialize the state for ASSETS
-    let mut assets_len_bytes = [0; 4];
-    memory.read(assets_offset, &mut assets_len_bytes);
-    let assets_len = u32::from_le_bytes(assets_len_bytes) as usize;
-
-    let mut assets_bytes = vec![0; assets_len];
-    memory.read(assets_offset + 4, &mut assets_bytes);
-
-    let assets = ciborium::de::from_reader(&*assets_bytes).expect("failed to decode assets");
-    ASSETS.with(|a| {
-        *a.borrow_mut() = assets
-    });
-
+    update_root_hash();
 }
 
 /// Called when the canister is configured.
