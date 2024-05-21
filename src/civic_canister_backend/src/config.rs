@@ -7,7 +7,6 @@
 //! - Handling HTTP requests with CORS support.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
 use canister_sig_util::signature_map::{SignatureMap, LABEL_SIG};
 use candid::{candid_method, CandidType, Deserialize, Principal};
 use canister_sig_util::{extract_raw_root_pk_from_der, IC_ROOT_PK_DER};
@@ -15,33 +14,38 @@ use ic_cdk_macros::{init, query, update, post_upgrade};
 use ic_cdk::api;
 use ic_certification::{labeled_hash, pruned};
 use ic_stable_structures::storable::Bound;
-use ic_stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableCell, Storable};
+use ic_stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableCell, Storable, StableBTreeMap, memory_manager::{MemoryManager, MemoryId, VirtualMemory}};
 use include_dir::{include_dir, Dir};
 use serde_bytes::ByteBuf;
 use std::borrow::Cow;
 use asset_util::{collect_assets, CertifiedAssets};
 use vc_util::issuer_api::{
     DerivationOriginData, DerivationOriginError,
-    DerivationOriginRequest, Icrc21ConsentInfo, Icrc21Error,
-    Icrc21VcConsentMessageRequest
+    DerivationOriginRequest
 };
-use crate::credential::{StoredCredential, update_root_hash};
+use crate::credential::{CredentialList, update_root_hash};
 
 
 const PROD_II_CANISTER_ID: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai";
 
 thread_local! {
-    /// Static configuration of the canister set by init() or post_upgrade().
+    static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
+        RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
+
     pub(crate) static CONFIG: RefCell<ConfigCell> = RefCell::new(ConfigCell::init(config_memory(), IssuerConfig::default()).expect("failed to initialize stable cell"));
     pub(crate) static SIGNATURES : RefCell<SignatureMap> = RefCell::new(SignatureMap::default());
 
-    pub static CREDENTIALS : RefCell<HashMap<Principal, Vec<StoredCredential>>> = RefCell::new(HashMap::new());
+    pub(crate) static CREDENTIALS: RefCell<StableBTreeMap<Principal, CredentialList, VirtualMemory<DefaultMemoryImpl>>> = RefCell::new(
+        StableBTreeMap::init(
+            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0)))
+        )
+    );
     // Assets for the management app
     pub static ASSETS: RefCell<CertifiedAssets> = RefCell::new(CertifiedAssets::default());
 }
 
 /// We use restricted memory in order to ensure the separation between non-managed config memory (first page)
-/// and the managed memory for potential other data of the canister.
+/// and the managed memory for the credential data of the canister.
 type Memory = RestrictedMemory<DefaultMemoryImpl>;
 type ConfigCell = StableCell<IssuerConfig, Memory>;
 

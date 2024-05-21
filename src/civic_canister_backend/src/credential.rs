@@ -4,10 +4,11 @@
 //! including issuing, updating, and retrieving credentials. It also handles authorization
 //! and verification processes related to credential operations.
 
+use std::borrow::Cow;
 use std::fmt;
 use std::collections::{HashMap, BTreeMap};
 use std::iter::repeat;
-use candid::{CandidType, Deserialize, Principal, candid_method};
+use candid::{CandidType, Deserialize, Principal, candid_method, Encode, Decode};
 use serde::Serialize;
 use serde_json::Value;
 use identity_credential::credential::{CredentialBuilder, Subject};
@@ -26,6 +27,8 @@ use ic_certification::{Hash, fork_hash, labeled_hash};
 use serde_bytes::ByteBuf;
 use lazy_static::lazy_static;
 use identity_core::common::Timestamp;
+use ic_stable_structures::storable::{Storable, Bound};
+
 
 extern crate asset_util;
 
@@ -106,6 +109,35 @@ pub(crate) struct StoredCredential {
     pub(crate)  claim: Vec<Claim>,
 }
 
+const MAX_VALUE_SIZE: u32 = 100;
+
+/// Define a wrapper type around a list of credentials so that we can store it inside Stable
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub struct CredentialList(Vec<StoredCredential>);
+
+/// Implement the trait needed to use CredentialList inside a StableBTreeMap
+impl Storable for CredentialList {
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Owned(Encode!(&self.0).expect("Failed to encode StoredCredential"))
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        CredentialList(Decode!(&bytes, Vec<StoredCredential>).expect("Failed to decode StoredCredential"))
+    }
+
+    // at most 100 Credentials per user 
+    const BOUND: Bound = Bound::Bounded {
+        max_size: MAX_VALUE_SIZE,
+        is_fixed_size: false,
+    };
+}
+
+impl From<CredentialList> for Vec<StoredCredential> {
+    fn from(val: CredentialList) -> Self {
+        val.0
+    }     
+}
+
 /// Enumerates potential errors that can occur during credential operations.
 #[derive(CandidType, Deserialize, Debug)]
 pub(crate) enum CredentialError {
@@ -116,16 +148,28 @@ pub(crate) enum CredentialError {
 /// Adds new credentials to the canister for a given principal.
 #[update]
 #[candid_method]
-async fn add_credentials(principal: Principal, new_credentials: Vec<StoredCredential>) -> Result<String, CredentialError>  {
+async fn add_credentials(principal: Principal, new_credentials: CredentialList) -> Result<String, CredentialError>  {
     // Check if the caller is the authorized principal
     if caller().to_text() != AUTHORIZED_PRINCIPAL {
         return Err(CredentialError::UnauthorizedSubject("Unauthorized: You do not have permission to add credentials.".to_string()));
     }
     // Access the credentials storage and attempt to add the new credentials
-    CREDENTIALS.with_borrow_mut(|credentials| {
-            let entry = credentials.entry(principal).or_default();
-            entry.extend(new_credentials.clone());    
-        });
+    CREDENTIALS.with(|c| {
+        // get a mutable reference to the stable map
+        let mut credentials = c.borrow_mut(); 
+        // check if there is already credentials stored under this principal
+        if credentials.contains_key(&principal) {
+            // if yes, extend the vector with the vector of new credentials 
+            let mut existing_credentials: Vec<StoredCredential> = credentials.get(&principal).unwrap().into();
+            existing_credentials.extend(new_credentials.0.clone());
+            credentials.insert(principal, CredentialList(existing_credentials));
+        } else {
+        // else insert the new entry 
+        credentials.insert(principal, new_credentials.clone());
+     }
+
+    });
+
     let credential_info = format!("Added credentials: \n{:?}", new_credentials);
     Ok(credential_info)
 }
@@ -140,8 +184,9 @@ async fn update_credential(principal: Principal, credential_id: String, updated_
         return Err(CredentialError::UnauthorizedSubject("Unauthorized: You do not have permission to update credentials.".to_string()));
     }
     // Access the credentials storage and attempt to update the specified credential
-    CREDENTIALS.with_borrow_mut(|credentials| {
-        if let Some(creds) = credentials.get_mut(&principal) {
+    CREDENTIALS.with(|c| {
+        if let Some(creds) = c.borrow().get(&principal) {
+            let mut creds: Vec<StoredCredential> = creds.into();
             if let Some(pos) = creds.iter().position(|c| c.id == credential_id) {
                 creds[pos] = updated_credential.clone();
                 return Ok(format!("Credential updated successfully: {:?}", updated_credential));
@@ -156,13 +201,11 @@ async fn update_credential(principal: Principal, credential_id: String, updated_
 #[query]
 #[candid_method(query)]
 fn get_all_credentials(principal: Principal) -> Result<Vec<StoredCredential>, CredentialError> {
-    if let Some(c) = CREDENTIALS.with_borrow(|credentials| {
-        credentials.get(&principal).cloned()
-    }) {
-        Ok(c)
-    } else {
-        Err(CredentialError::NoCredentialFound(format!("No credentials found for principal {}", principal.to_text())))
-    }
+    if let Some(c) = CREDENTIALS.with(|c| c.borrow().get(&principal)) {
+    Ok(c.into())
+} else {
+    Err(CredentialError::NoCredentialFound(format!("No credentials found for principal {}", principal.to_text())))
+}
 }
 
 
@@ -298,12 +341,10 @@ fn verify_authorized_principal(
     alias_tuple: &AliasTuple,
 ) -> Result<StoredCredential, IssueCredentialError> {
     // Get the credentials of this user
-    if let Some(credentials) = CREDENTIALS.with(|credentials| {
-        let credentials = credentials.borrow();
-        credentials.get(&alias_tuple.id_dapp).cloned()
-    }) {
+    if let Some(credentials) = CREDENTIALS.with(|c|c.borrow().get(&alias_tuple.id_dapp)) {
         // Check if the user has a credential of the type and return it
-        for c in credentials {
+        let v: Vec<StoredCredential> = credentials.into();
+        for c in v {
             if c.type_.contains(&credential_type.to_string()) {
                 return Ok(c)
             }
