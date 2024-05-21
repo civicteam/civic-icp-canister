@@ -1,6 +1,3 @@
-Here's the updated `README.md` with an explanation and instructions for the script located in `./src/civic_frontend_canister`:
-
-```markdown
 # CI Build and Test (Local setup)
 
 This project provides steps to set up and run the project locally. Follow the steps below to configure your environment, build the project, and run tests.
@@ -103,4 +100,4 @@ This script performs the following tasks:
 - Modify the setup and deployment scripts as needed to suit your project's requirements.
 ```
 
-This `README.md` includes instructions for setting up and running the project locally, as well as an explanation and usage instructions for the script in `./src/civic_frontend_canister`. Make sure to replace placeholders like `https://github.com/your-repository.git` and `"principal id here"` with actual values specific to your project.
+This `README.md` includes instructions for setting up and running the project locally, as well as an explanation and usage instructions for the script in `./src/civic_frontend_canister`. Make sure to replace placeholders like `https://github.com/your-repository.git` and `"principal id here"` with actual values specific to your project.s
