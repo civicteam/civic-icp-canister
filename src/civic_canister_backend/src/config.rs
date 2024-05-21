@@ -6,27 +6,22 @@
 //! - Managing assets and their certification.
 //! - Handling HTTP requests with CORS support.
 
-use std::cell::RefCell;
-use std::collections::HashMap;
-use canister_sig_util::signature_map::{SignatureMap, LABEL_SIG};
+use crate::credential::{update_root_hash, StoredCredential};
+use asset_util::{collect_assets, CertifiedAssets};
 use candid::{candid_method, CandidType, Deserialize, Principal};
+use canister_sig_util::signature_map::{SignatureMap, LABEL_SIG};
 use canister_sig_util::{extract_raw_root_pk_from_der, IC_ROOT_PK_DER};
-use ic_cdk_macros::{init, query, update, post_upgrade};
 use ic_cdk::api;
+use ic_cdk_macros::{init, post_upgrade, query, update};
 use ic_certification::{labeled_hash, pruned};
 use ic_stable_structures::storable::Bound;
 use ic_stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableCell, Storable};
 use include_dir::{include_dir, Dir};
 use serde_bytes::ByteBuf;
 use std::borrow::Cow;
-use asset_util::{collect_assets, CertifiedAssets};
-use vc_util::issuer_api::{
-    DerivationOriginData, DerivationOriginError,
-    DerivationOriginRequest, Icrc21ConsentInfo, Icrc21Error,
-    Icrc21VcConsentMessageRequest
-};
-use crate::credential::{StoredCredential, update_root_hash};
-
+use std::cell::RefCell;
+use std::collections::HashMap;
+use vc_util::issuer_api::{DerivationOriginData, DerivationOriginError, DerivationOriginRequest};
 
 const PROD_II_CANISTER_ID: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai";
 
@@ -45,7 +40,6 @@ thread_local! {
 type Memory = RestrictedMemory<DefaultMemoryImpl>;
 type ConfigCell = StableCell<IssuerConfig, Memory>;
 
-
 /// Reserve the first stable memory page for the configuration stable cell.
 fn config_memory() -> Memory {
     RestrictedMemory::new(DefaultMemoryImpl::default(), 0..1)
@@ -55,7 +49,7 @@ fn config_memory() -> Memory {
 use ic_cdk::println;
 
 /// Configuration for the canister.
-#[derive(CandidType, Deserialize)]
+#[derive(Clone, Debug, CandidType, Deserialize)]
 pub(crate) struct IssuerConfig {
     /// Root of trust for checking canister signatures.
     pub(crate) ic_root_key_raw: Vec<u8>,
@@ -65,6 +59,10 @@ pub(crate) struct IssuerConfig {
     derivation_origin: String,
     /// Frontend hostname to be used by the issuer.
     frontend_hostname: String,
+    // Admin who can add authorized issuers
+    admin: Principal,
+    // List of authorized issuers who can issue credentials
+    pub authorized_issuers: Vec<Principal>,
 }
 
 impl Storable for IssuerConfig {
@@ -86,6 +84,8 @@ impl Default for IssuerConfig {
             idp_canister_ids: vec![Principal::from_text(PROD_II_CANISTER_ID).unwrap()],
             derivation_origin: derivation_origin.clone(),
             frontend_hostname: derivation_origin,
+            admin: ic_cdk::api::caller(),
+            authorized_issuers: vec![ic_cdk::api::caller()],
         }
     }
 }
@@ -98,9 +98,10 @@ impl From<IssuerInit> for IssuerConfig {
             idp_canister_ids: init.idp_canister_ids,
             derivation_origin: init.derivation_origin,
             frontend_hostname: init.frontend_hostname,
+            admin: init.admin,
+            authorized_issuers: init.authorized_issuers,
         }
     }
-
 }
 
 /// Initialization arguments for the canister.
@@ -114,6 +115,10 @@ struct IssuerInit {
     derivation_origin: String,
     /// Frontend hostname be used by the issuer.
     frontend_hostname: String,
+    // Admin who can add authorized issuers
+    admin: Principal,
+    // List of authorized issuers who can issue credentials
+    authorized_issuers: Vec<Principal>,
 }
 
 /// Called when the canister is deployed.
@@ -122,9 +127,68 @@ struct IssuerInit {
 fn init(init_arg: Option<IssuerInit>) {
     if let Some(init) = init_arg {
         apply_config(init);
-    };
-
+    } else {
+        // Initialize with default values and a specified admin
+        let default_config = IssuerConfig::default();
+        CONFIG.with(|config_cell| {
+            let mut config = config_cell.borrow_mut();
+            *config = ConfigCell::init(config_memory(), default_config)
+                .expect("Failed to initialize config");
+        });
+    }
     init_assets();
+}
+
+#[update]
+#[candid_method(update)]
+fn add_issuer(new_issuer: Principal) {
+    let caller = ic_cdk::api::caller();
+    CONFIG.with(|config_cell| {
+        let mut config = config_cell.borrow_mut();
+        // Retrieve the current configuration
+        let mut current_config = config.get().clone(); // Clone into a mutable local variable
+
+        // Check if the caller is the admin and modify the config
+        if caller == current_config.admin {
+            // Ensure no duplicates if that's intended
+            if !current_config.authorized_issuers.contains(&new_issuer) {
+                current_config.authorized_issuers.push(new_issuer);
+            }
+            // Save the updated configuration
+            let _ = config.set(current_config); // Pass the modified IssuerConfig back to set
+        } else {
+            ic_cdk::api::trap("Caller is not authorized as admin.");
+        }
+    });
+}
+
+#[update]
+#[candid_method(update)]
+fn remove_issuer(issuer: Principal) {
+    let caller = ic_cdk::api::caller();
+    CONFIG.with(|config_cell| {
+        let mut config = config_cell.borrow_mut();
+        // Retrieve the current configuration
+        let mut current_config = config.get().clone(); // Clone into a mutable local variable
+
+        if caller == current_config.admin {
+            // Remove the issuer if they exist in the list
+            current_config.authorized_issuers.retain(|x| *x != issuer);
+            // Save the updated configuration
+            let _ = config.set(current_config); // Pass the modified IssuerConfig back to set
+        } else {
+            ic_cdk::api::trap("Caller is not authorized as admin.");
+        }
+    });
+}
+
+#[query]
+fn get_admin() -> Principal {
+    CONFIG.with(|config| {
+        let config_borrowed = config.borrow(); // Obtain a read-only borrow
+                                               // Now you can access the config
+        return config_borrowed.get().admin;
+    })
 }
 
 /// Called when the canister is upgraded.
@@ -228,7 +292,6 @@ pub fn http_request(req: HttpRequest) -> HttpResponse {
         },
     }
 }
-
 
 #[derive(Clone, Debug, CandidType, Deserialize)]
 pub struct HttpRequest {
