@@ -8,6 +8,7 @@ dotenv.config({ path: '.env.local' });
 
 // Configuration
 const civicBackendCanisterId = process.env.VITE_CIVIC_BACKEND_CANISTER_ID ?? "";
+const isProduction = process.env.VITE_ENV === 'production';
 
 console.log('Civic backend canister ID:', civicBackendCanisterId);
 
@@ -45,7 +46,7 @@ const credential = {
 // Function to store the credential
 const storeCredential = async () => {
   const identity = Secp256k1KeyIdentity.fromSecretKey(dummyCivicSampleKey);
-  const agent = new HttpAgent({ identity });
+  const agent = isProduction ? new HttpAgent({ identity }) : new HttpAgent({ identity, host: 'http://127.0.0.1:4943' });
   console.log('#### Using Civic Principal:', identity.getPrincipal().toText());
 
   agent.fetchRootKey();
