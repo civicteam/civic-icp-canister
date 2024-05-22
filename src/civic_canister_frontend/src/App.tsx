@@ -10,6 +10,10 @@ function App() {
   const [credentialService, setCredentialService] = useState<CredentialService>();
 
   useEffect(() => {
+    console.log('Config:', config);
+  }, [config]);
+
+  useEffect(() => {
     const { civicBackendCanisterId, dummyCivicSampleKey } = config;
     const service = new CredentialService({
       civicBackendCanisterId,
