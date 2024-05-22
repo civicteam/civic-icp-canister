@@ -4,38 +4,42 @@
 //! including issuing, updating, and retrieving credentials. It also handles authorization
 //! and verification processes related to credential operations.
 
-use std::fmt;
-use std::collections::{HashMap, BTreeMap};
-use std::iter::repeat;
-use candid::{CandidType, Deserialize, Principal, candid_method};
-use serde::Serialize;
-use serde_json::Value;
-use identity_credential::credential::{CredentialBuilder, Subject};
-use identity_core::common::Url;
+use candid::{candid_method, CandidType, Deserialize, Principal};
 use canister_sig_util::signature_map::LABEL_SIG;
-use sha2::{Digest, Sha256};
+use canister_sig_util::CanisterSigPublicKey;
 use ic_cdk::api::{caller, set_certified_data, time};
-use ic_cdk_macros::{update, query};
+use ic_cdk_macros::{query, update};
+use ic_certification::{fork_hash, labeled_hash, Hash};
+use identity_core::common::Timestamp;
+use identity_core::common::Url;
+use identity_credential::credential::{CredentialBuilder, Subject};
+use lazy_static::lazy_static;
+use serde::Serialize;
+use serde_bytes::ByteBuf;
+use serde_json::Value;
+use sha2::{Digest, Sha256};
+use std::collections::{BTreeMap, HashMap};
+use std::fmt;
+use std::iter::repeat;
 use vc_util::issuer_api::{
     CredentialSpec, GetCredentialRequest, IssueCredentialError, IssuedCredentialData,
-    PrepareCredentialRequest, PreparedCredentialData, SignedIdAlias
+    PrepareCredentialRequest, PreparedCredentialData, SignedIdAlias,
 };
-use vc_util::{did_for_principal, get_verified_id_alias_from_jws, vc_jwt_to_jws, vc_signing_input, vc_signing_input_hash, AliasTuple};
-use canister_sig_util::CanisterSigPublicKey;
-use ic_certification::{Hash, fork_hash, labeled_hash};
-use serde_bytes::ByteBuf;
-use lazy_static::lazy_static;
-use identity_core::common::Timestamp;
+use vc_util::{
+    did_for_principal, get_verified_id_alias_from_jws, vc_jwt_to_jws, vc_signing_input,
+    vc_signing_input_hash, AliasTuple,
+};
 
 extern crate asset_util;
 
-use crate::config::{CONFIG, CREDENTIALS, SIGNATURES, ASSETS};
+use crate::config::{ASSETS, CONFIG, CREDENTIALS, SIGNATURES};
 
 // The expiration of issued verifiable credentials.
 const MINUTE_NS: u64 = 60 * 1_000_000_000;
 const VC_EXPIRATION_PERIOD_NS: u64 = 15 * MINUTE_NS;
 // Authorized Civic Principal - get this from the frontend
-const AUTHORIZED_PRINCIPAL: &str = "tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae";
+const AUTHORIZED_PRINCIPAL: &str =
+    "tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae";
 
 lazy_static! {
     /// Seed and public key used for signing the credentials.
@@ -58,7 +62,7 @@ impl fmt::Display for SupportedCredentialType {
 
 /// Represents different types of claim values that can be part of a credential.
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
-pub(crate) enum ClaimValue {
+pub enum ClaimValue {
     Boolean(bool),
     Date(String),
     Text(String),
@@ -68,8 +72,8 @@ pub(crate) enum ClaimValue {
 
 /// Represents a collection of claims.
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
-pub(crate) struct Claim {
-    pub(crate)  claims:HashMap<String, ClaimValue>,
+pub struct Claim {
+    pub claims: HashMap<String, ClaimValue>,
 }
 
 impl From<ClaimValue> for Value {
@@ -81,7 +85,7 @@ impl From<ClaimValue> for Value {
             ClaimValue::Number(n) => Value::Number(n.into()),
             ClaimValue::Claim(nested_claim) => {
                 serde_json::to_value(nested_claim).unwrap_or(Value::Null)
-            },
+            }
         }
     }
 }
@@ -89,26 +93,28 @@ impl From<ClaimValue> for Value {
 /// Converts a `Claim` into a `Subject` that represents a credential subject containing the given claims (but no subject ID yet)
 impl Claim {
     pub(crate) fn into(self) -> Subject {
-        let btree_map: BTreeMap<String, Value> = self.claims.into_iter()
-        .map(|(k, v)| (k, v.into()))
-        .collect();
-        Subject::with_properties(btree_map) 
+        let btree_map: BTreeMap<String, Value> = self
+            .claims
+            .into_iter()
+            .map(|(k, v)| (k, v.into()))
+            .collect();
+        Subject::with_properties(btree_map)
     }
 }
 
 /// Represents a stored credential within the canister.
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
-pub(crate) struct StoredCredential {
-    pub(crate)  id: String, 
-    pub(crate)  type_: Vec<String>,
-    pub(crate)  context: Vec<String>,
-    pub(crate)  issuer: String,
-    pub(crate)  claim: Vec<Claim>,
+pub struct StoredCredential {
+    pub id: String,
+    pub type_: Vec<String>,
+    pub context: Vec<String>,
+    pub issuer: String,
+    pub claim: Vec<Claim>,
 }
 
 /// Enumerates potential errors that can occur during credential operations.
 #[derive(CandidType, Deserialize, Debug)]
-pub(crate) enum CredentialError {
+pub enum CredentialError {
     NoCredentialFound(String),
     UnauthorizedSubject(String),
 }
@@ -116,55 +122,71 @@ pub(crate) enum CredentialError {
 /// Adds new credentials to the canister for a given principal.
 #[update]
 #[candid_method]
-async fn add_credentials(principal: Principal, new_credentials: Vec<StoredCredential>) -> Result<String, CredentialError>  {
+async fn add_credentials(
+    principal: Principal,
+    new_credentials: Vec<StoredCredential>,
+) -> Result<String, CredentialError> {
     // Check if the caller is the authorized principal
     if caller().to_text() != AUTHORIZED_PRINCIPAL {
-        return Err(CredentialError::UnauthorizedSubject("Unauthorized: You do not have permission to add credentials.".to_string()));
+        return Err(CredentialError::UnauthorizedSubject(
+            "Unauthorized: You do not have permission to add credentials.".to_string(),
+        ));
     }
     // Access the credentials storage and attempt to add the new credentials
     CREDENTIALS.with_borrow_mut(|credentials| {
-            let entry = credentials.entry(principal).or_default();
-            entry.extend(new_credentials.clone());    
-        });
+        let entry = credentials.entry(principal).or_default();
+        entry.extend(new_credentials.clone());
+    });
     let credential_info = format!("Added credentials: \n{:?}", new_credentials);
     Ok(credential_info)
 }
 
-
 /// Updates an existing credential for a given principal.
 #[update]
 #[candid_method]
-async fn update_credential(principal: Principal, credential_id: String, updated_credential: StoredCredential) -> Result<String, CredentialError> {
+async fn update_credential(
+    principal: Principal,
+    credential_id: String,
+    updated_credential: StoredCredential,
+) -> Result<String, CredentialError> {
     // Check if the caller is the authorized principal
     if caller().to_text() != AUTHORIZED_PRINCIPAL {
-        return Err(CredentialError::UnauthorizedSubject("Unauthorized: You do not have permission to update credentials.".to_string()));
+        return Err(CredentialError::UnauthorizedSubject(
+            "Unauthorized: You do not have permission to update credentials.".to_string(),
+        ));
     }
     // Access the credentials storage and attempt to update the specified credential
     CREDENTIALS.with_borrow_mut(|credentials| {
         if let Some(creds) = credentials.get_mut(&principal) {
             if let Some(pos) = creds.iter().position(|c| c.id == credential_id) {
                 creds[pos] = updated_credential.clone();
-                return Ok(format!("Credential updated successfully: {:?}", updated_credential));
+                return Ok(format!(
+                    "Credential updated successfully: {:?}",
+                    updated_credential
+                ));
             }
         }
-        Err(CredentialError::NoCredentialFound(format!("No credential found with ID {} for principal {}", credential_id, principal.to_text())))
+        Err(CredentialError::NoCredentialFound(format!(
+            "No credential found with ID {} for principal {}",
+            credential_id,
+            principal.to_text()
+        )))
     })
 }
-
 
 /// Retrieves all credentials for a given principal.
 #[query]
 #[candid_method(query)]
 fn get_all_credentials(principal: Principal) -> Result<Vec<StoredCredential>, CredentialError> {
-    if let Some(c) = CREDENTIALS.with_borrow(|credentials| {
-        credentials.get(&principal).cloned()
-    }) {
+    if let Some(c) = CREDENTIALS.with_borrow(|credentials| credentials.get(&principal).cloned()) {
         Ok(c)
     } else {
-        Err(CredentialError::NoCredentialFound(format!("No credentials found for principal {}", principal.to_text())))
+        Err(CredentialError::NoCredentialFound(format!(
+            "No credentials found for principal {}",
+            principal.to_text()
+        )))
     }
 }
-
 
 /// Request to prepare a VC for issuance.
 #[update]
@@ -183,7 +205,7 @@ async fn prepare_credential(
         Ok(credential) => credential,
         Err(err) => return Result::<PreparedCredentialData, IssueCredentialError>::Err(err),
     };
-    // And sign the JWT 
+    // And sign the JWT
     let signing_input =
         vc_signing_input(&credential_jwt, &CANISTER_SIG_PK).expect("failed getting signing_input");
     let msg_hash = vc_signing_input_hash(&signing_input);
@@ -199,7 +221,6 @@ async fn prepare_credential(
         prepared_context: Some(ByteBuf::from(credential_jwt.as_bytes())),
     })
 }
-
 
 /// Obtain a VC from the canister after it was prepared.
 #[query]
@@ -222,7 +243,7 @@ fn get_credential(req: GetCredentialRequest) -> Result<IssuedCredentialData, Iss
             ))
         }
     };
-    let credential_jwt: String = match String::from_utf8(prepared_context.into_vec()){
+    let credential_jwt: String = match String::from_utf8(prepared_context.into_vec()) {
         Ok(s) => s,
         Err(_) => {
             return Result::<IssuedCredentialData, IssueCredentialError>::Err(internal_error(
@@ -263,7 +284,6 @@ fn get_credential(req: GetCredentialRequest) -> Result<IssuedCredentialData, Iss
     Result::<IssuedCredentialData, IssueCredentialError>::Ok(IssuedCredentialData { vc_jws })
 }
 
-
 /// Check if the ID alias of a VC request is valid and matches the expected VC subject.
 fn authorize_vc_request(
     alias: &SignedIdAlias,
@@ -272,8 +292,8 @@ fn authorize_vc_request(
 ) -> Result<AliasTuple, IssueCredentialError> {
     CONFIG.with_borrow(|config| {
         let config = config.get();
-        
-        // heck if the ID alias is legitimate and was issued by the internet identity canister    
+
+        // heck if the ID alias is legitimate and was issued by the internet identity canister
         for idp_canister_id in &config.idp_canister_ids {
             if let Ok(alias_tuple) = get_verified_id_alias_from_jws(
                 &alias.credential_jws,
@@ -291,7 +311,6 @@ fn authorize_vc_request(
     })
 }
 
-
 /// Check if the given user has a credential of the type and return it.
 fn verify_authorized_principal(
     credential_type: SupportedCredentialType,
@@ -305,28 +324,28 @@ fn verify_authorized_principal(
         // Check if the user has a credential of the type and return it
         for c in credentials {
             if c.type_.contains(&credential_type.to_string()) {
-                return Ok(c)
+                return Ok(c);
             }
         }
-    } 
-    // No (matching) credential found for this user 
-        println!(
-            "*** principal {} it is not authorized for credential type {:?}",
-            alias_tuple.id_dapp.to_text(),
-            credential_type
-        );
-        Err(IssueCredentialError::UnauthorizedSubject(format!(
-            "unauthorized principal {}",
-            alias_tuple.id_dapp.to_text()
-        )))
+    }
+    // No (matching) credential found for this user
+    println!(
+        "*** principal {} it is not authorized for credential type {:?}",
+        alias_tuple.id_dapp.to_text(),
+        credential_type
+    );
+    Err(IssueCredentialError::UnauthorizedSubject(format!(
+        "unauthorized principal {}",
+        alias_tuple.id_dapp.to_text()
+    )))
 }
 
 /// Verifies if the credential spec is supported and returns the corresponding credential type.
-pub (crate) fn verify_credential_spec(spec: &CredentialSpec) -> Result<SupportedCredentialType, String> {
+pub(crate) fn verify_credential_spec(
+    spec: &CredentialSpec,
+) -> Result<SupportedCredentialType, String> {
     match spec.credential_type.as_str() {
-        "VerifiedAdult" => {
-            Ok(SupportedCredentialType::VerifiedAdult)
-        }
+        "VerifiedAdult" => Ok(SupportedCredentialType::VerifiedAdult),
         other => Err(format!("Credential {} is not supported", other)),
     }
 }
@@ -335,15 +354,13 @@ fn internal_error(msg: &str) -> IssueCredentialError {
     IssueCredentialError::Internal(String::from(msg))
 }
 
-
 fn hash_bytes(value: impl AsRef<[u8]>) -> Hash {
     let mut hasher = Sha256::new();
     hasher.update(value.as_ref());
     hasher.finalize().into()
 }
 
-
-pub (crate) fn update_root_hash() {
+pub(crate) fn update_root_hash() {
     SIGNATURES.with_borrow(|sigs| {
         ASSETS.with_borrow(|assets| {
             let prefixed_root_hash = fork_hash(
@@ -367,31 +384,30 @@ fn prepare_credential_jwt(
             return Err(IssueCredentialError::UnsupportedCredentialSpec(err));
         }
     };
-    // Currently only supports VerifiedAdults spec 
+    // Currently only supports VerifiedAdults spec
     let credential = verify_authorized_principal(credential_type, alias_tuple)?;
     Ok(build_credential(
         alias_tuple.id_alias,
         credential_spec,
-        credential
+        credential,
     ))
-
 }
 
 /// Internal parameters to pass to the build_credential_jwt function.
 struct CredentialParams {
-     spec: CredentialSpec,
-     subject_id: String,
-     credential_id_url: String, 
-     context: Vec<String>,
-     issuer_url: String,
-     claims: Vec<Claim>,
-     expiration_timestamp_s: u32,
+    spec: CredentialSpec,
+    subject_id: String,
+    credential_id_url: String,
+    context: Vec<String>,
+    issuer_url: String,
+    claims: Vec<Claim>,
+    expiration_timestamp_s: u32,
 }
 
 fn build_credential(
     subject_principal: Principal,
     credential_spec: &CredentialSpec,
-    credential: StoredCredential
+    credential: StoredCredential,
 ) -> String {
     let params = CredentialParams {
         spec: credential_spec.clone(),
@@ -412,7 +428,7 @@ fn exp_timestamp_s() -> u32 {
 /// Build a VC and return it as a JWT-string.
 fn build_credential_jwt(params: CredentialParams) -> String {
     // Build "credentialSubject" objects
-    let subjects = build_claims_into_credential_subjects(params.claims, params.subject_id); 
+    let subjects = build_claims_into_credential_subjects(params.claims, params.subject_id);
     let expiration_date = Timestamp::from_unix(params.expiration_timestamp_s as i64)
         .expect("internal: failed computing expiration timestamp");
 
@@ -422,9 +438,9 @@ fn build_credential_jwt(params: CredentialParams) -> String {
         .issuer(Url::parse(params.issuer_url).unwrap())
         .type_("VerifiedCredential".to_string())
         .type_(params.spec.credential_type)
-        .subjects(subjects) // add objects to the credentialSubject 
+        .subjects(subjects) // add objects to the credentialSubject
         .expiration_date(expiration_date);
-    // Add all the context 
+    // Add all the context
     credential = add_context(credential, params.context);
 
     // Serialize the VC object into a JWT-string
@@ -432,20 +448,28 @@ fn build_credential_jwt(params: CredentialParams) -> String {
     credential.serialize_jwt().unwrap()
 }
 
-
-/// Helper function to construct the claims stored in the canister into a CredentialSubject containing the subject and given claims 
-pub(crate) fn build_claims_into_credential_subjects(claims: Vec<Claim>, subject: String) -> Vec<Subject> {
-    claims.into_iter().zip(repeat(subject)).map(|(c, id )|{
-        let mut sub = c.into();
-        sub.id = Url::parse(id).ok();
-        sub
-    }).collect()
+/// Helper function to construct the claims stored in the canister into a CredentialSubject containing the subject and given claims
+pub(crate) fn build_claims_into_credential_subjects(
+    claims: Vec<Claim>,
+    subject: String,
+) -> Vec<Subject> {
+    claims
+        .into_iter()
+        .zip(repeat(subject))
+        .map(|(c, id)| {
+            let mut sub = c.into();
+            sub.id = Url::parse(id).ok();
+            sub
+        })
+        .collect()
 }
 
-
-pub(crate) fn add_context(mut credential: CredentialBuilder, context: Vec<String>) -> CredentialBuilder {
+pub(crate) fn add_context(
+    mut credential: CredentialBuilder,
+    context: Vec<String>,
+) -> CredentialBuilder {
     for c in context {
-     credential = credential.context(Url::parse(c).unwrap());
+        credential = credential.context(Url::parse(c).unwrap());
     }
     credential
 }
