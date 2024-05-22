@@ -11,11 +11,10 @@ use canister_sig_util::signature_map::{SignatureMap, LABEL_SIG};
 use candid::{candid_method, CandidType, Deserialize, Principal};
 use canister_sig_util::{extract_raw_root_pk_from_der, IC_ROOT_PK_DER};
 use ic_cdk_macros::{init, query, update, post_upgrade};
-use candid_parser::{Encode, Decode};
 use ic_cdk::api;
 use ic_certification::{labeled_hash, pruned};
 use ic_stable_structures::storable::Bound;
-use ic_stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableVec, StableCell, Storable, StableBTreeMap, memory_manager::{MemoryManager, MemoryId, VirtualMemory}};
+use ic_stable_structures::{DefaultMemoryImpl, StableVec, StableCell, Storable, StableBTreeMap, memory_manager::{MemoryManager, MemoryId, VirtualMemory}};
 use include_dir::{include_dir, Dir};
 use serde_bytes::ByteBuf;
 use std::borrow::Cow;
@@ -29,41 +28,21 @@ use crate::credential::{CredentialList, update_root_hash, CANISTER_SIG_SEED};
 
 const PROD_II_CANISTER_ID: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai";
 
-// A memory for upgrades, where data from the heap can be serialized/deserialized.
+// A memory for config, where data from the heap can be serialized/deserialized.
+const CONF: MemoryId = MemoryId::new(0);
+// A memory for Signatures, where data from the heap can be serialized/deserialized.
 const SIG: MemoryId = MemoryId::new(1);
 
-// A memory for the StableBTreeMap we're using. A new memory should be created for
-// every additional stable structure
+// A memory for the Credential data
 const CREDENTIAL: MemoryId = MemoryId::new(2);
 
-const MAX_VALUE_SIZE: u32 = 100;
-
-#[derive(CandidType, Deserialize)]
-struct UserProfile {
-    age: u8,
-    name: String,
-}
-
-impl Storable for UserProfile {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        Cow::Owned(Encode!(self).unwrap())
-    }
-
-    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
-        Decode!(bytes.as_ref(), Self).unwrap()
-    }
-
-    const BOUND: Bound = Bound::Bounded {
-        max_size: MAX_VALUE_SIZE,
-        is_fixed_size: false,
-    };
-}
+type ConfigCell = StableCell<IssuerConfig, VirtualMemory<DefaultMemoryImpl>>;
 
 thread_local! {
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
         RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
 
-    pub(crate) static CONFIG: RefCell<ConfigCell> = RefCell::new(ConfigCell::init(config_memory(), IssuerConfig::default()).expect("failed to initialize stable cell"));
+    pub(crate) static CONFIG: RefCell<ConfigCell> = RefCell::new(ConfigCell::init(MEMORY_MANAGER.with(|m| m.borrow().get(CONF)), IssuerConfig::default()).expect("failed to initialize stable cell"));
     pub(crate) static SIGNATURES : RefCell<SignatureMap> = RefCell::new(SignatureMap::default());
 
     pub(crate) static CREDENTIALS: RefCell<StableBTreeMap<Principal, CredentialList, VirtualMemory<DefaultMemoryImpl>>> = RefCell::new(
@@ -81,24 +60,6 @@ thread_local! {
             MEMORY_MANAGER.with(|m| m.borrow().get(SIG))
         ).expect("failed to initialize stable vector")
     );
-
-        static MAP: RefCell<StableBTreeMap<u64, UserProfile, VirtualMemory<DefaultMemoryImpl>>> = RefCell::new(
-        StableBTreeMap::init(
-            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(3))),
-        )
-    );
-
-}
-
-/// We use restricted memory in order to ensure the separation between non-managed config memory (first page)
-/// and the managed memory for the credential data of the canister.
-type Memory= RestrictedMemory<DefaultMemoryImpl>;
-type ConfigCell = StableCell<IssuerConfig, Memory>;
-
-
-/// Reserve the first stable memory page for the configuration stable cell.
-fn config_memory() -> Memory{
-    RestrictedMemory::new(DefaultMemoryImpl::default(), 0..1)
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -310,17 +271,6 @@ pub struct HttpResponse {
     pub status_code: u16,
     pub headers: Vec<HeaderField>,
     pub body: ByteBuf,
-}
-
-
-#[ic_cdk_macros::query]
-fn get(key: u64) -> Option<UserProfile> {
-    MAP.with(|p| p.borrow().get(&key))
-}
-
-#[ic_cdk_macros::update]
-fn insert(key: u64, value: UserProfile) -> Option<UserProfile> {
-    MAP.with(|p| p.borrow_mut().insert(key, value))
 }
 
 ic_cdk::export_candid!();
