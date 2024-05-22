@@ -32,7 +32,8 @@
     "setup": "npm i && dfx canister create icp-civic-canister-backend && dfx generate icp-civic-canister-backend && dfx deploy",
     "start": "vite --port 3000",
     "test": "vitest run",
-    "issue-credential": "tsx ./scripts/issue-credential.ts"
+    "issue-credential": "tsx ./scripts/issue-credential.ts",
+    "serve": "vite preview"
   },
   "type": "module",
   "version": "0.0.0"

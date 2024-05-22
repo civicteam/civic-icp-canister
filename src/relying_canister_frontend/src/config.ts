@@ -1,24 +1,25 @@
-const isProduction = import.meta.env.NODE_ENV === "production";
+const isProduction = import.meta.env.VITE_ENV === 'production';
 
-const internetIdentityCanisterId = isProduction
-  ? import.meta.env.VITE_PROD_INTERNET_IDENTITY_CANISTER_ID
-  : import.meta.env.VITE_LOCAL_INTERNET_IDENTITY_CANISTER_ID;
+console.log('isProduction:', isProduction);
 
-export const civicBackendCanisterId = isProduction
-  ? import.meta.env.VITE_PROD_CIVIC_BACKEND_CANISTER_ID
-  : import.meta.env.VITE_LOCAL_CIVIC_BACKEND_CANISTER_ID;
+const internetIdentityCanisterId = import.meta.env.VITE_INTERNET_IDENTITY_CANISTER_ID;
+const civicBackendCanisterId = import.meta.env.VITE_CIVIC_BACKEND_CANISTER_ID;
+const relyingFrontendCanisterId = import.meta.env.VITE_RELYING_FRONTEND_CANISTER_ID;
+const host = import.meta.env.VITE_HOST;
 
-export const relyingFrontendCanisterId = isProduction
-  ? import.meta.env.VITE_PROD_RELYING_FRONTEND_CANISTER_ID
-  : import.meta.env.VITE_LOCAL_RELYING_FRONTEND_CANISTER_ID;
+console.log('env', { internetIdentityCanisterId, civicBackendCanisterId, relyingFrontendCanisterId, host }, import.meta.env.VITE_ENV);
 
-const host = isProduction
-  ? import.meta.env.VITE_PROD_HOST
-  : import.meta.env.VITE_LOCAL_HOST;
+const internetIdentityUrl = isProduction
+  ? 'https://identity.ic0.app'
+  : `http://${internetIdentityCanisterId}.${host}`;
 
-const internetIdentityUrl = `http://${internetIdentityCanisterId}.${host}`;
-const civicBackendCanisterUrl = `http://${civicBackendCanisterId}.${host}`;
-const relyingFrontendCanisterUrl = `http://${relyingFrontendCanisterId}.${host}`;
+const civicBackendCanisterUrl = isProduction
+  ? `https://${civicBackendCanisterId}.ic0.app`
+  : `http://${civicBackendCanisterId}.${host}`;
+
+const relyingFrontendCanisterUrl = isProduction
+  ? `https://${relyingFrontendCanisterId}.ic0.app`
+  : `http://${relyingFrontendCanisterId}.${host}`;
 
 // This is for demo purposes but should be replaced with a more secure method
 const dummyCivicSampleKey = new Uint8Array([

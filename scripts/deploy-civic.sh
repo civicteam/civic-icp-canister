@@ -35,6 +35,7 @@ EOF
 
 II_CANISTER_ID=
 DFX_NETWORK=
+ADMIN_PRINCIPAL_ID=tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae
 
 while [[ $# -gt 0  ]]
 do
@@ -112,10 +113,10 @@ echo "Parsed rootkey: ${rootkey_did:0:20}..." >&2
 if [ "$DFX_NETWORK" = "local" ]; then
   ALTERNATIVE_ORIGINS="\"http://$CIVIC_FRONTEND_CANISTER_ID.localhost:4943\""
   else
-  ALTERNATIVE_ORIGINS="\"http://$CIVIC_FRONTEND_CANISTER_ID.icp0.io\","
+  ALTERNATIVE_ORIGINS="\"https://$CIVIC_FRONTEND_CANISTER_ID.icp0.io\""
 fi
 
-echo "Using Alternative Origin: $ALTERNATIVE_ORIGINS"
+echo "Using Alternative Origin: $ALTERNATIVE_ORIGINS $ISSUER_FRONTEND_HOSTNAME"
 
 # Adjust issuer's .well-known/ii-alternative-origins to contain FE-hostname of local/dev deployments.
 # We had a problem with `sed` command in CI. This is a hack to make it work locally and in CI.
@@ -123,6 +124,15 @@ mv src/civic_canister_backend/dist/.well-known/ii-alternative-origins ./ii-alter
 cat ./ii-alternative-origins-template | sed "s+ISSUER_FE_HOSTNAME_PLACEHOLDER+$ALTERNATIVE_ORIGINS+g"  > src/civic_canister_backend/dist/.well-known/ii-alternative-origins
 rm ./ii-alternative-origins-template
 
-dfx deploy civic_canister_backend --network "$DFX_NETWORK" --argument '(opt record { idp_canister_ids = vec{ principal "'"$II_CANISTER_ID"'" }; ic_root_key_der = vec '"$rootkey_did"'; derivation_origin = "'"$ISSUER_DERIVATION_ORIGIN"'"; frontend_hostname = "'"$ISSUER_FRONTEND_HOSTNAME"'"; })'
+dfx deploy civic_canister_backend --network "$DFX_NETWORK" --argument '(
+    opt record {
+        idp_canister_ids = vec { principal "'"$II_CANISTER_ID"'" };
+        ic_root_key_der = vec '"$rootkey_did"';
+        derivation_origin = "'"$ISSUER_DERIVATION_ORIGIN"'";
+        frontend_hostname = "'"$ISSUER_FRONTEND_HOSTNAME"'";
+        admin = principal "'"$ADMIN_PRINCIPAL_ID"'";
+        authorized_issuers = vec { principal "'"$ADMIN_PRINCIPAL_ID"'" };
+    }
+)'
 # Revert changes
 git checkout src/civic_canister_backend/dist/.well-known/ii-alternative-origins

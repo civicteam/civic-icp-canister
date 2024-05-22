@@ -1,146 +1,103 @@
-[comment]: # Webapp adapted from: https://internetcomputer.org/docs/current/developer-docs/integrations/internet-identity/integrate-identity/
+# CI Build and Test (Local setup)
+
+This project provides steps to set up and run the project locally. Follow the steps below to configure your environment, build the project, and run tests.
 
 ## Prerequisites
-Make sure to install dfx: 
-```bash
-sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
+
+- [Node.js](https://nodejs.org/) (version 14.x or later)
+- [Rust](https://www.rust-lang.org/tools/install)
+- [DFX](https://smartcontracts.org/docs/developers-guide/install-upgrade-remove.html) (Internet Computer SDK)
+
+## Setup
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/your-repository.git
+   cd your-repository
+   ```
+
+2. **Install DFX**:
+   Follow the official DFX installation guide [here](https://smartcontracts.org/docs/developers-guide/install-upgrade-remove.html).
+
+3. **Install Rust**:
+   Follow the official Rust installation guide [here](https://www.rust-lang.org/tools/install).
+
+4. **Install Node.js dependencies**:
+   ```bash
+   npm install
+   ```
+
+5. **Install Rust target and dependencies**:
+   ```bash
+   rustup target add wasm32-unknown-unknown
+   cargo install ic-wasm
+   ```
+
+6. **Create canisters and start the local Internet Computer replica**:
+   ```bash
+   dfx start --clean --background
+   dfx canister create --all
+   ```
+
+7. **Set environment variables**:
+   Make sure the `scripts/set-env-vars.sh` script is executable and run it:
+   ```bash
+   chmod +x scripts/set-env-vars.sh
+   source scripts/set-env-vars.sh
+   ```
+
+8. **Deploy the Civic Canister and Internet Identity**:
+   ```bash
+   ./scripts/deploy-civic.sh
+   dfx deploy internet_identity
+   ```
+
+9. **Deploy the Civic Frontend Canister**:
+    ```bash
+    dfx deploy civic_canister_frontend
+    ```
+
+10. **Deploy the Relying Party (RP) canister**:
+   ```bash
+   dfx deploy relying_canister_frontend
+   ```
+
+11. **Run tests**:
+    Ensure the test state machine binary is executable and run the tests:
+    ```bash
+    chmod +x ic-test-state-machine
+    cargo test --test integration_tests
+    ```
+
+## Script for Storing and Fetching Credentials
+
+The following script is located in `./src/civic_frontend_canister`. It demonstrates how to store and fetch credentials from the Civic Canister backend. The script uses environment variables to configure the canister ID and other settings.
+
+### Script Explanation
+
+This script performs the following tasks:
+
+1. **Load Environment Variables**: Uses the `dotenv` package to load environment variables from `.env.local`.
+2. **Configure Canister IDs**: Reads the canister IDs from the environment variables.
+3. **Dummy Credential Data**: Sets up dummy credential data for testing purposes.
+4. **Store Credential**: Stores a credential in the Civic Canister backend.
+5. **Fetch Credentials**: Fetches and logs all credentials associated with a specified principal.
+
+### Usage Instructions
+
+1. **Ensure Environment Variables are Set**: Make sure the `.env.local` file contains the necessary environment variables.
+
+2. **Run the Script**:
+   Navigate to the directory containing the script and run it using Node.js:
+   ```bash
+   cd src/civic_canister_frontend
+   npm run issue-credential
+   ```
+
+## Notes
+
+- Ensure you have the required binaries in the `ic-test-machine-binaries` directory.
+- Modify the setup and deployment scripts as needed to suit your project's requirements.
 ```
-Add Rust target and ic-wasm:
-```
-rustup target add wasm32-unknown-unknown
-cargo install ic-wasm
-```
 
-
-
-## Usage
-### Setup
-```
-dfx start --clean --background 
-```
-
-Create the canisters 
-```
-dfx canister create --all
-```
-
-### Configure the correct Alternative Frontends
-Get the ID of the Civic Backend canister
-```
-dfx canister id civic_canister_backend
-```
-
-Put this as the `canisterId` inside the `src/civic_canister_frontend/index.ts` AND `src/relying_canister_frontend/src/index.ts`:
-```
-const canisterId = "canister-id-here" 
-```
-This sets up the canister login with the correct `derivationOrigin` that the vc-flow call inside `src/relying_canister_frontend/src/index.ts` will later be pointed to
-
-(NOTE: You should be able to get these IDs from environmental variables as well, like ```const local_ii_url = `http://${process.env.INTERNET_IDENTITY_CANISTER_ID}.localhost:4943`;``` but that's not working for the `CIVIC_CANISTER_BACKEND_ID`)
-
-Get the ID of the civic frontend canister 
-```
-dfx canister id civic_canister_frontend
-```
-write it into the `src/civic_canister_backend/dist/.well-known/ii-alternative-origins` file:
-```
-{
-    "alternativeOrigins": ["http://${ID-here}.localhost:4943"]
-}
-```
-
-### Deploying 
-Deploy II
-```
-dfx deploy internet_identity
-```
-
-Now build & deploy the Civic Frontend:
-```
-cd src/civic_canister_frontend
-yarn install
-yarn build
-dfx deploy civic_canister_frontend
-cd ../..
-```
-
-Build & Deploy Civic Backend Canister (using the local `ic_rootkey`):
-```
-src/civic_canister_backend/deploy-civic.sh
-```
-
-
-RP Frontend: 
-```
-cd src/relying_canister_frontend
-yarn install
-yarn build
-./deploy-rp.sh
-```
-
-### Tests
-To run the tests:
-```
-cargo test --test integration_tests
-```
-
-## Demo Flow
-
-1. Open the ```civic_canister_frontend``` using the second URL (looks like so: `http://${canister-id}.localhost:4943/`). Login & issue the credential. The credential is now stored against the principal that's printed. 
-2. Open the ```relying_canister_frontend``` using the second URL again. Login and request the VC through Internet Identity. 
-
-## Alternative Frontends 
-
-Setting the correct derivationOrigin/Alternative Frontends of the canisters allows the II backend to correctly convert the principals from the civic POV to the RP POV. The key point is that the the `origin` of the issuer inside the vc-flow call should match the `derivationOrigin` in the login process to the issuer (ie in the civic frontend canister).
-
-1. In the civic frontend, the user logs into the canister using the civic canister backend as `derivationOrigin`. This allows the user's principal to be the same for civic canister backend (since the user is using the _frontend_ canister and they are two separate canisters, II would otherwise use different principals)
-2. In the RP, the user wants to request from the issuer of the credentials, namely the civic canister backend. Therefore, the `origin` in the call to the start the vc-flow is set as the civic canister backend. 
-
-3. II must map the generated alias between the RP Canister and the Issuing Canister (in order to provide unlinkability of the user's identities). In the vc-flow, when II is sending a `request_credential` to the backend, the principal that it's using must be the one that the civic canister backend stored the credentials under. By specifying a `derivationOrigin` during the login, II knows to use the same principal as in the login to send to the backend and check for stored credentials. Otherwise there will be an `unauthorized principal` error. 
-
-   
-## ICP Notes
-
-### Flow for the user sign-in 
-*(sk = secret key, pk = public key)*
-
-As their "Internet Identity", a user sees a number like 193431. This is called a identity anchor. 
-
-To register a new Internet Identity (identity anchor):
-- The user's security device generates a keypair that acts as the master keypair for this identity anchor
-- The secure device signs a delegation from from the master public key `master_pk` to the session public key `session_pk` such that the latter is valid wrt the `master_pk` (see delegation chain below)
-
-Now the browser can use this session keypair to sign messages using a delegated signature under the principal derived from the `master_pk` as `SHA224(master_pk) · 0x02`. *All subsequent operations for this identity anchor must be authenticated under one of the principals that are associated like this with the anchor.*
-
-To sign into the Civic Canister: 
-1. Get a session keypair with valid delegation:
-    - If the browser memory contains none, it will generate a new one as described above. 
-2. Use the session keypair to sign into the dApp:
-    - Sign an ingress message under the principal described above
-    - Sign a second ingress message containing the relying canister ID and session public key `session_pk` 
-    - The II canister computes a unique self-authenticating principal for this canister dApp. It uses a secret salt contained in its storage in order to prevent tracking of users by linking their different app identities together. 
-    - The II canister returns the "canister signature" that certifies that the `session_pk` may be used with the relying canister ID
-    
-After this process, the user is logged into the app using a temporary session and without their Internet Identity being able to be linked to other apps. 
-
-Source: https://wiki.internetcomputer.org/wiki/Internet_Identity
-
-### Canister Call Authentication Fields
-*(dk = delegated public key, wrt = with regards to)*
-
-```sender``` - Principal which identifies user who issued the request
-```sender_pubkey``` - public key used to authenticate the request (in the future a user may have more than one pk)
-```sender_sig``` - signature of request
-```sender_delegation``` - chain of delegation, example
- *dk1 signed wrt pk1, where pk1 = sender_pubkey -> dk2 signed wrt dk1 -> dk3 signed wrt dk2, where sender_sig is valid wrt to dk3*
- 
- The ```sender_pubkey``` must authenticate the sender principal, ie ```sender_sig``` verifies the authenticity of the call against the public key (*self-authenticating principal*)
-
-Source:
-https://internetcomputer.org/docs/current/references/ic-interface-spec#authentication
-https://internetcomputer.org/docs/current/developer-docs/web-apps/independently-verifying-ic-signatures
-
-## Sequence Diagrams 
-![canister drawio](https://github.com/civicteam/icp-civic-canister/assets/66886792/72ef5395-5751-4597-b25c-878b50ef8a85)
-
-
+This `README.md` includes instructions for setting up and running the project locally, as well as an explanation and usage instructions for the script in `./src/civic_frontend_canister`. Make sure to replace placeholders like `https://github.com/your-repository.git` and `"principal id here"` with actual values specific to your project.s

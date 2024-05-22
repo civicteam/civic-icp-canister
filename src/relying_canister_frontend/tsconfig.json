@@ -19,12 +19,14 @@
     "strict": true,
     "target": "ESNext",
     "types": [
+      "node",
       "vite/client",
       "@testing-library/jest-dom"
     ],
     "useDefineForClassFields": true
   },
   "include": [
-    "src"
+    "./src",
+    "./scripts"
   ]
 }
