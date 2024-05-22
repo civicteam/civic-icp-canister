@@ -80,11 +80,9 @@ pub(crate) struct IssuerConfig {
 
 impl Storable for IssuerConfig {
     fn to_bytes(&self) -> Cow<[u8]> {
-        ic_cdk::print("serializing config");
         Cow::Owned(candid::encode_one(self).expect("failed to encode IssuerConfig"))
     }
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
-        ic_cdk::print("deserializing config");
         candid::decode_one(&bytes).expect("failed to decode IssuerConfig")
     }
     const BOUND: Bound = Bound::Unbounded;
@@ -151,7 +149,6 @@ fn post_upgrade(init_arg: Option<IssuerInit>) {
         let mut sigs = sigs.borrow_mut();
         MSG_HASHES.with(|hashes| {
         hashes.borrow().iter().for_each(|hash| {
-            ic_cdk::print("adding signature ");
             sigs.add_signature(&CANISTER_SIG_SEED, hash);
         })
         });

@@ -116,12 +116,10 @@ pub struct CredentialList(Vec<StoredCredential>);
 /// Implement the trait needed to use CredentialList inside a StableBTreeMap
 impl Storable for CredentialList {
     fn to_bytes(&self) -> Cow<[u8]> {
-        ic_cdk::print("serializing credential list");
         Cow::Owned(Encode!(&self.0).expect("Failed to encode StoredCredential"))
     }
 
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
-        ic_cdk::print("deserializing credential list");
         CredentialList(Decode!(&bytes, Vec<StoredCredential>).expect("Failed to decode StoredCredential"))
     }
 
@@ -234,11 +232,8 @@ async fn prepare_credential(
         sigs.add_signature(&CANISTER_SIG_SEED, msg_hash);
         // Add the msg hash to the stable storage to restore the signatures when the canister is upgraded
         MSG_HASHES.with(|hashes| {
-            match hashes.borrow_mut().push(&msg_hash) {
-                Ok(_) => ic_cdk::println!("Message hash added successfully."),
-                Err(e) => ic_cdk::println!("Failed to add message hash: {:?}", e),
-            }
-                });
+            let _ = hashes.borrow_mut().push(&msg_hash);
+        });
     });
     update_root_hash();
     // Return a prepared context that includes the signed JWT
@@ -344,9 +339,6 @@ fn verify_authorized_principal(
     credential_type: SupportedCredentialType,
     alias_tuple: &AliasTuple,
 ) -> Result<StoredCredential, IssueCredentialError> {
-    
-    let c = get_all_credentials(alias_tuple.id_dapp).unwrap_or_else(|_| vec![]);
-    ic_cdk::println!("All credentials for user {}: {:?}. ", alias_tuple.id_dapp.to_text(), c);
     // Get the credentials of this user
     if let Some(credentials) = CREDENTIALS.with(|c|c.borrow().get(&alias_tuple.id_dapp)) {
         // Check if the user has a credential of the type and return it
