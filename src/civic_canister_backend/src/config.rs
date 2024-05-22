@@ -11,6 +11,7 @@ use canister_sig_util::signature_map::{SignatureMap, LABEL_SIG};
 use candid::{candid_method, CandidType, Deserialize, Principal};
 use canister_sig_util::{extract_raw_root_pk_from_der, IC_ROOT_PK_DER};
 use ic_cdk_macros::{init, query, update, post_upgrade};
+use candid_parser::{Encode, Decode};
 use ic_cdk::api;
 use ic_certification::{labeled_hash, pruned};
 use ic_stable_structures::storable::Bound;
@@ -29,11 +30,34 @@ use crate::credential::{CredentialList, update_root_hash, CANISTER_SIG_SEED};
 const PROD_II_CANISTER_ID: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai";
 
 // A memory for upgrades, where data from the heap can be serialized/deserialized.
-const SIG: MemoryId = MemoryId::new(0);
+const SIG: MemoryId = MemoryId::new(1);
 
 // A memory for the StableBTreeMap we're using. A new memory should be created for
 // every additional stable structure
-const CREDENTIAL: MemoryId = MemoryId::new(1);
+const CREDENTIAL: MemoryId = MemoryId::new(2);
+
+const MAX_VALUE_SIZE: u32 = 100;
+
+#[derive(CandidType, Deserialize)]
+struct UserProfile {
+    age: u8,
+    name: String,
+}
+
+impl Storable for UserProfile {
+    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+        Cow::Owned(Encode!(self).unwrap())
+    }
+
+    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
+        Decode!(bytes.as_ref(), Self).unwrap()
+    }
+
+    const BOUND: Bound = Bound::Bounded {
+        max_size: MAX_VALUE_SIZE,
+        is_fixed_size: false,
+    };
+}
 
 thread_local! {
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
@@ -50,12 +74,20 @@ thread_local! {
     // Assets for the management app
     pub(crate) static ASSETS: RefCell<CertifiedAssets> = RefCell::new(CertifiedAssets::default());
 
+    
     // Stable vector to restore the signatures when the canister is upgraded
     pub(crate) static MSG_HASHES: RefCell<StableVec<[u8; 32], VirtualMemory<DefaultMemoryImpl>>> = RefCell::new(
         StableVec::init(
             MEMORY_MANAGER.with(|m| m.borrow().get(SIG))
         ).expect("failed to initialize stable vector")
     );
+
+        static MAP: RefCell<StableBTreeMap<u64, UserProfile, VirtualMemory<DefaultMemoryImpl>>> = RefCell::new(
+        StableBTreeMap::init(
+            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(3))),
+        )
+    );
+
 }
 
 /// We use restricted memory in order to ensure the separation between non-managed config memory (first page)
@@ -87,9 +119,11 @@ pub(crate) struct IssuerConfig {
 
 impl Storable for IssuerConfig {
     fn to_bytes(&self) -> Cow<[u8]> {
+        ic_cdk::print("serializing config");
         Cow::Owned(candid::encode_one(self).expect("failed to encode IssuerConfig"))
     }
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        ic_cdk::print("deserializing config");
         candid::decode_one(&bytes).expect("failed to decode IssuerConfig")
     }
     const BOUND: Bound = Bound::Unbounded;
@@ -155,7 +189,9 @@ fn post_upgrade(init_arg: Option<IssuerInit>) {
     SIGNATURES.with(|sigs| {    
         let mut sigs = sigs.borrow_mut();
         MSG_HASHES.with(|hashes| {
-        hashes.borrow().iter().for_each(|hash| {sigs.add_signature(&CANISTER_SIG_SEED, hash);
+        hashes.borrow().iter().for_each(|hash| {
+            ic_cdk::print("adding signature ");
+            sigs.add_signature(&CANISTER_SIG_SEED, hash);
         })
         });
     });
@@ -274,6 +310,17 @@ pub struct HttpResponse {
     pub status_code: u16,
     pub headers: Vec<HeaderField>,
     pub body: ByteBuf,
+}
+
+
+#[ic_cdk_macros::query]
+fn get(key: u64) -> Option<UserProfile> {
+    MAP.with(|p| p.borrow().get(&key))
+}
+
+#[ic_cdk_macros::update]
+fn insert(key: u64, value: UserProfile) -> Option<UserProfile> {
+    MAP.with(|p| p.borrow_mut().insert(key, value))
 }
 
 ic_cdk::export_candid!();

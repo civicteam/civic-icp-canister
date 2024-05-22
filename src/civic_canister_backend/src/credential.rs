@@ -116,10 +116,12 @@ pub struct CredentialList(Vec<StoredCredential>);
 /// Implement the trait needed to use CredentialList inside a StableBTreeMap
 impl Storable for CredentialList {
     fn to_bytes(&self) -> Cow<[u8]> {
+        ic_cdk::print("serializing credential list");
         Cow::Owned(Encode!(&self.0).expect("Failed to encode StoredCredential"))
     }
 
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        ic_cdk::print("deserializing credential list");
         CredentialList(Decode!(&bytes, Vec<StoredCredential>).expect("Failed to decode StoredCredential"))
     }
 
@@ -223,7 +225,7 @@ async fn prepare_credential(
     };
     // And sign the JWT 
     let signing_input =
-        vc_signing_input(&credential_jwt, &CANISTER_SIG_PK).expect("Failed getting signing_input");
+        vc_signing_input(&credential_jwt, &CANISTER_SIG_PK).expect("Failed getting signing_input.");
     let msg_hash = vc_signing_input_hash(&signing_input);
 
     // Add the signed JWT to the signature storage
