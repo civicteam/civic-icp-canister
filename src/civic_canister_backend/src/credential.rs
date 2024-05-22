@@ -42,7 +42,7 @@ const AUTHORIZED_PRINCIPAL: &str = "tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj
 
 lazy_static! {
     /// Seed and public key used for signing the credentials.
-    pub(crate) static ref CANISTER_SIG_SEED: Vec<u8> = hash_bytes("some_random_seed").to_vec();
+    pub(crate) static ref CANISTER_SIG_SEED: Vec<u8> = hash_bytes("a_random_seed").to_vec();
     static ref CANISTER_SIG_PK: CanisterSigPublicKey = CanisterSigPublicKey::new(ic_cdk::id(), CANISTER_SIG_SEED.clone());
 }
 
@@ -199,7 +199,7 @@ fn get_all_credentials(principal: Principal) -> Result<Vec<StoredCredential>, Cr
     if let Some(c) = CREDENTIALS.with(|c| c.borrow().get(&principal)) {
     Ok(c.into())
 } else {
-    Err(CredentialError::NoCredentialFound(format!("No credentials found for principal {}", principal.to_text())))
+    Err(CredentialError::NoCredentialFound(format!("No credentials found for the principal {}", principal.to_text())))
 }
 }
 
@@ -223,7 +223,7 @@ async fn prepare_credential(
     };
     // And sign the JWT 
     let signing_input =
-        vc_signing_input(&credential_jwt, &CANISTER_SIG_PK).expect("failed getting signing_input");
+        vc_signing_input(&credential_jwt, &CANISTER_SIG_PK).expect("Failed getting signing_input");
     let msg_hash = vc_signing_input_hash(&signing_input);
 
     // Add the signed JWT to the signature storage
@@ -232,8 +232,11 @@ async fn prepare_credential(
         sigs.add_signature(&CANISTER_SIG_SEED, msg_hash);
         // Add the msg hash to the stable storage to restore the signatures when the canister is upgraded
         MSG_HASHES.with(|hashes| {
-            let _ = hashes.borrow_mut().push(&msg_hash);
-        });
+            match hashes.borrow_mut().push(&msg_hash) {
+                Ok(_) => ic_cdk::println!("Message hash added successfully."),
+                Err(e) => ic_cdk::println!("Failed to add message hash: {:?}", e),
+            }
+                });
     });
     update_root_hash();
     // Return a prepared context that includes the signed JWT
@@ -339,6 +342,9 @@ fn verify_authorized_principal(
     credential_type: SupportedCredentialType,
     alias_tuple: &AliasTuple,
 ) -> Result<StoredCredential, IssueCredentialError> {
+    
+    let c = get_all_credentials(alias_tuple.id_dapp).unwrap_or_else(|_| vec![]);
+    ic_cdk::println!("All credentials for user {}: {:?}. ", alias_tuple.id_dapp.to_text(), c);
     // Get the credentials of this user
     if let Some(credentials) = CREDENTIALS.with(|c|c.borrow().get(&alias_tuple.id_dapp)) {
         // Check if the user has a credential of the type and return it
