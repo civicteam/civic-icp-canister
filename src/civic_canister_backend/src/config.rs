@@ -6,7 +6,7 @@
 //! - Managing assets and their certification.
 //! - Handling HTTP requests with CORS support.
 
-use crate::credential::{update_root_hash, StoredCredential};
+use crate::credential::{update_root_hash, CredentialList, CANISTER_SIG_SEED};
 use asset_util::{collect_assets, CertifiedAssets};
 use candid::{candid_method, CandidType, Deserialize, Principal};
 use canister_sig_util::signature_map::{SignatureMap, LABEL_SIG};
@@ -15,34 +15,50 @@ use ic_cdk::api;
 use ic_cdk_macros::{init, post_upgrade, query, update};
 use ic_certification::{labeled_hash, pruned};
 use ic_stable_structures::storable::Bound;
-use ic_stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableCell, Storable};
+use ic_stable_structures::{
+    memory_manager::{MemoryId, MemoryManager, VirtualMemory},
+    DefaultMemoryImpl, StableBTreeMap, StableCell, StableVec, Storable,
+};
 use include_dir::{include_dir, Dir};
 use serde_bytes::ByteBuf;
 use std::borrow::Cow;
 use std::cell::RefCell;
-use std::collections::HashMap;
 use vc_util::issuer_api::{DerivationOriginData, DerivationOriginError, DerivationOriginRequest};
 
 const PROD_II_CANISTER_ID: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai";
 
+// A memory for config, where data from the heap can be serialized/deserialized.
+const CONF: MemoryId = MemoryId::new(0);
+// A memory for Signatures, where data from the heap can be serialized/deserialized.
+const SIG: MemoryId = MemoryId::new(1);
+
+// A memory for the Credential data
+const CREDENTIAL: MemoryId = MemoryId::new(2);
+
+type ConfigCell = StableCell<IssuerConfig, VirtualMemory<DefaultMemoryImpl>>;
+
 thread_local! {
-    /// Static configuration of the canister set by init() or post_upgrade().
-    pub(crate) static CONFIG: RefCell<ConfigCell> = RefCell::new(ConfigCell::init(config_memory(), IssuerConfig::default()).expect("failed to initialize stable cell"));
+    static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
+        RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
+
+    pub(crate) static CONFIG: RefCell<ConfigCell> = RefCell::new(ConfigCell::init(MEMORY_MANAGER.with(|m| m.borrow().get(CONF)), IssuerConfig::default()).expect("failed to initialize stable cell"));
     pub(crate) static SIGNATURES : RefCell<SignatureMap> = RefCell::new(SignatureMap::default());
 
-    pub static CREDENTIALS : RefCell<HashMap<Principal, Vec<StoredCredential>>> = RefCell::new(HashMap::new());
+    pub(crate) static CREDENTIALS: RefCell<StableBTreeMap<Principal, CredentialList, VirtualMemory<DefaultMemoryImpl>>> = RefCell::new(
+        StableBTreeMap::init(
+            MEMORY_MANAGER.with(|m| m.borrow().get(CREDENTIAL))
+        )
+    );
     // Assets for the management app
-    pub static ASSETS: RefCell<CertifiedAssets> = RefCell::new(CertifiedAssets::default());
-}
+    pub(crate) static ASSETS: RefCell<CertifiedAssets> = RefCell::new(CertifiedAssets::default());
 
-/// We use restricted memory in order to ensure the separation between non-managed config memory (first page)
-/// and the managed memory for potential other data of the canister.
-type Memory = RestrictedMemory<DefaultMemoryImpl>;
-type ConfigCell = StableCell<IssuerConfig, Memory>;
 
-/// Reserve the first stable memory page for the configuration stable cell.
-fn config_memory() -> Memory {
-    RestrictedMemory::new(DefaultMemoryImpl::default(), 0..1)
+    // Stable vector to restore the signatures when the canister is upgraded
+    pub(crate) static MSG_HASHES: RefCell<StableVec<[u8; 32], VirtualMemory<DefaultMemoryImpl>>> = RefCell::new(
+        StableVec::init(
+            MEMORY_MANAGER.with(|m| m.borrow().get(SIG))
+        ).expect("failed to initialize stable vector")
+    );
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -132,7 +148,7 @@ fn init(init_arg: Option<IssuerInit>) {
         let default_config = IssuerConfig::default();
         CONFIG.with(|config_cell| {
             let mut config = config_cell.borrow_mut();
-            *config = ConfigCell::init(config_memory(), default_config)
+            *config = ConfigCell::init(MEMORY_MANAGER.with(|m| m.borrow().get(CONF)), default_config)
                 .expect("Failed to initialize config");
         });
     }
@@ -194,7 +210,20 @@ fn get_admin() -> Principal {
 /// Called when the canister is upgraded.
 #[post_upgrade]
 fn post_upgrade(init_arg: Option<IssuerInit>) {
+    // Initialize the CONFIG
     init(init_arg);
+
+    // Restore the signatures
+    SIGNATURES.with(|sigs| {
+        let mut sigs = sigs.borrow_mut();
+        MSG_HASHES.with(|hashes| {
+            hashes.borrow().iter().for_each(|hash| {
+                sigs.add_signature(&CANISTER_SIG_SEED, hash);
+            })
+        });
+    });
+
+    update_root_hash();
 }
 
 /// Called when the canister is configured.

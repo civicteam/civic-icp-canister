@@ -485,6 +485,7 @@ dependencies = [
  "candid_parser",
  "canister_sig_util",
  "canister_tests",
+ "ciborium",
  "hex",
  "ic-cdk",
  "ic-cdk-macros",
