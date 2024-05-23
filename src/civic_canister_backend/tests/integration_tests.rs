@@ -1,38 +1,31 @@
 //! Tests related to issue_credential canister call.
+extern crate civic_canister_backend;
 
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::time::{Duration, UNIX_EPOCH};
 use assert_matches::assert_matches;
 use candid::{CandidType, Deserialize, Principal};
 use canister_sig_util::{extract_raw_root_pk_from_der, CanisterSigPublicKey};
-use canister_tests::api::http_request;
 use canister_tests::api::internet_identity::vc_mvp as ii_api;
 use canister_tests::flows;
-use canister_tests::framework::{env, get_wasm_path, principal, principal_1, test_principal, time, II_WASM};
+use canister_tests::framework::{env, get_wasm_path, principal_1, test_principal, II_WASM};
+use civic_canister_backend::credential::{Claim, ClaimValue, CredentialError, FullCredential};
 use ic_cdk::api::management_canister::provisional::CanisterId;
-use ic_response_verification::types::VerificationInfo;
-use ic_response_verification::verify_request_response_pair;
 use ic_test_state_machine_client::{call_candid, call_candid_as};
 use ic_test_state_machine_client::{query_candid_as, CallError, StateMachine};
-use internet_identity_interface::http_gateway::{HttpRequest, HttpResponse};
 use internet_identity_interface::internet_identity::types::vc_mvp::{
     GetIdAliasRequest, PrepareIdAliasRequest,
 };
 use internet_identity_interface::internet_identity::types::FrontendHostname;
 use lazy_static::lazy_static;
-use serde_bytes::ByteBuf;
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::time::UNIX_EPOCH;
 use vc_util::issuer_api::{
     ArgumentValue, CredentialSpec, DerivationOriginData, DerivationOriginError,
     DerivationOriginRequest, GetCredentialRequest, Icrc21ConsentInfo, Icrc21ConsentPreferences,
     Icrc21Error, Icrc21VcConsentMessageRequest, IssueCredentialError, IssuedCredentialData,
     PrepareCredentialRequest, PreparedCredentialData, SignedIdAlias as SignedIssuerIdAlias,
-
 };
-use vc_util::{
-    get_verified_id_alias_from_jws, verify_credential_jws_with_canister_id
-
-};
+use vc_util::{get_verified_id_alias_from_jws, verify_credential_jws_with_canister_id};
 
 const DUMMY_ROOT_KEY: &str ="308182301d060d2b0601040182dc7c0503010201060c2b0601040182dc7c05030201036100adf65638a53056b2222c91bb2457b0274bca95198a5acbdadfe7fd72178f069bdea8d99e9479d8087a2686fc81bf3c4b11fe275570d481f1698f79d468afe0e57acc1e298f8b69798da7a891bbec197093ec5f475909923d48bfed6843dbed1f";
 const DUMMY_II_CANISTER_ID: &str = "rwlgt-iiaaa-aaaaa-aaaaa-cai";
@@ -99,8 +92,6 @@ pub fn install_issuer(env: &StateMachine, init: &IssuerInit) -> CanisterId {
 }
 
 mod api {
-    
-
     use super::*;
 
     pub fn configure(
@@ -147,10 +138,18 @@ mod api {
         env: &StateMachine,
         canister_id: CanisterId,
         user: Principal,
-        credential: StoredCredential,
+        credential: FullCredential,
     ) -> Result<Result<String, CredentialError>, CallError> {
-        let civic_issuer = Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae").unwrap();
-        call_candid_as(env, canister_id, civic_issuer, "add_credentials", (user, vec!(credential), ))
+        let civic_issuer =
+            Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae")
+                .unwrap();
+        call_candid_as(
+            env,
+            canister_id,
+            civic_issuer,
+            "add_credentials",
+            (user, vec![credential]),
+        )
         .map(|(x,)| x)
     }
 
@@ -159,23 +158,26 @@ mod api {
         canister_id: CanisterId,
         user: Principal,
         credential_id: String,
-        updated_credential: StoredCredential
+        updated_credential: FullCredential,
     ) -> Result<Result<String, CredentialError>, CallError> {
-        let civic_issuer = Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae").unwrap();
+        let civic_issuer =
+            Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae")
+                .unwrap();
         call_candid_as(
             env,
             canister_id,
             civic_issuer,
             "update_credential",
             (user, credential_id, updated_credential),
-        ).map(|(x,)| x)
+        )
+        .map(|(x,)| x)
     }
 
     pub fn get_all_credentials(
         env: &StateMachine,
         canister_id: CanisterId,
         user: Principal,
-    ) -> Result<Result<Vec<StoredCredential>, CredentialError>, CallError> {
+    ) -> Result<Result<Vec<FullCredential>, CredentialError>, CallError> {
         call_candid(env, canister_id, "get_all_credentials", (user,)).map(|(x,)| x)
     }
 
@@ -297,32 +299,37 @@ fn should_update_credential_successfully() {
     let principal = principal_1();
     let original_credential = construct_adult_credential();
     let mut updated_credential = construct_adult_credential();
-    updated_credential.claim[0].claims.entry("Is over 18".to_string()).and_modify(|x| *x = ClaimValue::Boolean(false));
+    updated_credential.claim[0]
+        .claims
+        .entry("Is over 18".to_string())
+        .and_modify(|x| *x = ClaimValue::Boolean(false));
     let id = original_credential.id.clone();
 
     // Add a credential first to update it later
-    api::add_credentials(&env, issuer_id, principal, original_credential).expect("failed to add credential");
+    let _ = api::add_credentials(&env, issuer_id, principal, original_credential)
+        .expect("failed to add credential");
 
     // Update the credential
-    let response = api::update_credential(
-        &env,
-        issuer_id,
-        principal,
-        id.clone(),
-        updated_credential,
-    )
-    .expect("API call failed");
+    let response =
+        api::update_credential(&env, issuer_id, principal, id.clone(), updated_credential)
+            .expect("API call failed");
 
     assert_matches!(response, Ok(_));
 
-    let stored_updated_credential = api::get_all_credentials(&env, issuer_id, principal).expect("API call failed").expect("get_all_credentials error");
-    // assert there is only one version of the VC 
+    let stored_updated_credential = api::get_all_credentials(&env, issuer_id, principal)
+        .expect("API call failed")
+        .expect("get_all_credentials error");
+    // assert there is only one version of the VC
     assert_eq!(stored_updated_credential.len(), 1);
     // that was changed to the updated_credential
     assert_eq!(stored_updated_credential[0].id, id);
-    assert_matches!(stored_updated_credential[0].claim[0].claims.get("Is over 18").unwrap(), &ClaimValue::Boolean(false));
-
-
+    assert_matches!(
+        stored_updated_credential[0].claim[0]
+            .claims
+            .get("Is over 18")
+            .unwrap(),
+        &ClaimValue::Boolean(false)
+    );
 }
 
 #[test]
@@ -345,7 +352,6 @@ fn should_fail_update_credential_if_not_found() {
     assert_matches!(response, Err(CredentialError::NoCredentialFound(_)));
 }
 
-
 #[test]
 fn should_fail_vc_consent_message_if_not_supported() {
     let env = env();
@@ -366,7 +372,6 @@ fn should_fail_vc_consent_message_if_not_supported() {
             .expect("API call failed");
     assert_matches!(response, Err(Icrc21Error::UnsupportedCanisterCall(_)));
 }
-
 
 #[test]
 fn should_fail_prepare_credential_for_unauthorized_principal() {
@@ -412,7 +417,13 @@ fn should_fail_get_credential_for_wrong_sender() {
     let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
     let signed_id_alias = DUMMY_SIGNED_ID_ALIAS.clone();
     let authorized_principal = Principal::from_text(DUMMY_ALIAS_ID_DAPP_PRINCIPAL).unwrap();
-    api::add_credentials(&env, issuer_id, authorized_principal, construct_adult_credential()).expect("failed to add employee");
+    let _ = api::add_credentials(
+        &env,
+        issuer_id,
+        authorized_principal,
+        construct_adult_credential(),
+    )
+    .expect("failed to add employee");
     let unauthorized_principal = test_principal(2);
 
     let prepare_credential_response = api::prepare_credential(
@@ -518,7 +529,8 @@ fn should_prepare_adult_credential_for_authorized_principal() {
     let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
     let authorized_principal = Principal::from_text(DUMMY_ALIAS_ID_DAPP_PRINCIPAL).unwrap();
     let credential = construct_adult_credential();
-    api::add_credentials(&env, issuer_id, authorized_principal, credential).expect("API call failed");
+    let _ = api::add_credentials(&env, issuer_id, authorized_principal, credential)
+        .expect("API call failed");
     let response = api::prepare_credential(
         &env,
         issuer_id,
@@ -586,11 +598,14 @@ fn should_issue_credential_e2e() -> Result<(), CallError> {
     )
     .expect("Invalid ID alias");
 
-    api::add_credentials(&env, issuer_id, alias_tuple.id_dapp, construct_adult_credential())?;
+    let _ = api::add_credentials(
+        &env,
+        issuer_id,
+        alias_tuple.id_dapp,
+        construct_adult_credential(),
+    )?;
 
-    for credential_spec in [
-        adult_credential_spec(),
-    ] {
+    for credential_spec in [adult_credential_spec()] {
         let prepared_credential = api::prepare_credential(
             &env,
             issuer_id,
@@ -633,7 +648,6 @@ fn should_issue_credential_e2e() -> Result<(), CallError> {
         println!("{:?}", vc_claims);
 
         // validate_claims_match_spec(vc_claims, &credential_spec).expect("Clam validation failed");
-
     }
 
     Ok(())
@@ -646,179 +660,22 @@ fn should_configure() {
     api::configure(&env, issuer_id, &DUMMY_ISSUER_INIT).expect("API call failed");
 }
 
-// /// Verifies that the expected assets is delivered and certified.
-// #[test]
-// fn issuer_canister_serves_http_assets() -> Result<(), CallError> {
-//     fn verify_response_certification(
-//         env: &StateMachine,
-//         canister_id: CanisterId,
-//         request: HttpRequest,
-//         http_response: HttpResponse,
-//         min_certification_version: u16,
-//     ) -> VerificationInfo {
-//         verify_request_response_pair(
-//             ic_http_certification::HttpRequest {
-//                 method: request.method,
-//                 url: request.url,
-//                 headers: request.headers,
-//                 body: request.body.into_vec(),
-//             },
-//             ic_http_certification::HttpResponse {
-//                 status_code: http_response.status_code,
-//                 headers: http_response.headers,
-//                 body: http_response.body.into_vec(),
-//                 upgrade: http_response.upgrade,
-//             },
-//             canister_id.as_slice(),
-//             time(env) as u128,
-//             Duration::from_secs(300).as_nanos(),
-//             &env.root_key(),
-//             min_certification_version as u8,
-//         )
-//         .unwrap_or_else(|e| panic!("validation failed: {e}"))
-//     }
-
-//     let env = env();
-//     let canister_id = install_canister(&env, CIVIV_CANISTER_BACKEND_WASM.clone());
-
-//     // for each asset and certification version, fetch the asset, check the HTTP status code, headers and certificate.
-
-//     for certification_version in 1..=2 {
-//         let request = HttpRequest {
-//             method: "GET".to_string(),
-//             url: "/".to_string(),
-//             headers: vec![],
-//             body: ByteBuf::new(),
-//             certificate_version: Some(certification_version),
-//         };
-//         let http_response = http_request(&env, canister_id, &request)?;
-//         println!("{:?}", http_response);
-//         // assert_eq!(http_response.status_code, 200);
-
-//         let _result = verify_response_certification(
-//             &env,
-//             canister_id,
-//             request,
-//             http_response,
-//             certification_version,
-//         );
-//         // assert_eq!(result.verification_version, certification_version);
-//     }
-
-//     Ok(())
-// }
-
-
 ic_cdk::export_candid!();
 
-
-// Helper functions
-
-fn construct_adult_credential () -> StoredCredential {
+fn construct_adult_credential() -> FullCredential {
     let mut claim_map = HashMap::<String, ClaimValue>::new();
     claim_map.insert("Is over 18".to_string(), ClaimValue::Boolean(true));
-       StoredCredential {
+    FullCredential {
         id: "http://example.edu/credentials/3732".to_string(),
-        type_: vec!["VerifiableCredential".to_string(), "VerifiedAdult".to_string()],
+        type_: vec![
+            "VerifiableCredential".to_string(),
+            "VerifiedAdult".to_string(),
+        ],
         context: vec![
             "https://www.w3.org/2018/credentials/v1".to_string(),
             "https://www.w3.org/2018/credentials/examples/v1".to_string(),
         ],
         issuer: "https://civic.com".to_string(),
-        claim: vec![Claim{claims: claim_map}],
+        claim: vec![Claim { claims: claim_map }],
     }
 }
-
-
-// ==================================================
-
-
-use std::collections::BTreeMap;
-use identity_credential::credential::{CredentialBuilder, Subject};
-use serde::Serialize;
-pub use serde_json::Value;
-// use candid::CandidType;
-use identity_core::common::Url;
-use std::iter::repeat;
-
-#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
-pub enum ClaimValue {
-    Boolean(bool),
-    Date(String),
-    Text(String),
-    Number(i64),
-    Claim(Claim),
-}
-
-#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
-pub struct Claim {
-    pub claims:HashMap<String, ClaimValue>,
-}
-
-impl From<ClaimValue> for Value {
-    fn from(claim_value: ClaimValue) -> Self {
-        match claim_value {
-            ClaimValue::Boolean(b) => Value::Bool(b),
-            ClaimValue::Date(d) => Value::String(d),
-            ClaimValue::Text(t) => Value::String(t),
-            ClaimValue::Number(n) => Value::Number(n.into()),
-            ClaimValue::Claim(nested_claim) => {
-                serde_json::to_value(nested_claim).unwrap_or(Value::Null)
-            },
-        }
-    }
-}
-
-
-impl Claim {
-    pub fn into(self) -> Subject {
-        let btree_map: BTreeMap<String, Value> = self.claims.into_iter()
-        .map(|(k, v)| (k, v.into()))
-        .collect();
-        Subject::with_properties(btree_map) 
-    }
-}
-
-#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
-pub struct StoredCredential {
-    pub id: String, 
-    pub type_: Vec<String>,
-    pub context: Vec<String>,
-    pub issuer: String,
-    pub claim: Vec<Claim>,
-}
-#[derive(CandidType, Deserialize, Debug)]
-pub enum CredentialError {
-    NoCredentialFound(String),
-    UnauthorizedSubject(String),
-}
-
-
-// Helper functions for constructing the credential that is returned from the canister 
-
-/// Build a credentialSubject {
-/// id: SubjectId, 
-/// otherData
-///  }
-pub fn build_claims_into_credential_subjects(claims: Vec<Claim>, subject: String) -> Vec<Subject> {
-    claims.into_iter().zip(repeat(subject)).map(|(c, id )|{
-        let mut sub = c.into();
-        sub.id = Url::parse(id).ok();
-        sub
-    }).collect()
-}
-
-
-pub fn add_context(mut credential: CredentialBuilder, context: Vec<String>) -> CredentialBuilder {
-    for c in context {
-     credential = credential.context(Url::parse(c).unwrap());
-    }
-    credential
-}
-
-// pub fn add_types(mut credential: CredentialBuilder, types: Vec<String>) -> CredentialBuilder {
-//     for t in types {
-//      credential = credential.type_(t);
-//     }
-//     credential
-// }
