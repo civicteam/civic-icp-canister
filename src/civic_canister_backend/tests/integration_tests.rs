@@ -7,8 +7,8 @@ use canister_sig_util::{extract_raw_root_pk_from_der, CanisterSigPublicKey};
 use canister_tests::api::internet_identity::vc_mvp as ii_api;
 use canister_tests::flows;
 use canister_tests::framework::{env, get_wasm_path, principal_1, test_principal, II_WASM};
-use civic_canister_backend::credential::{Claim, ClaimValue, CredentialError, StoredCredential};
 use civic_canister_backend::config::IssuerInit;
+use civic_canister_backend::credential::{Claim, ClaimValue, CredentialError, StoredCredential};
 use ic_cdk::api::management_canister::provisional::CanisterId;
 use ic_test_state_machine_client::{call_candid, call_candid_as};
 use ic_test_state_machine_client::{query_candid_as, CallError, StateMachine};
@@ -42,17 +42,20 @@ const DUMMY_ALIAS_ID_DAPP_PRINCIPAL: &str =
 
 lazy_static! {
     pub static ref CIVIV_CANISTER_BACKEND_WASM: Vec<u8> = {
-        let def_path = PathBuf::from("../../").join("target/wasm32-unknown-unknown/release/civic_canister_backend.wasm");
-        let err = format!("
+        let def_path = PathBuf::from("../../")
+            .join("target/wasm32-unknown-unknown/release/civic_canister_backend.wasm");
+        let err = format!(
+            "
         Could not find VC Issuer Wasm module for current build.
         I will look for it at {:?} (note that I run from {:?}).
-        ", &def_path,
-            &std::env::current_dir().map(|x| x.display().to_string()).unwrap_or_else(|_|
-                "an unknown directory".to_string()));
-                get_wasm_path("CIVIV_CANISTER_BACKEND_WASM".to_string(), &def_path).expect(&err)
-
+        ",
+            &def_path,
+            &std::env::current_dir()
+                .map(|x| x.display().to_string())
+                .unwrap_or_else(|_| "an unknown directory".to_string())
+        );
+        get_wasm_path("CIVIV_CANISTER_BACKEND_WASM".to_string(), &def_path).expect(&err)
     };
-
     pub static ref DUMMY_ISSUER_INIT: IssuerInit = IssuerInit {
         ic_root_key_der: hex::decode(DUMMY_ROOT_KEY).unwrap(),
         idp_canister_ids: vec![Principal::from_text(DUMMY_II_CANISTER_ID).unwrap()],
@@ -61,7 +64,6 @@ lazy_static! {
         admin: Principal::from_text(DUMMY_II_CANISTER_ID).unwrap(),
         authorized_issuers: vec![],
     };
-
     pub static ref DUMMY_SIGNED_ID_ALIAS: SignedIssuerIdAlias = SignedIssuerIdAlias {
         credential_jws: DUMMY_ALIAS_JWS.to_string(),
     };
@@ -199,6 +201,25 @@ mod api {
             sender,
             "get_credential",
             (get_credential_request,),
+        )
+        .map(|(x,)| x)
+    }
+
+    pub fn remove_credential(
+        env: &StateMachine,
+        canister_id: CanisterId,
+        user: Principal,
+        credential_id: String,
+    ) -> Result<Result<String, CredentialError>, CallError> {
+        let civic_issuer =
+            Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae")
+                .unwrap();
+        call_candid_as(
+            env,
+            canister_id,
+            civic_issuer,
+            "remove_credential",
+            (user, credential_id),
         )
         .map(|(x,)| x)
     }
@@ -687,6 +708,36 @@ fn should_not_add_duplicate_credentials() {
         "Expected only one credential, but found {}",
         stored_credentials.len()
     );
+}
+
+#[test]
+fn should_remove_credential_successfully() {
+    let env = env();
+    let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
+    let principal = principal_1();
+    let credential = construct_adult_credential();
+
+    // Add the credential first
+    let _ = api::add_credentials(&env, issuer_id, principal, vec![credential.clone()])
+        .expect("API call failed");
+
+    // Ensure the credential is added
+    let stored_credentials = api::get_all_credentials(&env, issuer_id, principal)
+        .expect("API call failed")
+        .expect("get_all_credentials error");
+    assert_eq!(stored_credentials.len(), 1);
+
+    // Remove the credential
+    let response = api::remove_credential(&env, issuer_id, principal, credential.id.clone())
+        .expect("API call failed")
+        .unwrap();
+    assert!(response.contains("removed successfully"));
+
+    // Ensure the credential is removed
+    let stored_credentials_after_removal = api::get_all_credentials(&env, issuer_id, principal)
+        .expect("API call failed")
+        .expect("get_all_credentials error");
+    assert_eq!(stored_credentials_after_removal.len(), 0);
 }
 
 #[test]

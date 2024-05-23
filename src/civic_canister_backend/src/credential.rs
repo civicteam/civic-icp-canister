@@ -150,6 +150,35 @@ async fn add_credentials(
     Ok(credential_info)
 }
 
+#[update]
+#[candid_method]
+async fn remove_credential(
+    principal: Principal,
+    credential_id: String,
+) -> Result<String, CredentialError> {
+    // Check if the caller is the authorized principal
+    if caller().to_text() != AUTHORIZED_PRINCIPAL {
+        return Err(CredentialError::UnauthorizedSubject(
+            "Unauthorized: You do not have permission to remove credentials.".to_string(),
+        ));
+    }
+
+    // Access the credentials storage and attempt to remove the credential
+    CREDENTIALS.with(|credentials| {
+        let mut credentials = credentials.borrow_mut();
+        if let Some(creds) = credentials.get_mut(&principal) {
+            if let Some(pos) = creds.iter().position(|c| c.id == credential_id) {
+                creds.remove(pos);
+                return Ok(format!("Credential with ID {} removed successfully", credential_id));
+            }
+        }
+        Err(CredentialError::NoCredentialFound(format!(
+            "No credential found with ID {} for principal {}",
+            credential_id,
+            principal.to_text()
+        )))
+    })
+}
 
 /// Updates an existing credential for a given principal.
 #[update]
