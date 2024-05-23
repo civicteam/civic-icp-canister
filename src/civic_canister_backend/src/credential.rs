@@ -32,7 +32,7 @@ use ic_stable_structures::storable::{Storable, Bound};
 
 extern crate asset_util;
 
-use crate::config::{CONFIG, CREDENTIALS, SIGNATURES, ASSETS, MSG_HASHES};
+use crate::config::{ASSETS, CONFIG, CREDENTIALS, MSG_HASHES, SIGNATURES, URL_TABLE};
 
 // The expiration of issued verifiable credentials.
 const MINUTE_NS: u64 = 60 * 1_000_000_000;
@@ -99,17 +99,26 @@ impl Claim {
     }
 }
 
+/// Represents a full credential that includes the issuer and context url in full. This is the type that will be passed to the canister 
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub struct FullCredential {
+    pub id: String,
+    pub type_: Vec<String>,
+    pub issuer: String,
+    pub context: Vec<String>,
+    pub claim: Vec<Claim>,
+}
+
 /// Represents a stored credential within the canister.
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
 pub(crate) struct StoredCredential {
     pub(crate)  id: String, 
     pub(crate)  type_: Vec<String>,
-    pub(crate)  context: Vec<String>,
-    pub(crate)  issuer: String,
+    pub(crate)  context_issuer_id: u16,
     pub(crate)  claim: Vec<Claim>,
 }
 
-/// Define a wrapper type around a list of credentials so that we can store it inside Stable
+/// Define a wrapper type around a list of credentials so that we can store it inside Stable Storage
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
 pub struct CredentialList(Vec<StoredCredential>);
 
@@ -143,11 +152,27 @@ pub(crate) enum CredentialError {
 /// Adds new credentials to the canister for a given principal.
 #[update]
 #[candid_method]
-async fn add_credentials(principal: Principal, new_credentials: CredentialList) -> Result<String, CredentialError>  {
+async fn add_credentials(principal: Principal, new_full_credentials: Vec<FullCredential>) -> Result<String, CredentialError>  {
     // Check if the caller is the authorized principal
     if caller().to_text() != AUTHORIZED_PRINCIPAL {
         return Err(CredentialError::UnauthorizedSubject("Unauthorized: You do not have permission to add credentials.".to_string()));
     }
+    let mut new_stored_credentials: Vec<StoredCredential> = Vec::new();
+    // For each full credential get or insert the id for the issuer and context fields, converting it into a StoredCredential type
+    URL_TABLE.with(|url_table| {
+        let mut url_table = url_table.borrow_mut();
+        for c in new_full_credentials {
+            let url_id = url_table.get_or_insert(c.issuer, c.context);
+            let stored_credential = StoredCredential {
+                id: c.id,
+                type_: c.type_,
+                context_issuer_id: url_id,
+                claim: c.claim,
+            };
+            new_stored_credentials.push(stored_credential);
+        }
+    });
+
     // Access the credentials storage and attempt to add the new credentials
     CREDENTIALS.with(|c| {
         // get a mutable reference to the stable map
@@ -156,16 +181,16 @@ async fn add_credentials(principal: Principal, new_credentials: CredentialList) 
         if credentials.contains_key(&principal) {
             // if yes, extend the vector with the vector of new credentials 
             let mut existing_credentials: Vec<StoredCredential> = credentials.get(&principal).unwrap().into();
-            existing_credentials.extend(<Vec<StoredCredential>>::from(new_credentials.clone()));
+            existing_credentials.extend(<Vec<StoredCredential>>::from(new_stored_credentials.clone()));
             credentials.insert(principal, CredentialList(existing_credentials));
         } else {
         // else insert the new entry 
-        credentials.insert(principal, new_credentials.clone());
+        credentials.insert(principal, CredentialList(new_stored_credentials.clone()));
      }
 
     });
 
-    let credential_info = format!("Added credentials: \n{:?}", new_credentials);
+    let credential_info = format!("Added credentials: \n{:?}", new_stored_credentials);
     Ok(credential_info)
 }
 
