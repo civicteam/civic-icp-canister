@@ -101,24 +101,24 @@ impl Claim {
 
 /// Represents a full credential that includes the issuer and context url in full. This is the type that will be passed to the canister 
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
-pub struct FullCredential {
-    pub id: String,
-    pub type_: Vec<String>,
-    pub issuer: String,
-    pub context: Vec<String>,
-    pub claim: Vec<Claim>,
+pub(crate) struct FullCredential {
+    pub(crate) id: String,
+    pub(crate) type_: Vec<String>,
+    pub(crate) issuer: String,
+    pub(crate) context: Vec<String>,
+    pub(crate) claim: Vec<Claim>,
 }
 
-/// Represents a stored credential within the canister.
+/// Represents a stored credential within the canister in the 'compressed' form with the url fields resolved to the url id
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
-pub(crate) struct StoredCredential {
-    pub(crate)  id: String, 
-    pub(crate)  type_: Vec<String>,
-    pub(crate)  context_issuer_id: u16,
-    pub(crate)  claim: Vec<Claim>,
+struct StoredCredential {
+    id: String, 
+    type_: Vec<String>,
+    context_issuer_id: u16,
+    claim: Vec<Claim>,
 }
 
-/// Define a wrapper type around a list of credentials so that we can store it inside Stable Storage
+/// Define a wrapper type around a list of credentials so that we can store it inside Stable Storage as well as implement to and from conversion to a list of full credentials
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
 pub struct CredentialList(Vec<StoredCredential>);
 
@@ -142,6 +142,51 @@ impl From<CredentialList> for Vec<StoredCredential> {
     }     
 }
 
+impl From<CredentialList> for Vec<FullCredential> {
+    // Convert from a list of stored credentials to a list of full credentials
+    fn from(val: CredentialList) -> Vec<FullCredential> {
+        let mut new_full_credentials: Vec<FullCredential> = Vec::new();
+        URL_TABLE.with(|url_table| {
+        for c in val.0 {
+            let (issuer, context) = url_table.borrow().get(c.context_issuer_id).unwrap().to_owned();
+            let full_credential = FullCredential {
+                id: c.id,
+                type_: c.type_,
+                issuer: issuer,
+                context: context,
+                claim: c.claim,
+            };
+            new_full_credentials.push(full_credential);
+        }
+        new_full_credentials
+    })
+    }
+}
+
+impl From<Vec<FullCredential>> for CredentialList {
+     //Convert from a list of full credentials to a list of stored credentials
+     fn from(full_credentials: Vec<FullCredential>) -> Self {
+        let mut new_stored_credentials: Vec<StoredCredential> = Vec::new();
+        // For each full credential get or insert the id for the issuer and context fields, converting it into a StoredCredential type
+        URL_TABLE.with(|url_table| {
+            let mut url_table = url_table.borrow_mut();
+            for c in full_credentials {
+                // get the corresponding key for these values or insert a new entry into the URLTable
+                let url_id = url_table.get_or_insert(c.issuer, c.context);
+                let stored_credential = StoredCredential {
+                    id: c.id,
+                    type_: c.type_,
+                    context_issuer_id: url_id,
+                    claim: c.claim,
+                };
+                new_stored_credentials.push(stored_credential);
+            }
+        });
+
+        CredentialList(new_stored_credentials)
+    }
+}
+
 /// Enumerates potential errors that can occur during credential operations.
 #[derive(CandidType, Deserialize, Debug)]
 pub(crate) enum CredentialError {
@@ -152,26 +197,13 @@ pub(crate) enum CredentialError {
 /// Adds new credentials to the canister for a given principal.
 #[update]
 #[candid_method]
-async fn add_credentials(principal: Principal, new_full_credentials: Vec<FullCredential>) -> Result<String, CredentialError>  {
+async fn add_credentials(principal: Principal, full_credentials: Vec<FullCredential>) -> Result<String, CredentialError>  {
     // Check if the caller is the authorized principal
     if caller().to_text() != AUTHORIZED_PRINCIPAL {
         return Err(CredentialError::UnauthorizedSubject("Unauthorized: You do not have permission to add credentials.".to_string()));
     }
-    let mut new_stored_credentials: Vec<StoredCredential> = Vec::new();
-    // For each full credential get or insert the id for the issuer and context fields, converting it into a StoredCredential type
-    URL_TABLE.with(|url_table| {
-        let mut url_table = url_table.borrow_mut();
-        for c in new_full_credentials {
-            let url_id = url_table.get_or_insert(c.issuer, c.context);
-            let stored_credential = StoredCredential {
-                id: c.id,
-                type_: c.type_,
-                context_issuer_id: url_id,
-                claim: c.claim,
-            };
-            new_stored_credentials.push(stored_credential);
-        }
-    });
+    // First get the it in compressed form of StoredCredential
+    let new_stored_credentials: CredentialList = CredentialList::from(full_credentials);
 
     // Access the credentials storage and attempt to add the new credentials
     CREDENTIALS.with(|c| {
@@ -185,7 +217,7 @@ async fn add_credentials(principal: Principal, new_full_credentials: Vec<FullCre
             credentials.insert(principal, CredentialList(existing_credentials));
         } else {
         // else insert the new entry 
-        credentials.insert(principal, CredentialList(new_stored_credentials.clone()));
+        credentials.insert(principal, new_stored_credentials.clone());
      }
 
     });
@@ -198,7 +230,7 @@ async fn add_credentials(principal: Principal, new_full_credentials: Vec<FullCre
 /// Updates an existing credential for a given principal.
 #[update]
 #[candid_method]
-async fn update_credential(principal: Principal, credential_id: String, updated_credential: StoredCredential) -> Result<String, CredentialError> {
+async fn update_credential(principal: Principal, credential_id: String, updated_credential: FullCredential) -> Result<String, CredentialError> {
     // Check if the caller is the authorized principal
     if caller().to_text() != AUTHORIZED_PRINCIPAL {
         return Err(CredentialError::UnauthorizedSubject("Unauthorized: You do not have permission to update credentials.".to_string()));
@@ -206,9 +238,14 @@ async fn update_credential(principal: Principal, credential_id: String, updated_
     // Access the credentials storage and attempt to update the specified credential
     CREDENTIALS.with(|c| {
         if let Some(creds) = c.borrow().get(&principal) {
-            let mut creds: Vec<StoredCredential> = creds.into();
+            // First convert to full credential to be able to check all the fields 
+            let mut creds: Vec<FullCredential> = creds.into();
             if let Some(pos) = creds.iter().position(|c| c.id == credential_id) {
                 creds[pos] = updated_credential.clone();
+                // Convert back to a list of stored credentials
+                let new_stored_credentials: CredentialList = CredentialList::from(creds);
+                // Update the principal with the new list of credentials
+                c.borrow_mut().insert(principal, new_stored_credentials);
                 return Ok(format!("Credential updated successfully: {:?}", updated_credential));
             }
         }
@@ -220,7 +257,7 @@ async fn update_credential(principal: Principal, credential_id: String, updated_
 /// Retrieves all credentials for a given principal.
 #[query]
 #[candid_method(query)]
-fn get_all_credentials(principal: Principal) -> Result<Vec<StoredCredential>, CredentialError> {
+fn get_all_credentials(principal: Principal) -> Result<Vec<FullCredential>, CredentialError> {
     if let Some(c) = CREDENTIALS.with(|c| c.borrow().get(&principal)) {
     Ok(c.into())
 } else {
@@ -458,16 +495,21 @@ fn build_credential(
     credential_spec: &CredentialSpec,
     credential: StoredCredential
 ) -> String {
-    let params = CredentialParams {
-        spec: credential_spec.clone(),
-        subject_id: did_for_principal(subject_principal),
-        credential_id_url: credential.id,
-        context: credential.context,
-        issuer_url: credential.issuer,
-        expiration_timestamp_s: exp_timestamp_s(),
-        claims: credential.claim,
-    };
-    build_credential_jwt(params)
+    // Retrieve the context and issuer url from the URLTable
+    URL_TABLE.with(|url_table| {
+        let url_table = url_table.borrow();
+        let (issuer, context) = url_table.get(credential.context_issuer_id).unwrap().to_owned();
+        let params = CredentialParams {
+            spec: credential_spec.clone(),
+            subject_id: did_for_principal(subject_principal),
+            credential_id_url: credential.id,
+            context: context,
+            issuer_url: issuer,
+            expiration_timestamp_s: exp_timestamp_s(),
+            claims: credential.claim,
+        };
+        build_credential_jwt(params)
+    })
 }
 
 fn exp_timestamp_s() -> u32 {
@@ -514,3 +556,4 @@ pub(crate) fn add_context(mut credential: CredentialBuilder, context: Vec<String
     }
     credential
 }
+

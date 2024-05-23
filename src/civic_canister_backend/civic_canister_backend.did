@@ -1,3 +1,4 @@
+type u16 = nat16;
 type ArgumentValue = variant { Int : int32; String : text };
 type Claim = record { claims : vec record { text; ClaimValue } };
 type ClaimValue = variant {
@@ -77,7 +78,7 @@ type Result_1 = variant {
   Ok : DerivationOriginData;
   Err : DerivationOriginError;
 };
-type Result_2 = variant { Ok : vec StoredCredential; Err : CredentialError };
+type Result_2 = variant { Ok : vec FullCredential; Err : CredentialError };
 type Result_3 = variant {
   Ok : IssuedCredentialData;
   Err : IssueCredentialError;
@@ -88,22 +89,28 @@ type Result_4 = variant {
 };
 type Result_5 = variant { Ok : Icrc21ConsentInfo; Err : Icrc21Error };
 type SignedIdAlias = record { credential_jws : text };
-type StoredCredential = record {
+type FullCredential = record {
   id : text;
   context : vec text;
   type_ : vec text;
   claim : vec Claim;
   issuer : text;
 };
+type StoredCredential = record {
+  id : text;
+  context_issuer_id : u16;
+  type_ : vec text;
+  claim : vec Claim;
+};
 service : (opt IssuerInit) -> {
-  add_credentials : (principal, vec StoredCredential) -> (Result);
+  add_credentials : (principal, vec FullCredential) -> (Result);
   configure : (IssuerInit) -> ();
   derivation_origin : (DerivationOriginRequest) -> (Result_1);
   get_all_credentials : (principal) -> (Result_2) query;
   get_credential : (GetCredentialRequest) -> (Result_3) query;
   http_request : (HttpRequest) -> (HttpResponse) query;
   prepare_credential : (PrepareCredentialRequest) -> (Result_4);
-  update_credential : (principal, text, StoredCredential) -> (Result);
+  update_credential : (principal, text, FullCredential) -> (Result);
   vc_consent_message : (Icrc21VcConsentMessageRequest) -> (Result_5);
   get_admin : () -> (principal) query;
   add_issuer: (principal) -> ();

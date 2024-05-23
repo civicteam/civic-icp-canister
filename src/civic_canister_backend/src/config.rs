@@ -58,7 +58,7 @@ thread_local! {
             MEMORY_MANAGER.with(|m| m.borrow().get(SIG))
         ).expect("failed to initialize stable vector")
     );
-
+    // Lookup table for the url fields to compress repeated information inside the credentials
     pub(crate) static URL_TABLE: RefCell<URLTable> = RefCell::new(URLTable::new());
     
     // Assets for the management app
@@ -245,24 +245,34 @@ fn apply_config(init: IssuerInit) {
 
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
 pub struct URLTable {
-    pub(crate) url_map: HashMap<(String, Vec<String>), u16>,
-    pub(crate) next_id: u16,
+    pub(crate) url_map: HashMap<u16, (String, Vec<String>)>,
+    pub(crate) current_id: u16,
 }
 
 impl URLTable {
     pub fn new() -> Self {
         URLTable {
             url_map: HashMap::new(),
-            next_id: 0,
+            current_id: 0,
         }
     }
 
+    pub fn get(&self, id: u16) -> Option<&(String, Vec<String>)> {
+        self.url_map.get(&id)
+    }
+
+    fn get_values(&self, url: String, context: Vec<String>) -> Option<&u16> {
+        self.url_map.iter().find_map(|(id, (u, c))| if *u == url && *c == context { Some(id) } else { None })
+    }
+
     pub fn get_or_insert(&mut self, url: String, context: Vec<String>) -> u16 {
-        let key = (url.clone(), context.clone());
-        *self.url_map.entry(key).or_insert_with(|| {
-            self.next_id += 1;
-            self.next_id
-        })
+        if let Some(id) = self.get_values(url.clone(), context.clone()) {
+            *id
+        } else {
+            self.current_id += 1;
+            self.url_map.insert(self.current_id, (url, context));
+            self.current_id
+        }
     }
 }
 
