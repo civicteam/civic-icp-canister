@@ -132,14 +132,24 @@ async fn add_credentials(
             "Unauthorized: You do not have permission to add credentials.".to_string(),
         ));
     }
+
     // Access the credentials storage and attempt to add the new credentials
-    CREDENTIALS.with_borrow_mut(|credentials| {
+    CREDENTIALS.with(|credentials| {
+        let mut credentials = credentials.borrow_mut();
         let entry = credentials.entry(principal).or_default();
-        entry.extend(new_credentials.clone());
+        println!("Existing credentials before adding: {:?}", entry);
+        for new_credential in new_credentials.clone() {
+            if !entry.iter().any(|c| c.id == new_credential.id) {
+                entry.push(new_credential);
+            }
+        }
+        println!("Existing credentials after adding: {:?}", entry);
     });
+
     let credential_info = format!("Added credentials: \n{:?}", new_credentials);
     Ok(credential_info)
 }
+
 
 /// Updates an existing credential for a given principal.
 #[update]

@@ -2,12 +2,13 @@
 extern crate civic_canister_backend;
 
 use assert_matches::assert_matches;
-use candid::{CandidType, Deserialize, Principal};
+use candid::Principal;
 use canister_sig_util::{extract_raw_root_pk_from_der, CanisterSigPublicKey};
 use canister_tests::api::internet_identity::vc_mvp as ii_api;
 use canister_tests::flows;
 use canister_tests::framework::{env, get_wasm_path, principal_1, test_principal, II_WASM};
 use civic_canister_backend::credential::{Claim, ClaimValue, CredentialError, StoredCredential};
+use civic_canister_backend::config::IssuerInit;
 use ic_cdk::api::management_canister::provisional::CanisterId;
 use ic_test_state_machine_client::{call_candid, call_candid_as};
 use ic_test_state_machine_client::{query_candid_as, CallError, StateMachine};
@@ -40,9 +41,8 @@ const DUMMY_ALIAS_ID_DAPP_PRINCIPAL: &str =
     "nugva-s7c6v-4yszt-koycv-5b623-an7q6-ha2nz-kz6rs-hawgl-nznbe-rqe";
 
 lazy_static! {
-    /** The gzipped Wasm module for the current Civic_Canister_Backend build, i.e. the one we're testing */
     pub static ref CIVIV_CANISTER_BACKEND_WASM: Vec<u8> = {
-        let def_path = PathBuf::from("./").join("civic_canister_backend.wasm.gz");
+        let def_path = PathBuf::from("../../").join("target/wasm32-unknown-unknown/release/civic_canister_backend.wasm");
         let err = format!("
         Could not find VC Issuer Wasm module for current build.
         I will look for it at {:?} (note that I run from {:?}).
@@ -58,6 +58,8 @@ lazy_static! {
         idp_canister_ids: vec![Principal::from_text(DUMMY_II_CANISTER_ID).unwrap()],
         derivation_origin: DUMMY_DERIVATION_ORIGIN.to_string(),
         frontend_hostname: DUMMY_FRONTEND_HOSTNAME.to_string(),
+        admin: Principal::from_text(DUMMY_II_CANISTER_ID).unwrap(),
+        authorized_issuers: vec![],
     };
 
     pub static ref DUMMY_SIGNED_ID_ALIAS: SignedIssuerIdAlias = SignedIssuerIdAlias {
@@ -70,18 +72,6 @@ pub fn install_canister(env: &StateMachine, wasm: Vec<u8>) -> CanisterId {
     let arg = candid::encode_one("()").expect("error encoding II installation arg as candid");
     env.install_canister(canister_id, wasm, arg, None);
     canister_id
-}
-
-#[derive(CandidType, Deserialize)]
-pub struct IssuerInit {
-    /// Root of trust for checking canister signatures.
-    ic_root_key_der: Vec<u8>,
-    /// List of canister ids that are allowed to provide id alias credentials.
-    idp_canister_ids: Vec<Principal>,
-    /// The derivation origin to be used by the issuer.
-    derivation_origin: String,
-    /// Frontend hostname be used by the issuer.
-    frontend_hostname: String,
 }
 
 pub fn install_issuer(env: &StateMachine, init: &IssuerInit) -> CanisterId {
@@ -138,7 +128,7 @@ mod api {
         env: &StateMachine,
         canister_id: CanisterId,
         user: Principal,
-        credential: StoredCredential,
+        new_credentials: Vec<StoredCredential>,
     ) -> Result<Result<String, CredentialError>, CallError> {
         let civic_issuer =
             Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae")
@@ -148,7 +138,7 @@ mod api {
             canister_id,
             civic_issuer,
             "add_credentials",
-            (user, vec![credential]),
+            (user, new_credentials),
         )
         .map(|(x,)| x)
     }
@@ -277,6 +267,8 @@ fn should_return_derivation_origin_with_custom_init() {
         idp_canister_ids: vec![Principal::from_text(DUMMY_II_CANISTER_ID).unwrap()],
         derivation_origin: "https://derivation_origin".to_string(),
         frontend_hostname: "https://frontend.host.name".to_string(),
+        admin: Principal::from_text(DUMMY_II_CANISTER_ID).unwrap(),
+        authorized_issuers: vec![],
     };
     let issuer_id = install_issuer(&env, &custom_init);
     let response = api::derivation_origin(
@@ -306,7 +298,7 @@ fn should_update_credential_successfully() {
     let id = original_credential.id.clone();
 
     // Add a credential first to update it later
-    let _ = api::add_credentials(&env, issuer_id, principal, original_credential)
+    let _ = api::add_credentials(&env, issuer_id, principal, vec![original_credential])
         .expect("failed to add credential");
 
     // Update the credential
@@ -421,7 +413,7 @@ fn should_fail_get_credential_for_wrong_sender() {
         &env,
         issuer_id,
         authorized_principal,
-        construct_adult_credential(),
+        vec![construct_adult_credential()],
     )
     .expect("failed to add employee");
     let unauthorized_principal = test_principal(2);
@@ -483,6 +475,8 @@ fn should_fail_prepare_credential_for_wrong_root_key() {
             idp_canister_ids: vec![Principal::from_text(DUMMY_II_CANISTER_ID).unwrap()],
             derivation_origin: DUMMY_DERIVATION_ORIGIN.to_string(),
             frontend_hostname: DUMMY_FRONTEND_HOSTNAME.to_string(),
+            admin: Principal::from_text(DUMMY_II_CANISTER_ID).unwrap(),
+            authorized_issuers: vec![],
         },
     );
     let response = api::prepare_credential(
@@ -508,6 +502,8 @@ fn should_fail_prepare_credential_for_wrong_idp_canister_id() {
             idp_canister_ids: vec![Principal::from_text("rdmx6-jaaaa-aaaaa-aaadq-cai").unwrap()], // does not match the DUMMY_II_CANISTER_ID, which is used in DUMMY_ALIAS_JWS
             derivation_origin: DUMMY_DERIVATION_ORIGIN.to_string(),
             frontend_hostname: DUMMY_FRONTEND_HOSTNAME.to_string(),
+            admin: Principal::from_text(DUMMY_II_CANISTER_ID).unwrap(),
+            authorized_issuers: vec![],
         },
     );
     let response = api::prepare_credential(
@@ -529,7 +525,7 @@ fn should_prepare_adult_credential_for_authorized_principal() {
     let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
     let authorized_principal = Principal::from_text(DUMMY_ALIAS_ID_DAPP_PRINCIPAL).unwrap();
     let credential = construct_adult_credential();
-    let _ = api::add_credentials(&env, issuer_id, authorized_principal, credential)
+    let _ = api::add_credentials(&env, issuer_id, authorized_principal, vec![credential])
         .expect("API call failed");
     let response = api::prepare_credential(
         &env,
@@ -555,6 +551,8 @@ fn should_issue_credential_e2e() -> Result<(), CallError> {
             idp_canister_ids: vec![ii_id],
             derivation_origin: DUMMY_DERIVATION_ORIGIN.to_string(),
             frontend_hostname: DUMMY_FRONTEND_HOSTNAME.to_string(),
+            admin: Principal::from_text(DUMMY_II_CANISTER_ID).unwrap(),
+            authorized_issuers: vec![],
         },
     );
     let identity_number = flows::register_anchor(&env, ii_id);
@@ -602,7 +600,7 @@ fn should_issue_credential_e2e() -> Result<(), CallError> {
         &env,
         issuer_id,
         alias_tuple.id_dapp,
-        construct_adult_credential(),
+        vec![construct_adult_credential()],
     )?;
 
     for credential_spec in [adult_credential_spec()] {
@@ -651,6 +649,44 @@ fn should_issue_credential_e2e() -> Result<(), CallError> {
     }
 
     Ok(())
+}
+
+#[test]
+fn should_not_add_duplicate_credentials() {
+    let env = env();
+    let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
+    let principal = principal_1();
+    let credential = construct_adult_credential();
+
+    // Add the credential for the first time
+    let _ = api::add_credentials(&env, issuer_id, principal, vec![credential.clone()])
+        .expect("API call failed");
+
+    // Attempt to add the same credential again
+    let response = api::add_credentials(&env, issuer_id, principal, vec![credential.clone()])
+        .expect("API call failed")
+        .unwrap(); // Unwrap the Result to access the inner String value
+
+    println!("Response from second add: {}", response);
+    assert!(response.contains("Added credentials"));
+
+    // Ensure the duplicate is not added
+    assert!(response.contains("Added credentials"));
+
+    // Retrieve all stored credentials for the principal
+    let stored_credentials = api::get_all_credentials(&env, issuer_id, principal)
+        .expect("API call failed")
+        .expect("get_all_credentials error");
+
+    println!("Stored credentials: {:?}", stored_credentials);
+
+    // Assert that only one credential is stored
+    assert_eq!(
+        stored_credentials.len(),
+        1,
+        "Expected only one credential, but found {}",
+        stored_credentials.len()
+    );
 }
 
 #[test]

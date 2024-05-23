@@ -106,19 +106,19 @@ impl From<IssuerInit> for IssuerConfig {
 
 /// Initialization arguments for the canister.
 #[derive(CandidType, Deserialize)]
-struct IssuerInit {
+pub struct IssuerInit {
     /// Root of trust for checking canister signatures.
-    ic_root_key_der: Vec<u8>,
+    pub ic_root_key_der: Vec<u8>,
     /// List of canister ids that are allowed to provide id alias credentials.
-    idp_canister_ids: Vec<Principal>,
+    pub idp_canister_ids: Vec<Principal>,
     /// The derivation origin to be used by the issuer.
-    derivation_origin: String,
+    pub derivation_origin: String,
     /// Frontend hostname be used by the issuer.
-    frontend_hostname: String,
-    // Admin who can add authorized issuers
-    admin: Principal,
-    // List of authorized issuers who can issue credentials
-    authorized_issuers: Vec<Principal>,
+    pub frontend_hostname: String,
+    /// Admin who can add authorized issuers
+    pub admin: Principal,
+    /// List of authorized issuers who can issue credentials
+    pub authorized_issuers: Vec<Principal>,
 }
 
 /// Called when the canister is deployed.
