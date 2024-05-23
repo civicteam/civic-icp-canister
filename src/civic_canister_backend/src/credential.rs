@@ -118,6 +118,20 @@ struct StoredCredential {
     claim: Vec<Claim>,
 }
 
+/// Convert from a single full credential to a single stored credential
+impl From<FullCredential> for StoredCredential {
+    fn from(full_credential: FullCredential) -> Self {
+        // Get the corresponding key for these values or insert a new entry into the URLTable
+        let url_id = URL_TABLE.with_borrow_mut(|url_table| url_table.get_or_insert(full_credential.issuer, full_credential.context));
+        StoredCredential {
+            id: full_credential.id,
+            type_: full_credential.type_,
+            context_issuer_id: url_id,
+            claim: full_credential.claim,
+        }
+    }
+}
+
 /// Define a wrapper type around a list of credentials so that we can store it inside Stable Storage as well as implement to and from conversion to a list of full credentials
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
 pub struct CredentialList(Vec<StoredCredential>);
@@ -132,22 +146,22 @@ impl Storable for CredentialList {
         CredentialList(Decode!(&bytes, Vec<StoredCredential>).expect("Failed to decode StoredCredential"))
     }
 
-    // this measures the size of the object in bytes 
+    // This measures the size of the object in bytes 
     const BOUND: Bound = Bound::Unbounded;
 }
 
 impl From<CredentialList> for Vec<StoredCredential> {
-    fn from(val: CredentialList) -> Self {
-        val.0
+    fn from(credentials: CredentialList) -> Self {
+        credentials.0
     }     
 }
 
+/// Convert from a list of stored credentials to a list of full credentials
 impl From<CredentialList> for Vec<FullCredential> {
-    // Convert from a list of stored credentials to a list of full credentials
-    fn from(val: CredentialList) -> Vec<FullCredential> {
+    fn from(credentials: CredentialList) -> Vec<FullCredential> {
         let mut new_full_credentials: Vec<FullCredential> = Vec::new();
         URL_TABLE.with(|url_table| {
-        for c in val.0 {
+        for c in credentials.0 {
             let (issuer, context) = url_table.borrow().get(c.context_issuer_id).unwrap().to_owned();
             let full_credential = FullCredential {
                 id: c.id,
@@ -163,26 +177,14 @@ impl From<CredentialList> for Vec<FullCredential> {
     }
 }
 
+/// Convert from a list of full credentials to a list of stored credentials
 impl From<Vec<FullCredential>> for CredentialList {
-     //Convert from a list of full credentials to a list of stored credentials
      fn from(full_credentials: Vec<FullCredential>) -> Self {
         let mut new_stored_credentials: Vec<StoredCredential> = Vec::new();
         // For each full credential get or insert the id for the issuer and context fields, converting it into a StoredCredential type
-        URL_TABLE.with(|url_table| {
-            let mut url_table = url_table.borrow_mut();
             for c in full_credentials {
-                // get the corresponding key for these values or insert a new entry into the URLTable
-                let url_id = url_table.get_or_insert(c.issuer, c.context);
-                let stored_credential = StoredCredential {
-                    id: c.id,
-                    type_: c.type_,
-                    context_issuer_id: url_id,
-                    claim: c.claim,
-                };
-                new_stored_credentials.push(stored_credential);
-            }
-        });
-
+                new_stored_credentials.push(<StoredCredential>::from(c));
+        }
         CredentialList(new_stored_credentials)
     }
 }
@@ -204,19 +206,19 @@ async fn add_credentials(principal: Principal, full_credentials: Vec<FullCredent
     }
     // First get the it in compressed form of StoredCredential
     let new_stored_credentials: CredentialList = CredentialList::from(full_credentials);
-
     // Access the credentials storage and attempt to add the new credentials
     CREDENTIALS.with(|c| {
-        // get a mutable reference to the stable map
+        // Get a mutable reference to the stable map    
         let mut credentials = c.borrow_mut(); 
-        // check if there is already credentials stored under this principal
+        // Check if there is already credentials stored under this principal
         if credentials.contains_key(&principal) {
-            // if yes, extend the vector with the vector of new credentials 
+            // If yes, extend the vector with the vector of new credentials 
             let mut existing_credentials: Vec<StoredCredential> = credentials.get(&principal).unwrap().into();
             existing_credentials.extend(<Vec<StoredCredential>>::from(new_stored_credentials.clone()));
+            ic_cdk::print(format!("updated {:?}", existing_credentials));
             credentials.insert(principal, CredentialList(existing_credentials));
         } else {
-        // else insert the new entry 
+        // Else insert the new entry 
         credentials.insert(principal, new_stored_credentials.clone());
      }
 
@@ -237,17 +239,16 @@ async fn update_credential(principal: Principal, credential_id: String, updated_
     }
     // Access the credentials storage and attempt to update the specified credential
     CREDENTIALS.with(|c| {
-        if let Some(creds) = c.borrow().get(&principal) {
-            // First convert to full credential to be able to check all the fields 
-            let mut creds: Vec<FullCredential> = creds.into();
-            if let Some(pos) = creds.iter().position(|c| c.id == credential_id) {
-                creds[pos] = updated_credential.clone();
-                // Convert back to a list of stored credentials
-                let new_stored_credentials: CredentialList = CredentialList::from(creds);
-                // Update the principal with the new list of credentials
-                c.borrow_mut().insert(principal, new_stored_credentials);
+        if let Some(credentials) = c.borrow().get(&principal) {
+            let mut credentials: Vec<StoredCredential> = credentials.into();
+            // Iterate through the credentials and find the one with the given id
+            if let Some(pos) = credentials.iter().position(|c| c.id == credential_id) {
+                // Update the credential with the new data
+                credentials[pos] = updated_credential.clone().into();
                 return Ok(format!("Credential updated successfully: {:?}", updated_credential));
             }
+            // Update the principal with the new list of credentials
+            c.borrow_mut().insert(principal, CredentialList(credentials));
         }
         Err(CredentialError::NoCredentialFound(format!("No credential found with ID {} for principal {}", credential_id, principal.to_text())))
     })
