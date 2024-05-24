@@ -91,6 +91,13 @@ pub fn install_issuer(env: &StateMachine, init: &IssuerInit) -> CanisterId {
     canister_id
 }
 
+struct StoredCredential {
+    id: String,
+    type_: Vec<String>,
+    context_issuer_id: u16,
+    claim: Vec<Claim>,
+}
+
 mod api {
     use super::*;
 
@@ -290,6 +297,47 @@ fn should_return_derivation_origin_with_custom_init() {
     .expect("API call failed")
     .expect("derivation_origin error");
     assert_eq!(response.origin, custom_init.derivation_origin);
+}
+
+/// Test that adding and retrieving a credential will return the same credential data, the fields are compressed and then converted back
+#[test]
+fn should_return_same_credential_data_after_internal_compression() {
+    let env = env();
+    let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
+    let principal = principal_1();
+    let credential1 = construct_adult_credential();
+    let mut credential2 = construct_adult_credential();
+    credential2.issuer = "other-issuer".to_string();
+    api::add_credentials(&env, issuer_id, principal, credential1.clone())
+        .expect("failed to add credential");
+    api::add_credentials(&env, issuer_id, principal, credential2.clone())
+        .expect("failed to add credential");
+    let response = api::get_all_credentials(&env, issuer_id, principal)
+        .expect("API call failed")
+        .expect("get_all_credentials error");
+    assert_eq!(response[0].issuer, credential1.issuer);
+    assert_eq!(response[1].issuer, credential2.issuer);
+}
+
+/// Test that updating an url field is handled correctly 
+#[test]
+fn should_handle_the_update_of_url_fields_inside_internal_compression() {
+    let env = env();
+    let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
+    let principal = principal_1();
+    let original_credential = construct_adult_credential();
+    let mut updated_credential = construct_adult_credential();
+    updated_credential.issuer = "updated-issuer".to_string();
+    let id = original_credential.id.clone();
+
+    api::add_credentials(&env, issuer_id, principal, original_credential)
+        .expect("failed to add credential");
+    api::update_credential(&env, issuer_id, principal, id, updated_credential.clone())
+        .expect("failed to update credential");
+    let response = api::get_all_credentials(&env, issuer_id, principal)
+        .expect("API call failed")
+        .expect("get_all_credentials error");
+    assert_eq!(response[0].issuer, updated_credential.issuer);
 }
 
 #[test]
