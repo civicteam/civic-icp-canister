@@ -178,8 +178,8 @@ impl From<CredentialList> for Vec<FullCredential> {
                 let full_credential = FullCredential {
                     id: c.id,
                     type_: c.type_,
-                    issuer: issuer,
-                    context: context,
+                    issuer,
+                    context,
                     claim: c.claim,
                 };
                 new_full_credentials.push(full_credential);
@@ -534,7 +534,7 @@ fn build_credential(
             spec: credential_spec.clone(),
             subject_id: did_for_principal(subject_principal),
             credential_id_url: credential.id,
-            context: context,
+            context,
             issuer_url: issuer,
             expiration_timestamp_s: exp_timestamp_s(),
             claims: credential.claim,
@@ -594,4 +594,118 @@ pub(crate) fn add_context(
         credential = credential.context(Url::parse(c).unwrap());
     }
     credential
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::credential::Claim;
+    use std::collections::HashMap;
+
+    /// Test that new entry is added to the table if there doesn't exist one for the given values 
+    #[test]
+    fn test_add_new_entry_to_table() {
+        let full_credential = FullCredential {
+            id: "http://example.com/credentials/123".to_string(),
+            type_: vec![
+                "VerifiedCredential".to_string(),
+            ],
+            issuer: "https://www.civic.com".to_string(),
+            context: vec![
+                "https://www.w3.org/ns/credentials/v2".to_string(),
+                "https://www.example.com/credentials/extension".to_string(),
+            ],
+            claim: vec![Claim { claims: HashMap::new() }],
+        };
+
+        let stored_credential = StoredCredential::from(full_credential);
+        assert_eq!(stored_credential.context_issuer_id, 1);
+        assert_eq!(URL_TABLE.with_borrow(|t| t.get(1).unwrap().0.clone()), ("https://www.civic.com".to_string()));
+    }
+
+    /// Test that the table will use existing entries if applicable  
+    #[test]
+    fn test_use_existing_entry_in_table() {
+        // Add the entry to the table 
+        test_add_new_entry_to_table();
+        // Create a new full credential with the same url and context as the one added above
+        let full_credential = FullCredential {
+            id: "http://example.com/credentials/123".to_string(),
+            type_: vec![
+                "VerifiedCredential".to_string(),
+            ],
+            issuer: "https://www.civic.com".to_string(),
+            context: vec![
+                "https://www.w3.org/ns/credentials/v2".to_string(),
+                "https://www.example.com/credentials/extension".to_string(),
+            ],
+            claim: vec![Claim { claims: HashMap::new() }],
+        };
+        // Convert the credential and verify the context_issuer_id remains the same 
+        let stored_credential = StoredCredential::from(full_credential);
+        assert_eq!(stored_credential.context_issuer_id, 1);
+    }
+
+    /// Test that the conversion from FullCredential to StoredCredential works as expected
+    #[test]
+    fn test_convert_full_credential_to_stored_credential() {
+        let full_credential = FullCredential {
+            id: "http://example.com/credentials/123".to_string(),
+            type_: vec![
+                "VerifiedCredential".to_string(),
+            ],
+            issuer: "https://www.civic.com".to_string(),
+            context: vec![
+                "https://www.w3.org/ns/credentials/v2".to_string(),
+                "https://www.example.com/credentials/extension".to_string(),
+            ],
+            claim: vec![Claim { claims: HashMap::new() }],
+        };
+        let stored_credential = StoredCredential::from(full_credential);
+        assert_eq!(stored_credential.context_issuer_id, 1);
+    }
+
+    /// Test conversion from StoredCredential to FullCredential (only implemented for an array)
+    #[test]
+    fn test_convert_list_of_stored_credential_to_list_of_full_credential() {
+        // Create and compress multiple full credentials to populate the lookup table 
+        let credential1 = FullCredential {
+            id: "http://example.com/credentials/123".to_string(),
+            type_: vec![
+                "VerifiedCredential".to_string(),
+            ],
+            issuer: "https://www.civic.com".to_string(),
+            context: vec![
+                "https://www.w3.org/ns/credentials/v2".to_string(),
+                "https://www.example.com/credentials/extension".to_string(),
+            ],
+            claim: vec![Claim { claims: HashMap::new() }],
+        };
+
+        let credential2 = FullCredential {
+            id: "http://example.com/credentials/123".to_string(),
+            type_: vec![
+                "VerifiedCredential".to_string(),
+            ],
+            issuer: "https://www.civic.com/issuer".to_string(),
+            context: vec![
+                "https://www.w3.org/ns/credentials/v2".to_string(),
+                "https://www.example.com/credentials/extension".to_string(),
+            ],
+            claim: vec![Claim { claims: HashMap::new() }],
+        };
+        // Convert them so that the table will be filled with entries for '1' and '2' 
+        let c1 = StoredCredential::from(credential1);
+        let c2 = StoredCredential::from(credential2);
+
+        // Convert them back to FullCredential and check if the values are correct
+        let full_credentials:Vec<FullCredential> = CredentialList(vec![c1, c2]).into();
+
+        assert_eq!(full_credentials[0].issuer, "https://www.civic.com".to_string());
+        assert_eq!(full_credentials[0].context[0], "https://www.w3.org/ns/credentials/v2".to_string());
+        assert_eq!(full_credentials[0].context[1], "https://www.example.com/credentials/extension".to_string());
+        assert_eq!(full_credentials[1].issuer, "https://www.civic.com/issuer".to_string());
+        assert_eq!(full_credentials[1].context[0], "https://www.w3.org/ns/credentials/v2".to_string());
+        assert_eq!(full_credentials[1].context[1], "https://www.example.com/credentials/extension".to_string());
+    }
 }

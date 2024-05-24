@@ -244,20 +244,20 @@ fn apply_config(init: IssuerInit) {
 }
 
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
-pub struct URLTable {
-    pub(crate) url_map: HashMap<u16, (String, Vec<String>)>,
-    pub(crate) current_id: u16,
+pub(crate) struct URLTable {
+    url_map: HashMap<u16, (String, Vec<String>)>,
+    current_id: u16,
 }
 
 impl URLTable {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         URLTable {
             url_map: HashMap::new(),
             current_id: 0,
         }
     }
 
-    pub fn get(&self, id: u16) -> Option<&(String, Vec<String>)> {
+    pub(crate) fn get(&self, id: u16) -> Option<&(String, Vec<String>)> {
         self.url_map.get(&id)
     }
 
@@ -265,7 +265,7 @@ impl URLTable {
         self.url_map.iter().find_map(|(id, (u, c))| if *u == url && *c == context { Some(id) } else { None })
     }
 
-    pub fn get_or_insert(&mut self, url: String, context: Vec<String>) -> u16 {
+    pub(crate) fn get_or_insert(&mut self, url: String, context: Vec<String>) -> u16 {
         if let Some(id) = self.get_values(url.clone(), context.clone()) {
             *id
         } else {
