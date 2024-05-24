@@ -227,7 +227,7 @@ async fn add_credentials(
         ));
     }
     // First get the it in compressed form of StoredCredential
-    let new_stored_credentials: CredentialList = CredentialList::from(full_credentials);
+    let new_stored_credentials: CredentialList = CredentialList::from(full_credentials.clone());
     // Access the credentials storage and attempt to add the new credentials
     CREDENTIALS.with(|c| {
         // Get a mutable reference to the stable map
@@ -253,11 +253,11 @@ async fn add_credentials(
             credentials.insert(principal, CredentialList(existing_credentials));
         } else {
             // Else insert the new entry
-            credentials.insert(principal, new_stored_credentials.clone());
+            credentials.insert(principal, new_stored_credentials);
         }
     });
 
-    let credential_info = format!("Added credentials: \n{:?}", new_stored_credentials);
+    let credential_info = format!("Added credentials: \n{:?}", full_credentials);
     Ok(credential_info)
 }
 
