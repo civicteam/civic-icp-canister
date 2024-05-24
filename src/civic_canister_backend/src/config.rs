@@ -20,9 +20,11 @@ use ic_stable_structures::{
     DefaultMemoryImpl, StableBTreeMap, StableCell, StableVec, Storable,
 };
 use include_dir::{include_dir, Dir};
+use serde::Serialize;
 use serde_bytes::ByteBuf;
 use std::borrow::Cow;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use vc_util::issuer_api::{DerivationOriginData, DerivationOriginError, DerivationOriginRequest};
 
 const PROD_II_CANISTER_ID: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai";
@@ -49,16 +51,18 @@ thread_local! {
             MEMORY_MANAGER.with(|m| m.borrow().get(CREDENTIAL))
         )
     );
-    // Assets for the management app
-    pub(crate) static ASSETS: RefCell<CertifiedAssets> = RefCell::new(CertifiedAssets::default());
-
-
+   
     // Stable vector to restore the signatures when the canister is upgraded
     pub(crate) static MSG_HASHES: RefCell<StableVec<[u8; 32], VirtualMemory<DefaultMemoryImpl>>> = RefCell::new(
         StableVec::init(
             MEMORY_MANAGER.with(|m| m.borrow().get(SIG))
         ).expect("failed to initialize stable vector")
     );
+    // Lookup table for the url fields to compress repeated information inside the credentials
+    pub(crate) static URL_TABLE: RefCell<URLTable> = RefCell::new(URLTable::new());
+    
+    // Assets for the management app
+    pub(crate) static ASSETS: RefCell<CertifiedAssets> = RefCell::new(CertifiedAssets::default());
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -237,6 +241,39 @@ fn apply_config(init: IssuerInit) {
     CONFIG
         .with_borrow_mut(|config_cell| config_cell.set(IssuerConfig::from(init)))
         .expect("failed to apply issuer config");
+}
+
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub(crate) struct URLTable {
+    url_map: HashMap<u16, (String, Vec<String>)>,
+    current_id: u16,
+}
+
+impl URLTable {
+    pub(crate) fn new() -> Self {
+        URLTable {
+            url_map: HashMap::new(),
+            current_id: 0,
+        }
+    }
+
+    pub(crate) fn get(&self, id: u16) -> Option<&(String, Vec<String>)> {
+        self.url_map.get(&id)
+    }
+
+    fn get_values(&self, url: String, context: Vec<String>) -> Option<&u16> {
+        self.url_map.iter().find_map(|(id, (u, c))| if *u == url && *c == context { Some(id) } else { None })
+    }
+
+    pub(crate) fn get_or_insert(&mut self, url: String, context: Vec<String>) -> u16 {
+        if let Some(id) = self.get_values(url.clone(), context.clone()) {
+            *id
+        } else {
+            self.current_id += 1;
+            self.url_map.insert(self.current_id, (url, context));
+            self.current_id
+        }
+    }
 }
 
 fn static_headers() -> Vec<HeaderField> {
