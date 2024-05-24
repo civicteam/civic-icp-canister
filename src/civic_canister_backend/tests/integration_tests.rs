@@ -294,7 +294,7 @@ fn construct_adult_credential() -> FullCredential {
             "https://www.w3.org/2018/credentials/v1".to_string(),
             "https://www.w3.org/2018/credentials/examples/v1".to_string(),
         ],
-        issuer: "https://civic.com".to_string(),
+        issuer: "did:example:76e12ec712ebc6f1c221ebfeb1f".to_string(),
         claim: vec![Claim { claims: claim_map }],
     }
 }

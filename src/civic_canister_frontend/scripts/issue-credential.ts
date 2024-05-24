@@ -18,7 +18,7 @@ const dummyCivicSampleKey = new Uint8Array([
 ]);
 
 // Dummy principal for testing purposes - this is the principal from the vc-flows that represents the user id from the civic POV (the same user that logs into the demo RP)
-const principal = Principal.fromText("your-principal-here");
+const principal = Principal.fromText("5vtx4-vex7o-xlogc-li6mq-dy5u2-3f36q-gskm5-tubbc-yipig-uyrfl-gae");
 
 // Define the dummy credential
 const id = ["id", { Text: "did:example:c276e12ec21ebfeb1f712ebc6f1" }];
@@ -39,7 +39,7 @@ const credential = {
   id: "urn:uuid:6a9c92a9-2530-4e2b-9776-530467e9bbe0",
   type_: ["VerifiableCredential", "VerifiedAdult"],
   context: ["https://www.w3.org/2018/credentials/v1", "https://www.w3.org/2018/credentials/examples/v1"],
-  issuer: "https://civic.com",
+  issuer: "did:example:76e12ec712ebc6f1c221ebfeb1f",
   claim: [mixedClaim]
 };
 

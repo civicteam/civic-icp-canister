@@ -59,7 +59,7 @@ thread_local! {
         ).expect("failed to initialize stable vector")
     );
     // Lookup table for the url fields to compress repeated information inside the credentials
-    pub(crate) static URL_TABLE: RefCell<URLTable> = RefCell::new(URLTable::new());
+    pub(crate) static STRING_TABLE: RefCell<StringTable> = RefCell::new(StringTable::new());
     
     // Assets for the management app
     pub(crate) static ASSETS: RefCell<CertifiedAssets> = RefCell::new(CertifiedAssets::default());
@@ -244,25 +244,25 @@ fn apply_config(init: IssuerInit) {
 }
 
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
-pub(crate) struct URLTable {
-    url_map: HashMap<u16, (String, Vec<String>)>,
+pub(crate) struct StringTable {
+    map: HashMap<u16, (String, Vec<String>)>,
     current_id: u16,
 }
 
-impl URLTable {
+impl StringTable {
     pub(crate) fn new() -> Self {
-        URLTable {
-            url_map: HashMap::new(),
+        StringTable {
+            map: HashMap::new(),
             current_id: 0,
         }
     }
 
     pub(crate) fn get(&self, id: u16) -> Option<&(String, Vec<String>)> {
-        self.url_map.get(&id)
+        self.map.get(&id)
     }
 
     fn get_values(&self, url: String, context: Vec<String>) -> Option<&u16> {
-        self.url_map.iter().find_map(|(id, (u, c))| if *u == url && *c == context { Some(id) } else { None })
+        self.map.iter().find_map(|(id, (u, c))| if *u == url && *c == context { Some(id) } else { None })
     }
 
     pub(crate) fn get_or_insert(&mut self, url: String, context: Vec<String>) -> u16 {
@@ -270,7 +270,7 @@ impl URLTable {
             *id
         } else {
             self.current_id += 1;
-            self.url_map.insert(self.current_id, (url, context));
+            self.map.insert(self.current_id, (url, context));
             self.current_id
         }
     }

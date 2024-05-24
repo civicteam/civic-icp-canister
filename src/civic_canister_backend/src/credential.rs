@@ -33,7 +33,7 @@ use vc_util::{
 
 extern crate asset_util;
 
-use crate::config::{ASSETS, CONFIG, CREDENTIALS, MSG_HASHES, SIGNATURES, URL_TABLE};
+use crate::config::{ASSETS, CONFIG, CREDENTIALS, MSG_HASHES, SIGNATURES, STRING_TABLE};
 
 // The expiration of issued verifiable credentials.
 const MINUTE_NS: u64 = 60 * 1_000_000_000;
@@ -122,9 +122,9 @@ struct StoredCredential {
 /// Convert from a single full credential to a single stored credential
 impl From<FullCredential> for StoredCredential {
     fn from(full_credential: FullCredential) -> Self {
-        // Get the corresponding key for these values or insert a new entry into the URLTable
-        let url_id = URL_TABLE.with_borrow_mut(|url_table| {
-            url_table.get_or_insert(full_credential.issuer, full_credential.context)
+        // Get the corresponding key for these values or insert a new entry into the StringTable
+        let url_id = STRING_TABLE.with_borrow_mut(|map| {
+            map.get_or_insert(full_credential.issuer, full_credential.context)
         });
         StoredCredential {
             id: full_credential.id,
@@ -165,9 +165,9 @@ impl From<CredentialList> for Vec<StoredCredential> {
 impl From<CredentialList> for Vec<FullCredential> {
     fn from(credentials: CredentialList) -> Vec<FullCredential> {
         let mut new_full_credentials: Vec<FullCredential> = Vec::new();
-        URL_TABLE.with(|url_table| {
+        STRING_TABLE.with(|map| {
             for c in credentials.0 {
-                let (issuer, context) = url_table
+                let (issuer, context) = map
                     .borrow()
                     .get(c.context_issuer_id)
                     .unwrap()
@@ -570,9 +570,9 @@ fn prepare_credential_jwt(
 struct CredentialParams {
     spec: CredentialSpec,
     subject_id: String,
-    credential_id_url: String,
+    credential_id: String,
     context: Vec<String>,
-    issuer_url: String,
+    issuer: String,
     claims: Vec<Claim>,
     expiration_timestamp_s: u32,
 }
@@ -582,19 +582,19 @@ fn build_credential(
     credential_spec: &CredentialSpec,
     credential: StoredCredential,
 ) -> String {
-    // Retrieve the context and issuer url from the URLTable
-    URL_TABLE.with(|url_table| {
-        let url_table = url_table.borrow();
-        let (issuer, context) = url_table
+    // Retrieve the context and issuer url from the StringTable
+    STRING_TABLE.with(|map| {
+        let map = map.borrow();
+        let (issuer, context) = map
             .get(credential.context_issuer_id)
             .unwrap()
             .to_owned();
         let params = CredentialParams {
             spec: credential_spec.clone(),
             subject_id: did_for_principal(subject_principal),
-            credential_id_url: credential.id,
+            credential_id: credential.id,
             context,
-            issuer_url: issuer,
+            issuer: issuer,
             expiration_timestamp_s: exp_timestamp_s(),
             claims: credential.claim,
         };
@@ -615,8 +615,8 @@ fn build_credential_jwt(params: CredentialParams) -> String {
 
     // Build the VC a
     let mut credential = CredentialBuilder::default()
-        .id(Url::parse(params.credential_id_url).unwrap())
-        .issuer(Url::parse(params.issuer_url).unwrap())
+        .id(Url::parse(params.credential_id).unwrap())
+        .issuer(Url::parse(params.issuer).unwrap())
         .type_("VerifiedCredential".to_string())
         .type_(params.spec.credential_type)
         .subjects(subjects) // add objects to the credentialSubject
@@ -680,7 +680,7 @@ mod tests {
         let stored_credential = StoredCredential::from(full_credential);
         assert_eq!(stored_credential.context_issuer_id, 1);
         assert_eq!(
-            URL_TABLE.with_borrow(|t| t.get(1).unwrap().0.clone()),
+            STRING_TABLE.with_borrow(|t| t.get(1).unwrap().0.clone()),
             ("https://www.civic.com".to_string())
         );
     }
