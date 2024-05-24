@@ -18,7 +18,7 @@ const dummyCivicSampleKey = new Uint8Array([
 ]);
 
 // Dummy principal for testing purposes - this is the principal from the vc-flows that represents the user id from the civic POV (the same user that logs into the demo RP)
-const principal = Principal.fromText("5vtx4-vex7o-xlogc-li6mq-dy5u2-3f36q-gskm5-tubbc-yipig-uyrfl-gae");
+const principal = Principal.fromText("your-principal-here");
 
 // Define the dummy credential
 const id = ["id", { Text: "did:example:c276e12ec21ebfeb1f712ebc6f1" }];
