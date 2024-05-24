@@ -104,6 +104,7 @@ type StoredCredential = record {
 };
 service : (opt IssuerInit) -> {
   add_credentials : (principal, vec FullCredential) -> (Result);
+  remove_credential : (principal, text) -> (Result);
   configure : (IssuerInit) -> ();
   derivation_origin : (DerivationOriginRequest) -> (Result_1);
   get_all_credentials : (principal) -> (Result_2) query;
