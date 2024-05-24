@@ -33,7 +33,7 @@ use vc_util::{
 
 extern crate asset_util;
 
-use crate::config::{ASSETS, CONFIG, CREDENTIALS, MSG_HASHES, SIGNATURES, STRING_TABLE};
+use crate::config::{ASSETS, CONFIG, CREDENTIALS, MSG_HASHES, SIGNATURES, LOOKUP_TABLE};
 
 // The expiration of issued verifiable credentials.
 const MINUTE_NS: u64 = 60 * 1_000_000_000;
@@ -122,8 +122,8 @@ struct StoredCredential {
 /// Convert from a single full credential to a single stored credential
 impl From<FullCredential> for StoredCredential {
     fn from(full_credential: FullCredential) -> Self {
-        // Get the corresponding key for these values or insert a new entry into the StringTable
-        let url_id = STRING_TABLE.with_borrow_mut(|map| {
+        // Get the corresponding key for these values or insert a new entry into the LookupTable
+        let url_id = LOOKUP_TABLE.with_borrow_mut(|map| {
             map.get_or_insert(full_credential.issuer, full_credential.context)
         });
         StoredCredential {
@@ -165,7 +165,7 @@ impl From<CredentialList> for Vec<StoredCredential> {
 impl From<CredentialList> for Vec<FullCredential> {
     fn from(credentials: CredentialList) -> Vec<FullCredential> {
         let mut new_full_credentials: Vec<FullCredential> = Vec::new();
-        STRING_TABLE.with(|map| {
+        LOOKUP_TABLE.with(|map| {
             for c in credentials.0 {
                 let (issuer, context) = map
                     .borrow()
@@ -582,8 +582,8 @@ fn build_credential(
     credential_spec: &CredentialSpec,
     credential: StoredCredential,
 ) -> String {
-    // Retrieve the context and issuer url from the StringTable
-    STRING_TABLE.with(|map| {
+    // Retrieve the context and issuer url from the LookupTable
+    LOOKUP_TABLE.with(|map| {
         let map = map.borrow();
         let (issuer, context) = map
             .get(credential.context_issuer_id)
@@ -680,7 +680,7 @@ mod tests {
         let stored_credential = StoredCredential::from(full_credential);
         assert_eq!(stored_credential.context_issuer_id, 1);
         assert_eq!(
-            STRING_TABLE.with_borrow(|t| t.get(1).unwrap().0.clone()),
+            LOOKUP_TABLE.with_borrow(|t| t.get(1).unwrap().0.clone()),
             ("https://www.civic.com".to_string())
         );
     }
