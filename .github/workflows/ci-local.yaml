@@ -13,8 +13,8 @@ jobs:
       matrix:
         os: [macos-latest] #, ubuntu-latest]
         include: 
-          - os: ubuntu-latest
-            file_suffix: "-linux"
+          # - os: ubuntu-latest
+          #   file_suffix: "-linux"
           - os: macos-latest
             file_suffix: "-mac"
      
