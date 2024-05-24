@@ -381,6 +381,7 @@ fn should_return_same_credential_data_after_internal_compression() {
     let principal = principal_1();
     let credential1 = construct_adult_credential();
     let mut credential2 = construct_adult_credential();
+    credential2.id = "other-id".to_string();
     credential2.issuer = "other-issuer".to_string();
     api::add_credentials(&env, issuer_id, principal, vec![credential1.clone()])
         .expect("failed to add credential");

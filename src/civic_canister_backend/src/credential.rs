@@ -234,12 +234,22 @@ async fn add_credentials(
         let mut credentials = c.borrow_mut();
         // Check if there is already credentials stored under this principal
         if credentials.contains_key(&principal) {
-            // If yes, extend the vector with the vector of new credentials
             let mut existing_credentials: Vec<StoredCredential> =
                 credentials.get(&principal).unwrap().into();
-            existing_credentials.extend(<Vec<StoredCredential>>::from(
-                new_stored_credentials.clone(),
-            ));
+
+            // If yes, add or replace with the new credential
+            for new_c in new_stored_credentials.clone().0 {
+                if let Some(pos) = existing_credentials
+                    .iter()
+                    .position(|existing_c| existing_c.id == new_c.id)
+                {
+                    // Replace existing credential
+                    existing_credentials[pos] = new_c;
+                } else {
+                    // Insert new credential
+                    existing_credentials.push(new_c);
+                }
+            }
             credentials.insert(principal, CredentialList(existing_credentials));
         } else {
             // Else insert the new entry
@@ -309,28 +319,30 @@ async fn update_credential(
     }
 
     // Access the credentials storage and attempt to update the specified credential
-    CREDENTIALS.with(|c| {
-        if let Some(credentials) = c.borrow().get(&principal) {
+    let result = CREDENTIALS.with(|c| {
+        let mut creds = c.borrow_mut();
+        if let Some(credentials) = creds.get(&principal) {
             let mut credentials: Vec<StoredCredential> = credentials.into();
             // Iterate through the credentials and find the one with the given id
             if let Some(pos) = credentials.iter().position(|c| c.id == credential_id) {
                 // Update the credential with the new data
                 credentials[pos] = updated_credential.clone().into();
+                // Update the principal with the new list of credentials
+                creds.insert(principal, CredentialList(credentials));
                 return Ok(format!(
                     "Credential updated successfully: {:?}",
                     updated_credential
                 ));
             }
-            // Update the principal with the new list of credentials
-            c.borrow_mut()
-                .insert(principal, CredentialList(credentials));
         }
+
         Err(CredentialError::NoCredentialFound(format!(
             "No credential found with ID {} for principal {}",
             credential_id,
             principal.to_text()
         )))
-    })
+    });
+    result
 }
 
 /// Retrieves all credentials for a given principal.
