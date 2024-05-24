@@ -103,7 +103,7 @@ type StoredCredential = record {
   claim : vec Claim;
 };
 service : (opt IssuerInit) -> {
-  add_credentials : (principal, vec StoredCredential) -> (Result);
+  add_credentials : (principal, vec FullCredential) -> (Result);
   remove_credential : (principal, text) -> (Result);
   configure : (IssuerInit) -> ();
   derivation_origin : (DerivationOriginRequest) -> (Result_1);

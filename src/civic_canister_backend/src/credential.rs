@@ -240,7 +240,6 @@ async fn add_credentials(
             existing_credentials.extend(<Vec<StoredCredential>>::from(
                 new_stored_credentials.clone(),
             ));
-            ic_cdk::print(format!("updated {:?}", existing_credentials));
             credentials.insert(principal, CredentialList(existing_credentials));
         } else {
             // Else insert the new entry
@@ -278,16 +277,16 @@ async fn remove_credential(
             {
                 existing_credentials_vec.remove(pos);
                 credentials.insert(principal, CredentialList(existing_credentials_vec));
-                return Ok("Credential removed successfully".to_string());
+                Ok("Credential removed successfully".to_string())
             } else {
-                return Err(CredentialError::NoCredentialFound(
+                Err(CredentialError::NoCredentialFound(
                     "Credential not found.".to_string(),
-                ));
+                ))
             }
         } else {
-            return Err(CredentialError::NoCredentialFound(
+            Err(CredentialError::NoCredentialFound(
                 "No credentials found for this principal.".to_string(),
-            ));
+            ))
         }
     });
 

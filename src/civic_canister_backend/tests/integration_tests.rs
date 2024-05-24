@@ -86,12 +86,6 @@ pub fn install_issuer(env: &StateMachine, init: &IssuerInit) -> CanisterId {
     canister_id
 }
 
-struct StoredCredential {
-    id: String,
-    type_: Vec<String>,
-    context_issuer_id: u16,
-    claim: Vec<Claim>,
-}
 
 mod api {
     use super::*;
@@ -140,7 +134,7 @@ mod api {
         env: &StateMachine,
         canister_id: CanisterId,
         user: Principal,
-        credential: FullCredential,
+        new_credentials: Vec<FullCredential>,
     ) -> Result<Result<String, CredentialError>, CallError> {
         let civic_issuer =
             Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae")
@@ -160,7 +154,7 @@ mod api {
         canister_id: CanisterId,
         sender: Principal,
         user: Principal,
-        new_credentials: Vec<StoredCredential>,
+        new_credentials: Vec<FullCredential>,
     ) -> Result<Result<String, CredentialError>, CallError> {
         call_candid_as(
             env,
@@ -388,9 +382,9 @@ fn should_return_same_credential_data_after_internal_compression() {
     let credential1 = construct_adult_credential();
     let mut credential2 = construct_adult_credential();
     credential2.issuer = "other-issuer".to_string();
-    api::add_credentials(&env, issuer_id, principal, credential1.clone())
+    api::add_credentials(&env, issuer_id, principal, vec![credential1.clone()])
         .expect("failed to add credential");
-    api::add_credentials(&env, issuer_id, principal, credential2.clone())
+    api::add_credentials(&env, issuer_id, principal, vec![credential2.clone()])
         .expect("failed to add credential");
     let response = api::get_all_credentials(&env, issuer_id, principal)
         .expect("API call failed")
@@ -399,7 +393,7 @@ fn should_return_same_credential_data_after_internal_compression() {
     assert_eq!(response[1].issuer, credential2.issuer);
 }
 
-/// Test that updating an url field is handled correctly
+/// Test that updating an url field is handled correctly 
 #[test]
 fn should_handle_the_update_of_url_fields_inside_internal_compression() {
     let env = env();
@@ -410,15 +404,22 @@ fn should_handle_the_update_of_url_fields_inside_internal_compression() {
     updated_credential.issuer = "updated-issuer".to_string();
     let id = original_credential.id.clone();
 
-    api::add_credentials(&env, issuer_id, principal, original_credential)
+    let civic_issuer =
+        Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae")
+            .unwrap();
+
+
+    api::add_credentials(&env, issuer_id, principal, vec![original_credential])
         .expect("failed to add credential");
-    api::update_credential(&env, issuer_id, principal, id, updated_credential.clone())
+    api::update_credential(&env, issuer_id, civic_issuer, principal, id, updated_credential.clone())
         .expect("failed to update credential");
     let response = api::get_all_credentials(&env, issuer_id, principal)
         .expect("API call failed")
         .expect("get_all_credentials error");
     assert_eq!(response[0].issuer, updated_credential.issuer);
 }
+
+
 
 #[test]
 fn should_update_credential_successfully() {
@@ -469,6 +470,7 @@ fn should_update_credential_successfully() {
         &ClaimValue::Boolean(false)
     );
 }
+
 
 /// Test: Update credential failure if not found
 #[test]
