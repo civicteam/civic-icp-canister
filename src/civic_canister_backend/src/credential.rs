@@ -38,9 +38,6 @@ use crate::config::{ASSETS, CONFIG, CREDENTIALS, MSG_HASHES, SIGNATURES, URL_TAB
 // The expiration of issued verifiable credentials.
 const MINUTE_NS: u64 = 60 * 1_000_000_000;
 const VC_EXPIRATION_PERIOD_NS: u64 = 15 * MINUTE_NS;
-// Authorized Civic Principal - get this from the frontend
-const AUTHORIZED_PRINCIPAL: &str =
-    "tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae";
 
 lazy_static! {
     /// Seed and public key used for signing the credentials.
@@ -208,6 +205,14 @@ pub enum CredentialError {
     UnauthorizedSubject(String),
 }
 
+fn is_authorized_issuer(caller: Principal) -> bool {
+    CONFIG.with(|config_cell| {
+        let config = config_cell.borrow();
+        let current_config = config.get();
+        current_config.authorized_issuers.contains(&caller)
+    })
+}
+
 /// Adds new credentials to the canister for a given principal.
 #[update]
 #[candid_method]
@@ -216,9 +221,9 @@ async fn add_credentials(
     full_credentials: Vec<FullCredential>,
 ) -> Result<String, CredentialError> {
     // Check if the caller is the authorized principal
-    if caller().to_text() != AUTHORIZED_PRINCIPAL {
+    if !is_authorized_issuer(caller()) {
         return Err(CredentialError::UnauthorizedSubject(
-            "Unauthorized: You do not have permission to add credentials.".to_string(),
+            "Unauthorized: You do not have permission to update credentials.".to_string(),
         ));
     }
     // First get the it in compressed form of StoredCredential
@@ -247,6 +252,48 @@ async fn add_credentials(
     Ok(credential_info)
 }
 
+#[update]
+#[candid_method]
+async fn remove_credential(
+    principal: Principal,
+    credential_id: String,
+) -> Result<String, CredentialError> {
+    // Check if the caller is an authorized issuer
+    if !is_authorized_issuer(caller()) {
+        return Err(CredentialError::UnauthorizedSubject(
+            "Unauthorized: You do not have permission to remove credentials.".to_string(),
+        ));
+    }
+
+    // Access the credentials storage and attempt to remove the credential
+    let result = CREDENTIALS.with(|c| {
+        let mut credentials = c.borrow_mut();
+
+        if let Some(existing_credentials) = credentials.get(&principal) {
+            let mut existing_credentials_vec: Vec<StoredCredential> = existing_credentials.into();
+
+            if let Some(pos) = existing_credentials_vec
+                .iter()
+                .position(|cred| cred.id == credential_id)
+            {
+                existing_credentials_vec.remove(pos);
+                credentials.insert(principal, CredentialList(existing_credentials_vec));
+                return Ok("Credential removed successfully".to_string());
+            } else {
+                return Err(CredentialError::NoCredentialFound(
+                    "Credential not found.".to_string(),
+                ));
+            }
+        } else {
+            return Err(CredentialError::NoCredentialFound(
+                "No credentials found for this principal.".to_string(),
+            ));
+        }
+    });
+
+    result
+}
+
 /// Updates an existing credential for a given principal.
 #[update]
 #[candid_method]
@@ -255,12 +302,13 @@ async fn update_credential(
     credential_id: String,
     updated_credential: FullCredential,
 ) -> Result<String, CredentialError> {
-    // Check if the caller is the authorized principal
-    if caller().to_text() != AUTHORIZED_PRINCIPAL {
+    // Check if the caller is an authorized issuer
+    if !is_authorized_issuer(caller()) {
         return Err(CredentialError::UnauthorizedSubject(
             "Unauthorized: You do not have permission to update credentials.".to_string(),
         ));
     }
+
     // Access the credentials storage and attempt to update the specified credential
     CREDENTIALS.with(|c| {
         if let Some(credentials) = c.borrow().get(&principal) {
@@ -602,46 +650,49 @@ mod tests {
     use crate::credential::Claim;
     use std::collections::HashMap;
 
-    /// Test that new entry is added to the table if there doesn't exist one for the given values 
+    /// Test that new entry is added to the table if there doesn't exist one for the given values
     #[test]
     fn test_add_new_entry_to_table() {
         let full_credential = FullCredential {
             id: "http://example.com/credentials/123".to_string(),
-            type_: vec![
-                "VerifiedCredential".to_string(),
-            ],
+            type_: vec!["VerifiedCredential".to_string()],
             issuer: "https://www.civic.com".to_string(),
             context: vec![
                 "https://www.w3.org/ns/credentials/v2".to_string(),
                 "https://www.example.com/credentials/extension".to_string(),
             ],
-            claim: vec![Claim { claims: HashMap::new() }],
+            claim: vec![Claim {
+                claims: HashMap::new(),
+            }],
         };
 
         let stored_credential = StoredCredential::from(full_credential);
         assert_eq!(stored_credential.context_issuer_id, 1);
-        assert_eq!(URL_TABLE.with_borrow(|t| t.get(1).unwrap().0.clone()), ("https://www.civic.com".to_string()));
+        assert_eq!(
+            URL_TABLE.with_borrow(|t| t.get(1).unwrap().0.clone()),
+            ("https://www.civic.com".to_string())
+        );
     }
 
     /// Test that the table will use existing entries if applicable  
     #[test]
     fn test_use_existing_entry_in_table() {
-        // Add the entry to the table 
+        // Add the entry to the table
         test_add_new_entry_to_table();
         // Create a new full credential with the same url and context as the one added above
         let full_credential = FullCredential {
             id: "http://example.com/credentials/123".to_string(),
-            type_: vec![
-                "VerifiedCredential".to_string(),
-            ],
+            type_: vec!["VerifiedCredential".to_string()],
             issuer: "https://www.civic.com".to_string(),
             context: vec![
                 "https://www.w3.org/ns/credentials/v2".to_string(),
                 "https://www.example.com/credentials/extension".to_string(),
             ],
-            claim: vec![Claim { claims: HashMap::new() }],
+            claim: vec![Claim {
+                claims: HashMap::new(),
+            }],
         };
-        // Convert the credential and verify the context_issuer_id remains the same 
+        // Convert the credential and verify the context_issuer_id remains the same
         let stored_credential = StoredCredential::from(full_credential);
         assert_eq!(stored_credential.context_issuer_id, 1);
     }
@@ -651,15 +702,15 @@ mod tests {
     fn test_convert_full_credential_to_stored_credential() {
         let full_credential = FullCredential {
             id: "http://example.com/credentials/123".to_string(),
-            type_: vec![
-                "VerifiedCredential".to_string(),
-            ],
+            type_: vec!["VerifiedCredential".to_string()],
             issuer: "https://www.civic.com".to_string(),
             context: vec![
                 "https://www.w3.org/ns/credentials/v2".to_string(),
                 "https://www.example.com/credentials/extension".to_string(),
             ],
-            claim: vec![Claim { claims: HashMap::new() }],
+            claim: vec![Claim {
+                claims: HashMap::new(),
+            }],
         };
         let stored_credential = StoredCredential::from(full_credential);
         assert_eq!(stored_credential.context_issuer_id, 1);
@@ -668,44 +719,62 @@ mod tests {
     /// Test conversion from StoredCredential to FullCredential (only implemented for an array)
     #[test]
     fn test_convert_list_of_stored_credential_to_list_of_full_credential() {
-        // Create and compress multiple full credentials to populate the lookup table 
+        // Create and compress multiple full credentials to populate the lookup table
         let credential1 = FullCredential {
             id: "http://example.com/credentials/123".to_string(),
-            type_: vec![
-                "VerifiedCredential".to_string(),
-            ],
+            type_: vec!["VerifiedCredential".to_string()],
             issuer: "https://www.civic.com".to_string(),
             context: vec![
                 "https://www.w3.org/ns/credentials/v2".to_string(),
                 "https://www.example.com/credentials/extension".to_string(),
             ],
-            claim: vec![Claim { claims: HashMap::new() }],
+            claim: vec![Claim {
+                claims: HashMap::new(),
+            }],
         };
 
         let credential2 = FullCredential {
             id: "http://example.com/credentials/123".to_string(),
-            type_: vec![
-                "VerifiedCredential".to_string(),
-            ],
+            type_: vec!["VerifiedCredential".to_string()],
             issuer: "https://www.civic.com/issuer".to_string(),
             context: vec![
                 "https://www.w3.org/ns/credentials/v2".to_string(),
                 "https://www.example.com/credentials/extension".to_string(),
             ],
-            claim: vec![Claim { claims: HashMap::new() }],
+            claim: vec![Claim {
+                claims: HashMap::new(),
+            }],
         };
-        // Convert them so that the table will be filled with entries for '1' and '2' 
+        // Convert them so that the table will be filled with entries for '1' and '2'
         let c1 = StoredCredential::from(credential1);
         let c2 = StoredCredential::from(credential2);
 
         // Convert them back to FullCredential and check if the values are correct
-        let full_credentials:Vec<FullCredential> = CredentialList(vec![c1, c2]).into();
+        let full_credentials: Vec<FullCredential> = CredentialList(vec![c1, c2]).into();
 
-        assert_eq!(full_credentials[0].issuer, "https://www.civic.com".to_string());
-        assert_eq!(full_credentials[0].context[0], "https://www.w3.org/ns/credentials/v2".to_string());
-        assert_eq!(full_credentials[0].context[1], "https://www.example.com/credentials/extension".to_string());
-        assert_eq!(full_credentials[1].issuer, "https://www.civic.com/issuer".to_string());
-        assert_eq!(full_credentials[1].context[0], "https://www.w3.org/ns/credentials/v2".to_string());
-        assert_eq!(full_credentials[1].context[1], "https://www.example.com/credentials/extension".to_string());
+        assert_eq!(
+            full_credentials[0].issuer,
+            "https://www.civic.com".to_string()
+        );
+        assert_eq!(
+            full_credentials[0].context[0],
+            "https://www.w3.org/ns/credentials/v2".to_string()
+        );
+        assert_eq!(
+            full_credentials[0].context[1],
+            "https://www.example.com/credentials/extension".to_string()
+        );
+        assert_eq!(
+            full_credentials[1].issuer,
+            "https://www.civic.com/issuer".to_string()
+        );
+        assert_eq!(
+            full_credentials[1].context[0],
+            "https://www.w3.org/ns/credentials/v2".to_string()
+        );
+        assert_eq!(
+            full_credentials[1].context[1],
+            "https://www.example.com/credentials/extension".to_string()
+        );
     }
 }
