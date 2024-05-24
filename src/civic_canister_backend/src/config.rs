@@ -12,11 +12,11 @@ use candid::{candid_method, CandidType, Deserialize, Principal};
 use canister_sig_util::signature_map::{SignatureMap, LABEL_SIG};
 use canister_sig_util::{extract_raw_root_pk_from_der, IC_ROOT_PK_DER};
 use ic_cdk::api;
-use ic_cdk_macros::{init, post_upgrade, query, update};
+use ic_cdk_macros::{init, post_upgrade, pre_upgrade, query, update};
 use ic_certification::{labeled_hash, pruned};
 use ic_stable_structures::storable::Bound;
 use ic_stable_structures::{
-    memory_manager::{MemoryId, MemoryManager, VirtualMemory},
+    memory_manager::{MemoryId, MemoryManager, VirtualMemory}, writer::Writer, Memory,
     DefaultMemoryImpl, StableBTreeMap, StableCell, StableVec, Storable,
 };
 use include_dir::{include_dir, Dir};
@@ -36,6 +36,8 @@ const SIG: MemoryId = MemoryId::new(1);
 
 // A memory for the Credential data
 const CREDENTIAL: MemoryId = MemoryId::new(2);
+
+const UPGRADES: MemoryId = MemoryId::new(3);
 
 type ConfigCell = StableCell<IssuerConfig, VirtualMemory<DefaultMemoryImpl>>;
 
@@ -59,7 +61,7 @@ thread_local! {
         ).expect("failed to initialize stable vector")
     );
     // Lookup table for the url fields to compress repeated information inside the credentials
-    pub(crate) static URL_TABLE: RefCell<URLTable> = RefCell::new(URLTable::new());
+    pub(crate) static LOOKUP_TABLE: RefCell<LookupTable> = RefCell::new(LookupTable::new());
     
     // Assets for the management app
     pub(crate) static ASSETS: RefCell<CertifiedAssets> = RefCell::new(CertifiedAssets::default());
@@ -211,6 +213,25 @@ fn get_admin() -> Principal {
     })
 }
 
+// A pre-upgrade hook for serializing the data stored on the heap.
+#[pre_upgrade]
+fn pre_upgrade() {
+    // Serialize the state.
+    // This example is using CBOR, but you can use any data format you like.
+    let mut state_bytes = vec![];
+    LOOKUP_TABLE.with(|s| ciborium::ser::into_writer(&*s.borrow(), &mut state_bytes))
+        .expect("failed to encode state");
+
+    // Write the length of the serialized bytes to memory, followed by the
+    // by the bytes themselves.
+    let len = state_bytes.len() as u32;
+    let mut memory = MEMORY_MANAGER.with(|m| m.borrow().get(UPGRADES));
+    let mut writer = Writer::new(&mut memory, 0);
+    writer.write(&len.to_le_bytes()).unwrap();
+    writer.write(&state_bytes).unwrap()
+}
+
+
 /// Called when the canister is upgraded.
 #[post_upgrade]
 fn post_upgrade(init_arg: Option<IssuerInit>) {
@@ -228,6 +249,24 @@ fn post_upgrade(init_arg: Option<IssuerInit>) {
     });
 
     update_root_hash();
+
+    // Restore the lookup table
+    let memory = MEMORY_MANAGER.with(|m| m.borrow().get(UPGRADES));
+    // Read the length of the state bytes.
+    let mut state_len_bytes = [0; 4];
+    memory.read(0, &mut state_len_bytes);
+    let state_len = u32::from_le_bytes(state_len_bytes) as usize;
+
+    // Read the bytes
+    let mut state_bytes = vec![0; state_len];
+    memory.read(4, &mut state_bytes);
+
+    // Deserialize and set the table.
+    let table = ciborium::de::from_reader(&*state_bytes).expect("failed to decode state");
+    LOOKUP_TABLE.with(|t| {
+        *t.borrow_mut() = table
+    });
+
 }
 
 /// Called when the canister is configured.
@@ -244,25 +283,25 @@ fn apply_config(init: IssuerInit) {
 }
 
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
-pub(crate) struct URLTable {
-    url_map: HashMap<u16, (String, Vec<String>)>,
+pub(crate) struct LookupTable {
+    map: HashMap<u16, (String, Vec<String>)>,
     current_id: u16,
 }
 
-impl URLTable {
+impl LookupTable {
     pub(crate) fn new() -> Self {
-        URLTable {
-            url_map: HashMap::new(),
+        LookupTable {
+            map: HashMap::new(),
             current_id: 0,
         }
     }
 
     pub(crate) fn get(&self, id: u16) -> Option<&(String, Vec<String>)> {
-        self.url_map.get(&id)
+        self.map.get(&id)
     }
 
     fn get_values(&self, url: String, context: Vec<String>) -> Option<&u16> {
-        self.url_map.iter().find_map(|(id, (u, c))| if *u == url && *c == context { Some(id) } else { None })
+        self.map.iter().find_map(|(id, (u, c))| if *u == url && *c == context { Some(id) } else { None })
     }
 
     pub(crate) fn get_or_insert(&mut self, url: String, context: Vec<String>) -> u16 {
@@ -270,7 +309,7 @@ impl URLTable {
             *id
         } else {
             self.current_id += 1;
-            self.url_map.insert(self.current_id, (url, context));
+            self.map.insert(self.current_id, (url, context));
             self.current_id
         }
     }

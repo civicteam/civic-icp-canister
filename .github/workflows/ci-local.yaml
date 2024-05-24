@@ -31,7 +31,8 @@ jobs:
       run: dfx --version
     - name: Install Rust target
       run: rustup target add wasm32-unknown-unknown
-
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2.7.3
     - name: Install dependencies
       run: |
         npm install 
