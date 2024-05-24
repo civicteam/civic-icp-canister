@@ -4,15 +4,13 @@
 //! including issuing, updating, and retrieving credentials. It also handles authorization
 //! and verification processes related to credential operations.
 
-use candid::{Decode, Encode};
-use candid::{candid_method, CandidType, Deserialize, Principal};
+use candid::{candid_method, CandidType, Decode, Deserialize, Encode, Principal};
 use canister_sig_util::signature_map::LABEL_SIG;
 use canister_sig_util::CanisterSigPublicKey;
 use ic_cdk::api::{caller, set_certified_data, time};
 use ic_cdk_macros::{query, update};
 use ic_certification::{fork_hash, labeled_hash, Hash};
-use ic_stable_structures::storable::Bound;
-use ic_stable_structures::Storable;
+use ic_stable_structures::storable::{Bound, Storable};
 use identity_core::common::Timestamp;
 use identity_core::common::Url;
 use identity_credential::credential::{CredentialBuilder, Subject};
@@ -36,14 +34,11 @@ use vc_util::{
 
 extern crate asset_util;
 
-use crate::config::{ASSETS, CONFIG, CREDENTIALS, SIGNATURES};
+use crate::config::{ASSETS, CONFIG, CREDENTIALS, MSG_HASHES, SIGNATURES};
 
 // The expiration of issued verifiable credentials.
 const MINUTE_NS: u64 = 60 * 1_000_000_000;
 const VC_EXPIRATION_PERIOD_NS: u64 = 15 * MINUTE_NS;
-// Authorized Civic Principal - get this from the frontend
-const AUTHORIZED_PRINCIPAL: &str =
-    "tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae";
 
 lazy_static! {
     /// Seed and public key used for signing the credentials.
@@ -127,17 +122,19 @@ impl Storable for CredentialList {
     }
 
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
-        CredentialList(Decode!(&bytes, Vec<StoredCredential>).expect("Failed to decode StoredCredential"))
+        CredentialList(
+            Decode!(&bytes, Vec<StoredCredential>).expect("Failed to decode StoredCredential"),
+        )
     }
 
-    // this measures the size of the object in bytes 
+    // this measures the size of the object in bytes
     const BOUND: Bound = Bound::Unbounded;
 }
 
 impl From<CredentialList> for Vec<StoredCredential> {
     fn from(val: CredentialList) -> Self {
         val.0
-    }     
+    }
 }
 
 /// Enumerates potential errors that can occur during credential operations.
@@ -147,36 +144,56 @@ pub enum CredentialError {
     UnauthorizedSubject(String),
 }
 
+fn is_authorized_issuer(caller: Principal) -> bool {
+    CONFIG.with(|config_cell| {
+        let config = config_cell.borrow();
+        let current_config = config.get();
+        current_config.authorized_issuers.contains(&caller)
+    })
+}
+
 /// Adds new credentials to the canister for a given principal.
 #[update]
 #[candid_method]
 async fn add_credentials(
     principal: Principal,
-    new_credentials: Vec<StoredCredential>,
+    new_credentials: CredentialList,
 ) -> Result<String, CredentialError> {
     // Check if the caller is the authorized principal
-    if caller().to_text() != AUTHORIZED_PRINCIPAL {
+    if !is_authorized_issuer(caller()) {
         return Err(CredentialError::UnauthorizedSubject(
-            "Unauthorized: You do not have permission to add credentials.".to_string(),
+            "Unauthorized: You do not have permission to update credentials.".to_string(),
         ));
     }
 
     // Access the credentials storage and attempt to add the new credentials
     CREDENTIALS.with(|c| {
-        // get a mutable reference to the stable map
-        let mut credentials = c.borrow_mut(); 
-        // check if there is already credentials stored under this principal
-        if credentials.contains_key(&principal) {
-            // if yes, extend the vector with the vector of new credentials 
-            let mut existing_credentials: Vec<StoredCredential> = credentials.get(&principal).unwrap().into();
-            existing_credentials.extend(<Vec<StoredCredential>>::from(new_credentials.clone()));
-            credentials.insert(principal, CredentialList(existing_credentials));
-        } else {
-        // else insert the new entry 
-        credentials.insert(principal, new_credentials.clone());
-     }
-    });
+        // Get a mutable reference to the stable map
+        let mut credentials = c.borrow_mut();
 
+        // Check if there are already credentials stored under this principal
+        if let Some(existing_credentials) = credentials.get(&principal) {
+            let mut existing_credentials_vec: Vec<StoredCredential> = existing_credentials.into();
+
+            for new_credential in <Vec<StoredCredential>>::from(new_credentials.clone()) {
+                if let Some(pos) = existing_credentials_vec
+                    .iter()
+                    .position(|cred| cred.id == new_credential.id)
+                {
+                    // Replace existing credential
+                    existing_credentials_vec[pos] = new_credential;
+                } else {
+                    // Add new credential
+                    existing_credentials_vec.push(new_credential);
+                }
+            }
+
+            credentials.insert(principal, CredentialList(existing_credentials_vec));
+        } else {
+            // Insert new entry
+            credentials.insert(principal, new_credentials.clone());
+        }
+    });
 
     let credential_info = format!("Added credentials: \n{:?}", new_credentials);
     Ok(credential_info)
@@ -188,29 +205,42 @@ async fn remove_credential(
     principal: Principal,
     credential_id: String,
 ) -> Result<String, CredentialError> {
-    // Check if the caller is the authorized principal
-    if caller().to_text() != AUTHORIZED_PRINCIPAL {
+    // Check if the caller is an authorized issuer
+    if !is_authorized_issuer(caller()) {
         return Err(CredentialError::UnauthorizedSubject(
             "Unauthorized: You do not have permission to remove credentials.".to_string(),
         ));
     }
 
     // Access the credentials storage and attempt to remove the credential
-    CREDENTIALS.with(|credentials| {
-        let mut credentials = credentials.borrow_mut();
-        if let Some(creds) = credentials.get_mut(&principal) {
-            if let Some(pos) = creds.iter().position(|c| c.id == credential_id) {
-                creds.remove(pos);
-                return Ok(format!("Credential with ID {} removed successfully", credential_id));
+    let result = CREDENTIALS.with(|c| {
+        let mut credentials = c.borrow_mut();
+
+        if let Some(existing_credentials) = credentials.get(&principal) {
+            let mut existing_credentials_vec: Vec<StoredCredential> = existing_credentials.into();
+
+            if let Some(pos) = existing_credentials_vec
+                .iter()
+                .position(|cred| cred.id == credential_id)
+            {
+                existing_credentials_vec.remove(pos);
+                credentials.insert(principal, CredentialList(existing_credentials_vec));
+                return Ok("Credential removed successfully".to_string());
+            } else {
+                return Err(CredentialError::NoCredentialFound(
+                    "Credential not found.".to_string(),
+                ));
             }
+        } else {
+            return Err(CredentialError::NoCredentialFound(
+                "No credentials found for this principal.".to_string(),
+            ));
         }
-        Err(CredentialError::NoCredentialFound(format!(
-            "No credential found with ID {} for principal {}",
-            credential_id,
-            principal.to_text()
-        )))
-    })
+    });
+
+    result
 }
+
 
 /// Updates an existing credential for a given principal.
 #[update]
@@ -220,18 +250,21 @@ async fn update_credential(
     credential_id: String,
     updated_credential: StoredCredential,
 ) -> Result<String, CredentialError> {
-    // Check if the caller is the authorized principal
-    if caller().to_text() != AUTHORIZED_PRINCIPAL {
+    // Check if the caller is an authorized issuer
+    if !is_authorized_issuer(caller()) {
         return Err(CredentialError::UnauthorizedSubject(
             "Unauthorized: You do not have permission to update credentials.".to_string(),
         ));
     }
+
     // Access the credentials storage and attempt to update the specified credential
-    CREDENTIALS.with(|c| {
-        if let Some(creds) = c.borrow().get(&principal) {
+    let result = CREDENTIALS.with(|c| {
+        let mut credentials = c.borrow_mut();
+        if let Some(creds) = credentials.get(&principal) {
             let mut creds: Vec<StoredCredential> = creds.into();
             if let Some(pos) = creds.iter().position(|c| c.id == credential_id) {
                 creds[pos] = updated_credential.clone();
+                credentials.insert(principal, CredentialList(creds));
                 return Ok(format!(
                     "Credential updated successfully: {:?}",
                     updated_credential
@@ -243,18 +276,20 @@ async fn update_credential(
             credential_id,
             principal.to_text()
         )))
-    })
+    });
+
+    result
 }
 
 /// Retrieves all credentials for a given principal.
 #[query]
 #[candid_method(query)]
 fn get_all_credentials(principal: Principal) -> Result<Vec<StoredCredential>, CredentialError> {
-    if let Some(c) = CREDENTIALS.with_borrow(|credentials| credentials.get(&principal).cloned()) {
-        Ok(c)
+    if let Some(c) = CREDENTIALS.with(|c| c.borrow().get(&principal)) {
+        Ok(c.into())
     } else {
         Err(CredentialError::NoCredentialFound(format!(
-            "No credentials found for principal {}",
+            "No credentials found for the principal {}",
             principal.to_text()
         )))
     }
@@ -369,7 +404,7 @@ fn authorize_vc_request(
     CONFIG.with_borrow(|config| {
         let config = config.get();
 
-        // heck if the ID alias is legitimate and was issued by the internet identity canister
+        // check if the ID alias is legitimate and was issued by the internet identity canister
         for idp_canister_id in &config.idp_canister_ids {
             if let Ok(alias_tuple) = get_verified_id_alias_from_jws(
                 &alias.credential_jws,
@@ -393,7 +428,7 @@ fn verify_authorized_principal(
     alias_tuple: &AliasTuple,
 ) -> Result<StoredCredential, IssueCredentialError> {
     // Get the credentials of this user
-    if let Some(credentials) = CREDENTIALS.with(|c|c.borrow().get(&alias_tuple.id_dapp)) {
+    if let Some(credentials) = CREDENTIALS.with(|c| c.borrow().get(&alias_tuple.id_dapp)) {
         // Check if the user has a credential of the type and return it
         let v: Vec<StoredCredential> = credentials.into();
         for c in v {
@@ -404,12 +439,12 @@ fn verify_authorized_principal(
     }
     // No (matching) credential found for this user
     println!(
-        "*** principal {} it is not authorized for credential type {:?}",
+        "*** Principal {} it is not authorized for credential type {:?}",
         alias_tuple.id_dapp.to_text(),
         credential_type
     );
     Err(IssueCredentialError::UnauthorizedSubject(format!(
-        "unauthorized principal {}",
+        "Unauthorized principal {}",
         alias_tuple.id_dapp.to_text()
     )))
 }
