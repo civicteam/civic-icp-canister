@@ -4,12 +4,15 @@
 //! including issuing, updating, and retrieving credentials. It also handles authorization
 //! and verification processes related to credential operations.
 
+use candid::{Decode, Encode};
 use candid::{candid_method, CandidType, Deserialize, Principal};
 use canister_sig_util::signature_map::LABEL_SIG;
 use canister_sig_util::CanisterSigPublicKey;
 use ic_cdk::api::{caller, set_certified_data, time};
 use ic_cdk_macros::{query, update};
 use ic_certification::{fork_hash, labeled_hash, Hash};
+use ic_stable_structures::storable::Bound;
+use ic_stable_structures::Storable;
 use identity_core::common::Timestamp;
 use identity_core::common::Url;
 use identity_credential::credential::{CredentialBuilder, Subject};
@@ -18,6 +21,7 @@ use serde::Serialize;
 use serde_bytes::ByteBuf;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
+use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::iter::repeat;
@@ -43,7 +47,7 @@ const AUTHORIZED_PRINCIPAL: &str =
 
 lazy_static! {
     /// Seed and public key used for signing the credentials.
-    static ref CANISTER_SIG_SEED: Vec<u8> = hash_bytes("some_random_seed").to_vec();
+    pub(crate) static ref CANISTER_SIG_SEED: Vec<u8> = hash_bytes("a_random_seed").to_vec();
     static ref CANISTER_SIG_PK: CanisterSigPublicKey = CanisterSigPublicKey::new(ic_cdk::id(), CANISTER_SIG_SEED.clone());
 }
 
@@ -110,6 +114,30 @@ pub struct StoredCredential {
     pub context: Vec<String>,
     pub issuer: String,
     pub claim: Vec<Claim>,
+}
+
+/// Define a wrapper type around a list of credentials so that we can store it inside Stable
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub struct CredentialList(Vec<StoredCredential>);
+
+/// Implement the trait needed to use CredentialList inside a StableBTreeMap
+impl Storable for CredentialList {
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Owned(Encode!(&self.0).expect("Failed to encode StoredCredential"))
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        CredentialList(Decode!(&bytes, Vec<StoredCredential>).expect("Failed to decode StoredCredential"))
+    }
+
+    // this measures the size of the object in bytes 
+    const BOUND: Bound = Bound::Unbounded;
+}
+
+impl From<CredentialList> for Vec<StoredCredential> {
+    fn from(val: CredentialList) -> Self {
+        val.0
+    }     
 }
 
 /// Enumerates potential errors that can occur during credential operations.
@@ -195,8 +223,9 @@ async fn update_credential(
         ));
     }
     // Access the credentials storage and attempt to update the specified credential
-    CREDENTIALS.with_borrow_mut(|credentials| {
-        if let Some(creds) = credentials.get_mut(&principal) {
+    CREDENTIALS.with(|c| {
+        if let Some(creds) = c.borrow().get(&principal) {
+            let mut creds: Vec<StoredCredential> = creds.into();
             if let Some(pos) = creds.iter().position(|c| c.id == credential_id) {
                 creds[pos] = updated_credential.clone();
                 return Ok(format!(
@@ -246,13 +275,17 @@ async fn prepare_credential(
     };
     // And sign the JWT
     let signing_input =
-        vc_signing_input(&credential_jwt, &CANISTER_SIG_PK).expect("failed getting signing_input");
+        vc_signing_input(&credential_jwt, &CANISTER_SIG_PK).expect("Failed getting signing_input.");
     let msg_hash = vc_signing_input_hash(&signing_input);
 
     // Add the signed JWT to the signature storage
     SIGNATURES.with(|sigs| {
         let mut sigs = sigs.borrow_mut();
         sigs.add_signature(&CANISTER_SIG_SEED, msg_hash);
+        // Add the msg hash to the stable storage to restore the signatures when the canister is upgraded
+        MSG_HASHES.with(|hashes| {
+            let _ = hashes.borrow_mut().push(&msg_hash);
+        });
     });
     update_root_hash();
     // Return a prepared context that includes the signed JWT
@@ -278,7 +311,7 @@ fn get_credential(req: GetCredentialRequest) -> Result<IssuedCredentialData, Iss
         Some(context) => context,
         None => {
             return Result::<IssuedCredentialData, IssueCredentialError>::Err(internal_error(
-                "missing prepared_context",
+                "Missing prepared_context",
             ))
         }
     };
@@ -286,7 +319,7 @@ fn get_credential(req: GetCredentialRequest) -> Result<IssuedCredentialData, Iss
         Ok(s) => s,
         Err(_) => {
             return Result::<IssuedCredentialData, IssueCredentialError>::Err(internal_error(
-                "invalid prepared_context",
+                "Invalid prepared_context",
             ))
         }
     };
@@ -311,7 +344,7 @@ fn get_credential(req: GetCredentialRequest) -> Result<IssuedCredentialData, Iss
             // If the signature is not found or has expired, return an error.
             return Result::<IssuedCredentialData, IssueCredentialError>::Err(
                 IssueCredentialError::SignatureNotFound(format!(
-                    "signature not prepared or expired: {}",
+                    "Signature not prepared or expired: {}",
                     e
                 )),
             );
@@ -345,7 +378,7 @@ fn authorize_vc_request(
             }
         }
         Err(IssueCredentialError::InvalidIdAlias(
-            "id alias could not be verified".to_string(),
+            "Id alias could not be verified".to_string(),
         ))
     })
 }
@@ -356,12 +389,10 @@ fn verify_authorized_principal(
     alias_tuple: &AliasTuple,
 ) -> Result<StoredCredential, IssueCredentialError> {
     // Get the credentials of this user
-    if let Some(credentials) = CREDENTIALS.with(|credentials| {
-        let credentials = credentials.borrow();
-        credentials.get(&alias_tuple.id_dapp).cloned()
-    }) {
+    if let Some(credentials) = CREDENTIALS.with(|c|c.borrow().get(&alias_tuple.id_dapp)) {
         // Check if the user has a credential of the type and return it
-        for c in credentials {
+        let v: Vec<StoredCredential> = credentials.into();
+        for c in v {
             if c.type_.contains(&credential_type.to_string()) {
                 return Ok(c);
             }
@@ -471,7 +502,7 @@ fn build_credential_jwt(params: CredentialParams) -> String {
     let expiration_date = Timestamp::from_unix(params.expiration_timestamp_s as i64)
         .expect("internal: failed computing expiration timestamp");
 
-    // Build the VC object
+    // Build the VC a
     let mut credential = CredentialBuilder::default()
         .id(Url::parse(params.credential_id_url).unwrap())
         .issuer(Url::parse(params.issuer_url).unwrap())
