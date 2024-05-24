@@ -162,17 +162,21 @@ async fn add_credentials(
     }
 
     // Access the credentials storage and attempt to add the new credentials
-    CREDENTIALS.with(|credentials| {
-        let mut credentials = credentials.borrow_mut();
-        let entry = credentials.entry(principal).or_default();
-        println!("Existing credentials before adding: {:?}", entry);
-        for new_credential in new_credentials.clone() {
-            if !entry.iter().any(|c| c.id == new_credential.id) {
-                entry.push(new_credential);
-            }
-        }
-        println!("Existing credentials after adding: {:?}", entry);
+    CREDENTIALS.with(|c| {
+        // get a mutable reference to the stable map
+        let mut credentials = c.borrow_mut(); 
+        // check if there is already credentials stored under this principal
+        if credentials.contains_key(&principal) {
+            // if yes, extend the vector with the vector of new credentials 
+            let mut existing_credentials: Vec<StoredCredential> = credentials.get(&principal).unwrap().into();
+            existing_credentials.extend(<Vec<StoredCredential>>::from(new_credentials.clone()));
+            credentials.insert(principal, CredentialList(existing_credentials));
+        } else {
+        // else insert the new entry 
+        credentials.insert(principal, new_credentials.clone());
+     }
     });
+
 
     let credential_info = format!("Added credentials: \n{:?}", new_credentials);
     Ok(credential_info)
