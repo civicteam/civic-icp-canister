@@ -383,9 +383,9 @@ fn should_return_same_credential_data_after_internal_compression() {
     let mut credential2 = construct_adult_credential();
     credential2.id = "other-id".to_string();
     credential2.issuer = "other-issuer".to_string();
-    api::add_credentials(&env, issuer_id, principal, vec![credential1.clone()])
+    let _ = api::add_credentials(&env, issuer_id, principal, vec![credential1.clone()])
         .expect("failed to add credential");
-    api::add_credentials(&env, issuer_id, principal, vec![credential2.clone()])
+    let _ = api::add_credentials(&env, issuer_id, principal, vec![credential2.clone()])
         .expect("failed to add credential");
     let response = api::get_all_credentials(&env, issuer_id, principal)
         .expect("API call failed")
@@ -410,9 +410,9 @@ fn should_handle_the_update_of_url_fields_inside_internal_compression() {
             .unwrap();
 
 
-    api::add_credentials(&env, issuer_id, principal, vec![original_credential])
+    let _ = api::add_credentials(&env, issuer_id, principal, vec![original_credential])
         .expect("failed to add credential");
-    api::update_credential(&env, issuer_id, civic_issuer, principal, id, updated_credential.clone())
+    let _ = api::update_credential(&env, issuer_id, civic_issuer, principal, id, updated_credential.clone())
         .expect("failed to update credential");
     let response = api::get_all_credentials(&env, issuer_id, principal)
         .expect("API call failed")
@@ -890,12 +890,9 @@ fn should_remove_credential_successfully() {
     let env = env();
     let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
     let principal = principal_1();
+    let civic_issuer = Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae").unwrap();
     let credential = construct_adult_credential();
-    let civic_issuer =
-        Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae")
-            .unwrap();
 
-    // Add the credential first
     let _ = api::add_credentials(&env, issuer_id, principal, vec![credential.clone()])
         .expect("API call failed");
 

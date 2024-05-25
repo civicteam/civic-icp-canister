@@ -267,12 +267,25 @@ async fn remove_credential(
     principal: Principal,
     credential_id: String,
 ) -> Result<String, CredentialError> {
+    let caller = caller();
+
     // Check if the caller is an authorized issuer
-    if !is_authorized_issuer(caller()) {
+    if !is_authorized_issuer(caller) {
         return Err(CredentialError::UnauthorizedSubject(
             "Unauthorized: You do not have permission to remove credentials.".to_string(),
         ));
     }
+
+    // Retrieve the full credentials to check the issuer
+    let existing_full_credentials = get_all_credentials(principal.clone())?;
+    let _ = existing_full_credentials
+        .iter()
+        .find(|cred| cred.id == credential_id)
+        .ok_or_else(|| CredentialError::NoCredentialFound(format!(
+            "No credential found with ID {} for principal {}",
+            credential_id,
+            principal.to_text()
+        )))?;
 
     // Access the credentials storage and attempt to remove the credential
     let result = CREDENTIALS.with(|c| {
@@ -309,14 +322,30 @@ async fn remove_credential(
 async fn update_credential(
     principal: Principal,
     credential_id: String,
-    updated_credential: FullCredential,
+    updated_full_credential: FullCredential,
 ) -> Result<String, CredentialError> {
+    let caller = caller();
+
     // Check if the caller is an authorized issuer
-    if !is_authorized_issuer(caller()) {
+    if !is_authorized_issuer(caller) {
         return Err(CredentialError::UnauthorizedSubject(
             "Unauthorized: You do not have permission to update credentials.".to_string(),
         ));
     }
+
+    // Retrieve the full credentials to check the issuer
+    let existing_full_credentials = get_all_credentials(principal.clone())?;
+    let _ = existing_full_credentials
+        .iter()
+        .find(|cred| cred.id == credential_id)
+        .ok_or_else(|| CredentialError::NoCredentialFound(format!(
+            "No credential found with ID {} for principal {}",
+            credential_id,
+            principal.to_text()
+        )))?;
+
+    // Convert the updated full credential to stored credential
+    let updated_stored_credential = StoredCredential::from(updated_full_credential.clone());
 
     // Access the credentials storage and attempt to update the specified credential
     let result = CREDENTIALS.with(|c| {
