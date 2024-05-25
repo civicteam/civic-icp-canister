@@ -355,12 +355,12 @@ async fn update_credential(
             // Iterate through the credentials and find the one with the given id
             if let Some(pos) = credentials.iter().position(|c| c.id == credential_id) {
                 // Update the credential with the new data
-                credentials[pos] = updated_credential.clone().into();
+                credentials[pos] = updated_stored_credential.clone().into();
                 // Update the principal with the new list of credentials
                 creds.insert(principal, CredentialList(credentials));
                 return Ok(format!(
                     "Credential updated successfully: {:?}",
-                    updated_credential
+                    updated_stored_credential
                 ));
             }
         }
