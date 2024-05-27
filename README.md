@@ -101,3 +101,119 @@ This script performs the following tasks:
 ```
 
 This `README.md` includes instructions for setting up and running the project locally, as well as an explanation and usage instructions for the script in `./src/civic_frontend_canister`. Make sure to replace placeholders like `https://github.com/your-repository.git` and `"principal id here"` with actual values specific to your project.s
+
+### Updated README
+
+```markdown
+# Civic Canister Deployment
+
+This project involves deploying the Civic frontend and backend canisters on the Internet Computer (IC) network.
+
+## Prerequisites
+
+- Ensure you have the `dfx` command-line tool installed.
+- Ensure you have an ICP wallet to add cycles.
+- Create a new identity for secure mainnet operations.
+
+## Steps to Deploy
+
+### 1. Create and Use a Secure Identity
+
+Create and use a new identity for secure operations on the mainnet.
+
+### 2. Ensure the Wallet Has Enough Cycles
+
+Check your wallet balance and add cycles if necessary.
+
+#### Check Wallet Balance
+
+```bash
+dfx wallet --network ic balance
+```
+
+#### Get Wallet Address
+
+```bash
+dfx identity get-wallet
+```
+
+#### Transfer Cycles to Wallet
+
+Use an external ICP wallet or exchange to transfer cycles to your wallet address. For example, to add 10 trillion cycles:
+
+```bash
+# Transfer ICP equivalent to 10 trillion cycles to your wallet address obtained from `dfx identity get-wallet`.
+```
+
+### 3. Deploy the Frontend Canister
+
+#### Create the Frontend Canister
+
+```bash
+dfx canister --network ic create civic_canister_frontend
+```
+
+#### Top-Up the Frontend Canister with Cycles
+
+```bash
+dfx canister --network ic deposit-cycles 1000000000000 civic_canister_frontend
+```
+
+Adjust the number of cycles as needed.
+
+#### Deploy the Frontend Canister
+
+```bash
+dfx deploy civic_canister_frontend --network ic --identity mainnet_identity
+```
+
+### 4. Deploy the Backend Canister
+
+#### Create the Backend Canister
+
+```bash
+dfx canister --network ic create civic_canister_backend
+```
+
+#### Top-Up the Backend Canister with Cycles
+
+```bash
+dfx canister --network ic deposit-cycles 1000000000000 civic_canister_backend
+```
+
+Adjust the number of cycles as needed.
+
+#### Deploy the Backend Canister
+
+```bash
+dfx deploy civic_canister_backend --network ic --identity mainnet_identity
+```
+
+## Summary
+
+1. **Create and use a secure identity:**
+
+   ```bash
+   dfx identity new mainnet_identity
+   dfx identity use mainnet_identity
+   ```
+
+2. **Ensure the wallet has enough cycles:**
+
+   - Check balance: `dfx wallet --network ic balance`
+   - Get wallet address: `dfx identity get-wallet`
+   - Transfer cycles to wallet using an external ICP wallet or exchange.
+
+3. **Deploy the Frontend Canister:**
+
+   - Create: `dfx canister --network ic create civic_canister_frontend`
+   - Top-Up: `dfx canister --network ic deposit-cycles 1000000000000 civic_canister_frontend`
+   - Deploy: `dfx deploy civic_canister_frontend --network ic --identity mainnet_identity`
+
+4. **Deploy the Backend Canister:**
+
+   - Create: `dfx canister --network ic create civic_canister_backend`
+   - Top-Up: `dfx canister --network ic deposit-cycles 1000000000000 civic_canister_backend`
+   - Deploy: `dfx deploy civic_canister_backend --network ic --identity mainnet_identity`
+
+By following these steps, you will ensure that the Civic frontend and backend canisters are deployed successfully on the Internet Computer network with the necessary cycles and configurations.
