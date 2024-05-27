@@ -100,18 +100,13 @@ This script performs the following tasks:
 - Modify the setup and deployment scripts as needed to suit your project's requirements.
 ```
 
-This `README.md` includes instructions for setting up and running the project locally, as well as an explanation and usage instructions for the script in `./src/civic_frontend_canister`. Make sure to replace placeholders like `https://github.com/your-repository.git` and `"principal id here"` with actual values specific to your project.s
-
-### Updated README
-
 ```markdown
 # Civic Canister Deployment
 
-This project involves deploying the Civic frontend and backend canisters on the Internet Computer (IC) network.
+This project involves deploying the Civic frontend, relying and backend canisters on the Internet Computer (IC) network.
 
 ## Prerequisites
 
-- Ensure you have the `dfx` command-line tool installed.
 - Ensure you have an ICP wallet to add cycles.
 - Create a new identity for secure mainnet operations.
 
