@@ -89,6 +89,13 @@ type Result_4 = variant {
 };
 type Result_5 = variant { Ok : Icrc21ConsentInfo; Err : Icrc21Error };
 type SignedIdAlias = record { credential_jws : text };
+type Credential = record {
+  id : text;
+  context : vec text;
+  type_ : vec text;
+  claim : vec Claim;
+};
+
 type FullCredential = record {
   id : text;
   context : vec text;
@@ -103,7 +110,7 @@ type StoredCredential = record {
   claim : vec Claim;
 };
 service : (opt IssuerInit) -> {
-  add_credentials : (principal, vec FullCredential) -> (Result);
+  add_credentials : (principal, vec Credential) -> (Result);
   remove_credential : (principal, text) -> (Result);
   configure : (IssuerInit) -> ();
   derivation_origin : (DerivationOriginRequest) -> (Result_1);
@@ -111,7 +118,7 @@ service : (opt IssuerInit) -> {
   get_credential : (GetCredentialRequest) -> (Result_3) query;
   http_request : (HttpRequest) -> (HttpResponse) query;
   prepare_credential : (PrepareCredentialRequest) -> (Result_4);
-  update_credential : (principal, text, FullCredential) -> (Result);
+  update_credential : (principal, text, Credential) -> (Result);
   vc_consent_message : (Icrc21VcConsentMessageRequest) -> (Result_5);
   get_admin : () -> (principal) query;
   add_issuer: (principal) -> ();

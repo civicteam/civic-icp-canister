@@ -39,7 +39,7 @@ const credential = {
   id: "urn:uuid:6a9c92a9-2530-4e2b-9776-530467e9bbe0",
   type_: ["VerifiableCredential", "VerifiedAdult"],
   context: ["https://www.w3.org/2018/credentials/v1", "https://www.w3.org/2018/credentials/examples/v1"],
-  issuer: "did:example:76e12ec712ebc6f1c221ebfeb1f",
+  issuer: "",
   claim: [mixedClaim]
 };
 
