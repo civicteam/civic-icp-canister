@@ -366,7 +366,7 @@ async fn update_credential(
                         .clone()
                 });
                 if *issuer == ic_cdk::api::caller().to_text() {
-                    // Convert the updated full credential to stored credential
+                    // Convert the updated credential to a full credential and then to a stored credential
                     let updated_stored_credential =
                         StoredCredential::from(FullCredential::from(updated_credential));
                     // Update the credential with the new data
@@ -646,7 +646,7 @@ fn build_credential(
             subject_id: did_for_principal(subject_principal),
             credential_id: credential.id,
             context,
-            issuer,
+            issuer: format!("did:icp:v0:{}", issuer),
             expiration_timestamp_s: exp_timestamp_s(),
             claims: credential.claim,
         };
@@ -675,7 +675,6 @@ fn build_credential_jwt(params: CredentialParams) -> String {
         .expiration_date(expiration_date);
     // Add all the context
     credential = add_context(credential, params.context);
-
     // Serialize the VC object into a JWT-string
     let credential = credential.build().unwrap();
     credential.serialize_jwt().unwrap()
