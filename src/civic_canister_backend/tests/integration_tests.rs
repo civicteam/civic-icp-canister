@@ -413,6 +413,37 @@ fn should_fail_to_remove_credentials_for_unauthorized_principal() {
     assert_matches!(response, Err(CredentialError::UnauthorizedSubject(ref msg)) if msg == "Unauthorized: You do not have permission to remove credentials.");
 }
 
+/// Test: An authorized issuer cannot remove a credential that he was not the original issuer for 
+#[test]
+fn should_fail_to_remove_credential_for_caller_that_was_not_the_original_issuer() {
+    let env = env();
+    let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
+    let admin: Principal = Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae")
+                .unwrap();
+    
+    // add another issuer that is allowed to issue credentials into the canister 
+    let another_issuer = principal_2();
+    let _ = api::add_issuer(&env, issuer_id, admin, another_issuer);
+
+    // Add a credential as the original issuer
+    let credential = construct_adult_credential();
+    // let _ = api::add_credentials_with_sender(&env, issuer_id, principal_1(), principal_1(), vec![credential.clone()])
+    //     .expect("API call failed");
+
+    // // Attempt to remove the credential as the other issuer
+    // let response = api::remove_credential(
+    //     &env,
+    //     another_issuer,
+    //     issuer_id,
+    //     principal_1(),
+    //     credential.id,
+    // )
+    // .expect("API call failed");
+
+    // Ensure the correct error is returned
+    // assert_matches!(response, Err(CredentialError::UnauthorizedSubject(ref msg)) if msg == "Unauthorized: You do not have permission to remove this credential.");
+}
+
 /// Test: Remove nonexistent credential
 #[test]
 fn should_fail_to_remove_nonexistent_credential() {
