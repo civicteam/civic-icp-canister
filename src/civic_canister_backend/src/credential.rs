@@ -100,6 +100,7 @@ impl Claim {
     }
 }
 
+/// Represents a credential that is passed to the canister. It will be stored with the method caller as its `issuer`` field
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
 pub struct Credential{
     pub id: String,
@@ -108,7 +109,7 @@ pub struct Credential{
     pub claim: Vec<Claim>,
 }
 
-/// Represents a full credential that includes the issuer and context url in full. This is the type that will be passed to the canister
+/// Represents a full credential that includes the issuer and context url in full. This is the type that will be returned from the canister
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
 pub struct FullCredential {
     pub id: String,
@@ -118,6 +119,7 @@ pub struct FullCredential {
     pub claim: Vec<Claim>,
 }
 
+/// Convert to a FullCredential by adding the caller as the issuer field 
 impl From<Credential> for FullCredential {
     fn from(credential: Credential) -> Self {
         FullCredential {
@@ -234,7 +236,7 @@ async fn add_credentials(
     // Check if the caller is the authorized principal
     if !is_authorized_issuer(caller()) {
         return Err(CredentialError::UnauthorizedSubject(
-            "Unauthorized: You do not have permission to update credentials.".to_string(),
+            "Unauthorized: You do not have permission to add credentials.".to_string(),
         ));
     }
     let full_credentials: Vec<FullCredential> = new_credentials.into_iter().map(FullCredential::from).collect();
