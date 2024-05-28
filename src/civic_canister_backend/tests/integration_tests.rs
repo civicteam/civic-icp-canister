@@ -418,12 +418,13 @@ fn should_fail_to_remove_credentials_for_unauthorized_principal() {
 fn should_fail_to_remove_credential_for_caller_that_was_not_the_original_issuer() {
     let env = env();
     let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
-    let admin: Principal = Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae")
-                .unwrap();
+    let civic_issuer =
+        Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae")
+            .unwrap();
     
     // add another issuer that is allowed to issue credentials into the canister 
     let another_issuer = principal_2();
-    let _ = api::add_issuer(&env, issuer_id, admin, another_issuer);
+    let _ = api::add_issuer(&env, issuer_id, civic_issuer, another_issuer);
 
     // Add a credential as the original issuer
     let credential = construct_adult_credential();
@@ -612,10 +613,27 @@ fn should_update_credential_successfully_for_authorized_principal() {
     );
 }
 
+/// Test that the caller becomes the issuer 
+#[test]
+fn should_use_the_method_caller_as_the_credential_issuer(){
+    let env: StateMachine = env();
+    let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
+    let principal = principal_1();
+    let credential = construct_adult_credential();
+    let civic_issuer =
+        Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae")
+            .unwrap();
+    let _ = api::add_credentials_with_sender(&env, issuer_id, civic_issuer, principal, vec![credential])
+        .expect("failed to add credential");
+    let response = api::get_all_credentials(&env, issuer_id, principal)
+        .expect("API call failed")
+        .expect("get_all_credentials error");
+    assert_eq!(response[0].issuer, civic_issuer.to_text());
+}
 /// Test that adding and retrieving a credential will return the same credential data, the fields are compressed and then converted back
 #[test]
 fn should_return_same_credential_data_after_being_compressed_and_retrieved() {
-    let env = env();
+    let env: StateMachine = env();
     let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
     let principal = principal_1();
     let credential1 = construct_adult_credential();
