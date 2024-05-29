@@ -33,7 +33,7 @@ use vc_util::{
 
 extern crate asset_util;
 
-use crate::config::{ASSETS, CONFIG, CREDENTIALS, MSG_HASHES, SIGNATURES, LOOKUP_TABLE};
+use crate::config::{ASSETS, CONFIG, CREDENTIALS, LOOKUP_TABLE, MSG_HASHES, SIGNATURES};
 
 // The expiration of issued verifiable credentials.
 const MINUTE_NS: u64 = 60 * 1_000_000_000;
@@ -100,7 +100,16 @@ impl Claim {
     }
 }
 
-/// Represents a full credential that includes the issuer and context url in full. This is the type that will be passed to the canister
+/// Represents a credential that is passed to the canister. It will be stored with the method caller as its `issuer`` field
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub struct Credential{
+    pub id: String,
+    pub type_: Vec<String>,
+    pub context: Vec<String>,
+    pub claim: Vec<Claim>,
+}
+
+/// Represents a full credential that includes the issuer and context url in full. This is the type that will be returned from the canister
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
 pub struct FullCredential {
     pub id: String,
@@ -108,6 +117,19 @@ pub struct FullCredential {
     pub issuer: String,
     pub context: Vec<String>,
     pub claim: Vec<Claim>,
+}
+
+/// Convert to a FullCredential by adding the caller as the issuer field 
+impl From<Credential> for FullCredential {
+    fn from(credential: Credential) -> Self {
+        FullCredential {
+            id: credential.id,
+            type_: credential.type_,
+            issuer: ic_cdk::api::caller().to_string(),
+            context: credential.context,
+            claim: credential.claim,
+        }
+    }
 }
 
 /// Represents a stored credential within the canister in the 'compressed' form with the url fields resolved to the url id
@@ -167,11 +189,7 @@ impl From<CredentialList> for Vec<FullCredential> {
         let mut new_full_credentials: Vec<FullCredential> = Vec::new();
         LOOKUP_TABLE.with(|map| {
             for c in credentials.0 {
-                let (issuer, context) = map
-                    .borrow()
-                    .get(c.context_issuer_id)
-                    .unwrap()
-                    .to_owned();
+                let (issuer, context) = map.borrow().get(c.context_issuer_id).unwrap().to_owned();
                 let full_credential = FullCredential {
                     id: c.id,
                     type_: c.type_,
@@ -189,12 +207,7 @@ impl From<CredentialList> for Vec<FullCredential> {
 /// Convert from a list of full credentials to a list of stored credentials
 impl From<Vec<FullCredential>> for CredentialList {
     fn from(full_credentials: Vec<FullCredential>) -> Self {
-        let mut new_stored_credentials: Vec<StoredCredential> = Vec::new();
-        // For each full credential get or insert the id for the issuer and context fields, converting it into a StoredCredential type
-        for c in full_credentials {
-            new_stored_credentials.push(<StoredCredential>::from(c));
-        }
-        CredentialList(new_stored_credentials)
+        CredentialList(full_credentials.into_iter().map(<StoredCredential>::from).collect())
     }
 }
 
@@ -218,14 +231,15 @@ fn is_authorized_issuer(caller: Principal) -> bool {
 #[candid_method]
 async fn add_credentials(
     principal: Principal,
-    full_credentials: Vec<FullCredential>,
+    new_credentials: Vec<Credential>,
 ) -> Result<String, CredentialError> {
     // Check if the caller is the authorized principal
     if !is_authorized_issuer(caller()) {
         return Err(CredentialError::UnauthorizedSubject(
-            "Unauthorized: You do not have permission to update credentials.".to_string(),
+            "Unauthorized: You do not have permission to add credentials.".to_string(),
         ));
     }
+    let full_credentials: Vec<FullCredential> = new_credentials.into_iter().map(FullCredential::from).collect();
     // First get the it in compressed form of StoredCredential
     let new_stored_credentials: CredentialList = CredentialList::from(full_credentials.clone());
     // Access the credentials storage and attempt to add the new credentials
@@ -267,25 +281,12 @@ async fn remove_credential(
     principal: Principal,
     credential_id: String,
 ) -> Result<String, CredentialError> {
-    let caller = caller();
-
     // Check if the caller is an authorized issuer
-    if !is_authorized_issuer(caller) {
+    if !is_authorized_issuer(caller()) {
         return Err(CredentialError::UnauthorizedSubject(
             "Unauthorized: You do not have permission to remove credentials.".to_string(),
         ));
     }
-
-    // Retrieve the full credentials to check the issuer
-    let existing_full_credentials = get_all_credentials(principal.clone())?;
-    let _ = existing_full_credentials
-        .iter()
-        .find(|cred| cred.id == credential_id)
-        .ok_or_else(|| CredentialError::NoCredentialFound(format!(
-            "No credential found with ID {} for principal {}",
-            credential_id,
-            principal.to_text()
-        )))?;
 
     // Access the credentials storage and attempt to remove the credential
     let result = CREDENTIALS.with(|c| {
@@ -298,18 +299,37 @@ async fn remove_credential(
                 .iter()
                 .position(|cred| cred.id == credential_id)
             {
-                existing_credentials_vec.remove(pos);
-                credentials.insert(principal, CredentialList(existing_credentials_vec));
-                Ok("Credential removed successfully".to_string())
+                let existing_credential = &existing_credentials_vec[pos];
+                // Check if the original credential issuer matches the caller
+                let (issuer, _) = LOOKUP_TABLE.with(|map| {
+                    map.borrow()
+                        .get(existing_credential.context_issuer_id)
+                        .unwrap()
+                        .clone()
+                });
+                if *issuer == ic_cdk::api::caller().to_string() {
+                    // Remove the credential 
+                    existing_credentials_vec.remove(pos);
+                    credentials.insert(principal, CredentialList(existing_credentials_vec));
+                    Ok("Credential removed successfully".to_string())
+                } else {
+                    Err(CredentialError::UnauthorizedSubject(
+                        "Unauthorized: You do not have permission to remove this credential."
+                            .to_string(),
+                    ))
+                }
             } else {
-                Err(CredentialError::NoCredentialFound(
-                    "Credential not found.".to_string(),
-                ))
+                Err(CredentialError::NoCredentialFound(format!(
+                    "Credential not found with id {} for principal {}",
+                    credential_id,
+                    principal.to_text()
+                )))
             }
         } else {
-            Err(CredentialError::NoCredentialFound(
-                "No credentials found for this principal.".to_string(),
-            ))
+            Err(CredentialError::NoCredentialFound(format!(
+                "No credentials found for principal {}",
+                principal.to_text()
+            )))
         }
     });
 
@@ -322,7 +342,7 @@ async fn remove_credential(
 async fn update_credential(
     principal: Principal,
     credential_id: String,
-    updated_full_credential: FullCredential,
+    updated_credential: Credential,
 ) -> Result<String, CredentialError> {
     let caller = caller();
 
@@ -333,20 +353,6 @@ async fn update_credential(
         ));
     }
 
-    // Retrieve the full credentials to check the issuer
-    let existing_full_credentials = get_all_credentials(principal.clone())?;
-    let _ = existing_full_credentials
-        .iter()
-        .find(|cred| cred.id == credential_id)
-        .ok_or_else(|| CredentialError::NoCredentialFound(format!(
-            "No credential found with ID {} for principal {}",
-            credential_id,
-            principal.to_text()
-        )))?;
-
-    // Convert the updated full credential to stored credential
-    let updated_stored_credential = StoredCredential::from(updated_full_credential.clone());
-
     // Access the credentials storage and attempt to update the specified credential
     let result = CREDENTIALS.with(|c| {
         let mut creds = c.borrow_mut();
@@ -354,22 +360,44 @@ async fn update_credential(
             let mut credentials: Vec<StoredCredential> = credentials.into();
             // Iterate through the credentials and find the one with the given id
             if let Some(pos) = credentials.iter().position(|c| c.id == credential_id) {
-                // Update the credential with the new data
-                credentials[pos] = updated_stored_credential.clone().into();
-                // Update the principal with the new list of credentials
-                creds.insert(principal, CredentialList(credentials));
-                return Ok(format!(
-                    "Credential updated successfully: {:?}",
-                    updated_stored_credential
-                ));
+                // Check if the original credential issuer matches the caller
+                let (issuer, _) = LOOKUP_TABLE.with(|map| {
+                    map.borrow()
+                        .get(credentials[pos].context_issuer_id)
+                        .unwrap()
+                        .clone()
+                });
+                if *issuer == ic_cdk::api::caller().to_text() {
+                    // Convert the updated credential to a full credential and then to a stored credential
+                    let updated_stored_credential =
+                        StoredCredential::from(FullCredential::from(updated_credential));
+                    // Update the credential with the new data
+                    credentials[pos] = updated_stored_credential.clone();
+                    // Update the principal with the new list of credentials
+                    creds.insert(principal, CredentialList(credentials));
+                    Ok(format!(
+                        "Credential updated successfully: {:?}",
+                        updated_stored_credential
+                    ))
+                } else {
+                    Err(CredentialError::UnauthorizedSubject(
+                        "Unauthorized: You do not have permission to update this credential."
+                            .to_string(),
+                    ))
+                }
+            } else {
+                Err(CredentialError::NoCredentialFound(format!(
+                    "No credential found with ID {} for principal {}",
+                    credential_id,
+                    principal.to_text()
+                )))
             }
+        } else {
+            Err(CredentialError::NoCredentialFound(format!(
+                "No credentials found for principal {}",
+                principal.to_text()
+            )))
         }
-
-        Err(CredentialError::NoCredentialFound(format!(
-            "No credential found with ID {} for principal {}",
-            credential_id,
-            principal.to_text()
-        )))
     });
     result
 }
@@ -614,16 +642,13 @@ fn build_credential(
     // Retrieve the context and issuer url from the LookupTable
     LOOKUP_TABLE.with(|map| {
         let map = map.borrow();
-        let (issuer, context) = map
-            .get(credential.context_issuer_id)
-            .unwrap()
-            .to_owned();
+        let (issuer, context) = map.get(credential.context_issuer_id).unwrap().to_owned();
         let params = CredentialParams {
             spec: credential_spec.clone(),
             subject_id: did_for_principal(subject_principal),
             credential_id: credential.id,
             context,
-            issuer: issuer,
+            issuer: format!("did:icp:v0:{}", issuer),
             expiration_timestamp_s: exp_timestamp_s(),
             claims: credential.claim,
         };
@@ -652,7 +677,6 @@ fn build_credential_jwt(params: CredentialParams) -> String {
         .expiration_date(expiration_date);
     // Add all the context
     credential = add_context(credential, params.context);
-
     // Serialize the VC object into a JWT-string
     let credential = credential.build().unwrap();
     credential.serialize_jwt().unwrap()
