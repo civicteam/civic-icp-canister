@@ -10,7 +10,9 @@ use canister_tests::framework::{
     env, get_wasm_path, principal_1, principal_2, test_principal, II_WASM,
 };
 use civic_canister_backend::config::IssuerInit;
-use civic_canister_backend::credential::{Claim, ClaimValue, CredentialError, FullCredential, Credential};
+use civic_canister_backend::credential::{
+    Claim, ClaimValue, Credential, CredentialError, FullCredential,
+};
 use ic_cdk::api::management_canister::provisional::CanisterId;
 use ic_test_state_machine_client::{call_candid, call_candid_as};
 use ic_test_state_machine_client::{query_candid_as, CallError, StateMachine};
@@ -85,7 +87,6 @@ pub fn install_issuer(env: &StateMachine, init: &IssuerInit) -> CanisterId {
     env.install_canister(canister_id, CIVIV_CANISTER_BACKEND_WASM.clone(), arg, None);
     canister_id
 }
-
 
 mod api {
     use super::*;
@@ -298,7 +299,6 @@ fn construct_adult_credential() -> Credential {
     }
 }
 
-
 /// Test: Configure canister
 #[test]
 fn should_configure() {
@@ -324,7 +324,6 @@ fn should_fail_to_add_duplicate_credentials() {
         .expect("API call failed")
         .unwrap(); // Unwrap the Result to access the inner String value
 
-    println!("Response from second add: {}", response);
     assert!(response.contains("Added credentials"));
 
     // Ensure the duplicate is not added
@@ -334,8 +333,6 @@ fn should_fail_to_add_duplicate_credentials() {
     let stored_credentials = api::get_all_credentials(&env, issuer_id, principal)
         .expect("API call failed")
         .expect("get_all_credentials error");
-
-    println!("Stored credentials: {:?}", stored_credentials);
 
     // Assert that only one credential is stored
     assert_eq!(
@@ -413,7 +410,7 @@ fn should_fail_to_remove_credentials_for_unauthorized_principal() {
     assert_matches!(response, Err(CredentialError::UnauthorizedSubject(ref msg)) if msg == "Unauthorized: You do not have permission to remove credentials.");
 }
 
-/// Test: An authorized issuer cannot remove a credential that he was not the original issuer for 
+/// Test: An authorized issuer cannot remove a credential that he was not the original issuer for
 #[test]
 fn should_fail_to_remove_credential_for_caller_that_was_not_the_original_issuer() {
     let env = env();
@@ -421,28 +418,83 @@ fn should_fail_to_remove_credential_for_caller_that_was_not_the_original_issuer(
     let civic_issuer =
         Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae")
             .unwrap();
-    
-    // add another issuer that is allowed to issue credentials into the canister 
+
+    // add another issuer that is allowed to issue credentials into the canister
     let another_issuer = principal_2();
     let _ = api::add_issuer(&env, issuer_id, civic_issuer, another_issuer);
 
     // Add a credential as the original issuer
     let credential = construct_adult_credential();
-    // let _ = api::add_credentials_with_sender(&env, issuer_id, principal_1(), principal_1(), vec![credential.clone()])
-    //     .expect("API call failed");
+    let _ = api::add_credentials_with_sender(
+        &env,
+        issuer_id,
+        another_issuer,
+        principal_1(),
+        vec![credential.clone()],
+    )
+    .expect("API call failed");
 
     // // Attempt to remove the credential as the other issuer
-    // let response = api::remove_credential(
-    //     &env,
-    //     another_issuer,
-    //     issuer_id,
-    //     principal_1(),
-    //     credential.id,
-    // )
-    // .expect("API call failed");
+    let result = api::remove_credential(
+        &env,
+        principal_1(),
+        issuer_id,
+        principal_1(),
+        credential.id,
+    )
+    .expect("API call failed");
 
-    // Ensure the correct error is returned
-    // assert_matches!(response, Err(CredentialError::UnauthorizedSubject(ref msg)) if msg == "Unauthorized: You do not have permission to remove this credential.");
+    // // Ensure the correct error is returned
+    match result {
+        Err(CredentialError::UnauthorizedSubject(message)) => {
+            assert_eq!(message, "Unauthorized: You do not have permission to remove credentials.");
+        }
+        _ => panic!("Expected Err(IssuerError::UnauthorizedSubject), got {:?}", result),
+    }
+}
+
+#[test]
+fn should_fail_to_remove_credential_for_caller_that_has_been_removed_as_caller() {
+    let env = env();
+    let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
+    let civic_issuer =
+        Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae")
+            .unwrap();
+
+    // add another issuer that is allowed to issue credentials into the canister
+    let another_issuer = principal_2();
+    let _ = api::add_issuer(&env, issuer_id, civic_issuer, another_issuer);
+
+    // Add a credential as the original issuer
+    let credential = construct_adult_credential();
+    let _ = api::add_credentials_with_sender(
+        &env,
+        issuer_id,
+        another_issuer,
+        principal_1(),
+        vec![credential.clone()],
+    )
+    .expect("API call failed");
+
+    let _ = api::remove_issuer(&env, issuer_id, civic_issuer, another_issuer);
+
+    // // Attempt to remove the credential as the other issuer
+    let result = api::remove_credential(
+        &env,
+        another_issuer,
+        issuer_id,
+        principal_1(),
+        credential.id,
+    )
+    .expect("API call failed");
+
+    // // Ensure the correct error is returned
+    match result {
+        Err(CredentialError::UnauthorizedSubject(message)) => {
+            assert_eq!(message, "Unauthorized: You do not have permission to remove credentials.");
+        }
+        _ => panic!("Expected Err(IssuerError::UnauthorizedSubject), got {:?}", result),
+    }
 }
 
 /// Test: Remove nonexistent credential
@@ -464,14 +516,15 @@ fn should_fail_to_remove_nonexistent_credential() {
     assert_matches!(response, Err(CredentialError::NoCredentialFound(_)));
 }
 
-
 /// Test: Remove credential successfully
 #[test]
 fn should_remove_credential_successfully_for_authorized_principal() {
     let env = env();
     let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
     let principal = principal_1();
-    let civic_issuer = Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae").unwrap();
+    let civic_issuer =
+        Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae")
+            .unwrap();
     let credential = construct_adult_credential();
 
     let _ = api::add_credentials(&env, issuer_id, principal, vec![credential.clone()])
@@ -484,15 +537,9 @@ fn should_remove_credential_successfully_for_authorized_principal() {
     assert_eq!(stored_credentials.len(), 1);
 
     // Remove the credential
-    let response = api::remove_credential(
-        &env,
-        civic_issuer,
-        issuer_id,
-        principal,
-        credential.id,
-    )
-    .expect("API call failed")
-    .expect("remove_credential error");
+    let response = api::remove_credential(&env, civic_issuer, issuer_id, principal, credential.id)
+        .expect("API call failed")
+        .expect("remove_credential error");
 
     assert!(response.contains("Credential removed successfully"));
 
@@ -502,7 +549,6 @@ fn should_remove_credential_successfully_for_authorized_principal() {
         .expect("get_all_credentials error");
     assert_eq!(stored_credentials_after_removal.len(), 0);
 }
-
 
 /// Test: Update credential failure if not found
 #[test]
@@ -562,7 +608,6 @@ fn should_fail_to_update_credentials_for_unauthorized_principal() {
     assert_matches!(response, Err(CredentialError::UnauthorizedSubject(ref msg)) if msg == "Unauthorized: You do not have permission to update credentials.");
 }
 
-
 #[test]
 fn should_update_credential_successfully_for_authorized_principal() {
     let env = env();
@@ -613,9 +658,9 @@ fn should_update_credential_successfully_for_authorized_principal() {
     );
 }
 
-/// Test that the caller becomes the issuer 
+/// Test that the caller becomes the issuer
 #[test]
-fn should_use_the_method_caller_as_the_credential_issuer(){
+fn should_use_the_method_caller_as_the_credential_issuer() {
     let env: StateMachine = env();
     let issuer_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
     let principal = principal_1();
@@ -623,8 +668,14 @@ fn should_use_the_method_caller_as_the_credential_issuer(){
     let civic_issuer =
         Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae")
             .unwrap();
-    let _ = api::add_credentials_with_sender(&env, issuer_id, civic_issuer, principal, vec![credential])
-        .expect("failed to add credential");
+    let _ = api::add_credentials_with_sender(
+        &env,
+        issuer_id,
+        civic_issuer,
+        principal,
+        vec![credential],
+    )
+    .expect("failed to add credential");
     let response = api::get_all_credentials(&env, issuer_id, principal)
         .expect("API call failed")
         .expect("get_all_credentials error");
@@ -647,13 +698,14 @@ fn should_return_same_credential_data_after_being_compressed_and_retrieved() {
         .expect("API call failed")
         .expect("get_all_credentials error");
 
-    // Assert that the issuer is stored and retrieved correctly 
-    let civic_issuer = "tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae".to_string();
+    // Assert that the issuer is stored and retrieved correctly
+    let civic_issuer =
+        "tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae".to_string();
     assert_eq!(response[0].issuer, civic_issuer);
     assert_eq!(response[1].issuer, civic_issuer);
 }
 
-/// Test that a compressed field is updated correctly 
+/// Test that a compressed field is updated correctly
 #[test]
 fn should_update_compressed_fields_successfully() {
     let env = env();
@@ -672,8 +724,15 @@ fn should_update_compressed_fields_successfully() {
     let civic_issuer =
         Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae")
             .unwrap();
-    let _ = api::update_credential(&env, issuer_id, civic_issuer, principal, id, updated_credential)
-        .expect("failed to update credential");
+    let _ = api::update_credential(
+        &env,
+        issuer_id,
+        civic_issuer,
+        principal,
+        id,
+        updated_credential,
+    )
+    .expect("failed to update credential");
 
     let response = api::get_all_credentials(&env, issuer_id, principal)
         .expect("API call failed")
@@ -1069,8 +1128,6 @@ fn should_issue_credential_e2e() -> Result<(), CallError> {
         .expect("credential verification failed");
         let vc_claims = claims.vc().expect("missing VC claims");
         println!("{:?}", vc_claims);
-
-        // validate_claims_match_spec(vc_claims, &credential_spec).expect("Clam validation failed");
     }
 
     Ok(())

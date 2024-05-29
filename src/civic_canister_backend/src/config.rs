@@ -25,7 +25,7 @@ use serde_bytes::ByteBuf;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use vc_util::issuer_api::{DerivationOriginData, DerivationOriginError, DerivationOriginRequest};
+use vc_util::issuer_api::{DerivationOriginData, DerivationOriginError, DerivationOriginRequest, IssuerError};
 
 const PROD_II_CANISTER_ID: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai";
 
@@ -163,7 +163,7 @@ fn init(init_arg: Option<IssuerInit>) {
 
 #[update]
 #[candid_method(update)]
-fn add_issuer(new_issuer: Principal) {
+fn add_issuer(new_issuer: Principal) -> Result<(), IssuerError> {
     let caller = ic_cdk::api::caller();
     CONFIG.with(|config_cell| {
         let mut config = config_cell.borrow_mut();
@@ -178,15 +178,16 @@ fn add_issuer(new_issuer: Principal) {
             }
             // Save the updated configuration
             let _ = config.set(current_config); // Pass the modified IssuerConfig back to set
+            Ok(())
         } else {
-            ic_cdk::api::trap("Caller is not authorized as admin.");
+            Err(IssuerError::UnauthorizedSubject("Caller is not authorized as admin.".to_string()))
         }
-    });
+    })
 }
 
 #[update]
 #[candid_method(update)]
-fn remove_issuer(issuer: Principal) {
+fn remove_issuer(issuer: Principal) -> Result<(), IssuerError> {
     let caller = ic_cdk::api::caller();
     CONFIG.with(|config_cell| {
         let mut config = config_cell.borrow_mut();
@@ -198,11 +199,13 @@ fn remove_issuer(issuer: Principal) {
             current_config.authorized_issuers.retain(|x| *x != issuer);
             // Save the updated configuration
             let _ = config.set(current_config); // Pass the modified IssuerConfig back to set
+            Ok(())
         } else {
-            ic_cdk::api::trap("Caller is not authorized as admin.");
+            Err(IssuerError::UnauthorizedSubject("Caller is not authorized as admin.".to_string()))
         }
-    });
+    })
 }
+
 
 #[query]
 fn get_admin() -> Principal {
