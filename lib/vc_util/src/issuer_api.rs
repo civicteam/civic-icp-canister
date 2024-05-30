@@ -155,6 +155,13 @@ pub enum DerivationOriginError {
     Internal(String),
 }
 
+#[derive(Clone, Debug, CandidType, Deserialize, Eq, PartialEq)]
+pub enum IssuerError {
+    UnauthorizedSubject(String),
+    SignatureNotFound(String),
+    UnsupportedCredentialSpec(String),
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

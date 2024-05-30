@@ -9,7 +9,6 @@ export interface Credential {
   id: string;
   type_: string[];
   context: string[];
-  issuer: string;
   claim: any; // Array of claims
 }
 
