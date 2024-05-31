@@ -1,6 +1,9 @@
+# Introduction
+
+
 # CI Build and Test (Local setup)
 
-This project provides steps to set up and run the project locally. Follow the steps below to configure your environment, build the project, and run tests.
+This section provides steps to set up and run the project locally. Follow the steps below to configure your environment, build the project, and run tests.
 
 ## Prerequisites
 
@@ -98,12 +101,10 @@ This script performs the following tasks:
 
 - Ensure you have the required binaries in the `ic-test-machine-binaries` directory.
 - Modify the setup and deployment scripts as needed to suit your project's requirements.
-```
 
-```markdown
-# Civic Canister Deployment
+# Civic Canister Mainnet Deployment
 
-This project involves deploying the Civic frontend, relying and backend canisters on the Internet Computer (IC) network.
+This section describes the steps to deploy the Civic frontend, relying and backend canisters on the Internet Computer (IC) network.
 
 ## Prerequisites
 
@@ -111,6 +112,15 @@ This project involves deploying the Civic frontend, relying and backend canister
 - Create a new identity for secure mainnet operations.
 
 ## Steps to Deploy
+
+### Overview
+1. **[Create and use a secure identity](#1-create-and-use-a-secure-identity)**
+2. **[Ensure the wallet has enough cycles](#2-ensure-the-wallet-has-enough-cycles)**
+
+3. **[Deploy the Frontend Canister](#3-deploy-the-frontend-canister)**
+4. **[Deploy the Relying canister Canister](#4-deploy-the-relying-canister-canister)**
+
+5. **[Deploy the Backend Canister](#5-deploy-the-backend-canister)**
 
 ### 1. Create and Use a Secure Identity
 
@@ -184,15 +194,4 @@ Adjust the number of cycles as needed.
 
 #### Deploy the Backend Canister
 
-Run the deploy-civic.sh script
-
-## Summary
-
-1. **Create and use a secure identity:**
-
-2. **Ensure the wallet has enough cycles:**
-
-3. **Deploy the Frontend Canister:**
-4. **Deploy the Relying canister Canister:**
-
-5. **Deploy the Backend Canister:**
+Run the `deploy-civic.sh` script
