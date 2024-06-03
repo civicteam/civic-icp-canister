@@ -1,0 +1,66 @@
+name: CI Build and Test (Local setup)
+
+on: [push, pull_request]
+  
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest] #, ubuntu-latest]
+        include: 
+          # - os: ubuntu-latest
+          #   file_suffix: "-linux"
+          - os: macos-latest
+            file_suffix: "-mac"
+     
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v4
+    - name: Set up environment
+      run: |
+        echo "Setting up on ${{ matrix.os }}"
+        mv ic-test-machine-binaries/ic-test-state-machine${{ matrix.file_suffix }} ic-test-state-machine
+    - name: Install dfx  
+      uses: dfinity/setup-dfx@main
+    - name: Confirm successful installation
+      run: dfx --version
+    - name: Install Rust target
+      run: rustup target add wasm32-unknown-unknown
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2.7.3
+    - name: Install dependencies
+      run: |
+        npm install 
+        cargo install ic-wasm
+    - name: Create canisters and start local ICP replica
+      run: |
+        dfx start --clean --background
+        dfx canister create --all
+    - name: Set env variables
+      run: |
+        chmod +x scripts/set-env-vars.sh
+        . scripts/set-env-vars.sh
+    - name: Deploy Civic Canister and Internet Identity
+      run: |
+        scripts/deploy-civic.sh
+        dfx deploy internet_identity
+    - name: Deploy RP 
+      id: deploy_rp
+      continue-on-error: true
+      run: |
+        dfx deploy relying_canister_frontend
+    - name: Deploy Civic FE
+      run: dfx deploy civic_canister_frontend
+    - name: Try again to deploy RP if it previously failed
+      if:  steps.deploy_rp.outcome == 'failure'
+      run: dfx deploy relying_canister_frontend
+ 
+    - name: Run tests
+      run: |
+        chmod +x ic-test-state-machine
+        cargo test --test integration_tests
