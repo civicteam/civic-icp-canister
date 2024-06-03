@@ -5,6 +5,7 @@ The Civic Canister is a component of a decentralized application deployed on the
 Civic (or other issuers) can issue credentials for the user as part of its identity verification flow. 3rd parties integrating Civic Pass on ICP can request these credentials from the Civic Canister. Through Internet Identity, the credential can be shared securely between the two dApps without linking the user's identities between the two dApps. 
 
 ![Overview of how the Civic Canister works](<Civic Canister Flow.png>)
+
 As you can see in the diagram, the user has two "versions" of their Internet Identity, Identity A and Identity B. Identity A is the one used in the Civic Canister while Identity B is the one used by the 3rd party dApp (Relying Party). When the credential data is shared between the two dApps, the two identities are not linked to each other, thanks to the attribute sharing of Internet Identity which the Civic Canister implements. 
 
 This repository contains the code to demo the above flow. `civic_canister_backend` contains the code for the Civic Canister, `relying_canister_frontend` contains the code for the example 3rd party, and `civic_canister_frontend` contains the code for an example frontend through which credentials can be issued to the canister. See [CI Build and Test (Local Setup)](#ci-build-and-test-local-setup) for instructions how to run the demo locally. 
