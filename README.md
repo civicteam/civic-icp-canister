@@ -1,6 +1,47 @@
-# CI Build and Test (Local setup)
+# Introduction
 
-This project provides steps to set up and run the project locally. Follow the steps below to configure your environment, build the project, and run tests.
+The Civic Canister is a component of a decentralized application deployed on the Internet Computer (IC) network by Civic. It is designed to handle secure storage and retrieval of credentials under Internet Identity, the authentication service for the Internet Computer. Internet Identity provides different, unlinkable identities for each app a user logs in to. 
+
+Civic (or other issuers) can issue credentials for the user as part of its identity verification flow. 3rd parties integrating Civic Pass on ICP can request these credentials from the Civic Canister. Through Internet Identity, the credential can be shared securely between the two dApps without linking the user's identities between the two dApps. 
+
+![Overview of how the Civic Canister works](<Civic Canister Flow.png>)
+
+As you can see in the diagram, the user has two "versions" of their Internet Identity, Identity A and Identity B. Identity A is the one used in the Civic Canister while Identity B is the one used by the 3rd party dApp (Relying Party). When the credential data is shared between the two dApps, the two identities are not linked to each other, thanks to the attribute sharing of Internet Identity which the Civic Canister implements. 
+
+This repository contains the code to demo the above flow. `civic_canister_backend` contains the code for the Civic Canister, `relying_canister_frontend` contains the code for the example 3rd party, and `civic_canister_frontend` contains the code for an example frontend through which credentials can be issued to the canister. See [CI Build and Test (Local Setup)](#ci-build-and-test-local-setup) for instructions how to run the demo locally. 
+
+
+## What does the Credential issued by the Civic Canister looks like? 
+The credentials issued by the Civic Canister adhere to the W3C Verifiable Credentials specification, ensuring compatibility and interoperability with various systems and platforms. 
+
+Here is an example of a credential the Civic Canister can issue:
+
+```
+{
+  "@context": [
+    "https://www.w3.org/ns/credentials/v2",
+    "https://www.w3.org/ns/credentials/examples/v2"
+  ],
+  "id": "urn:uuid:6a9c92a9-2530-4e2b-9776-530467e9bbe0",
+  "type": ["VerifiableCredential", "CivicUniquenessPass"],
+  "issuer": "did:icp:v0:tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae",
+  "expiry": "2024-04-04T00:00:00Z",
+  "credentialSubject": {
+    "id": "did:icp:user-principal",
+    "CivicPass": {
+      "id": "did:example:c276e12ec21ebfeb1f712ebc6f1",
+      "name": "Civic Uniqueness Pass",
+      "expiry": "2024-04-04T00:00:00Z"
+    }
+  }
+}
+```
+
+
+
+# CI Build and Test (Local Setup)
+
+This section provides steps to set up and run the project locally. Follow the steps below to configure your environment, build the project, and run tests.
 
 ## Prerequisites
 
@@ -98,12 +139,10 @@ This script performs the following tasks:
 
 - Ensure you have the required binaries in the `ic-test-machine-binaries` directory.
 - Modify the setup and deployment scripts as needed to suit your project's requirements.
-```
 
-```markdown
-# Civic Canister Deployment
+# Civic Canister Mainnet Deployment
 
-This project involves deploying the Civic frontend, relying and backend canisters on the Internet Computer (IC) network.
+This section describes the steps to deploy the Civic frontend, relying and backend canisters on the Internet Computer (IC) network.
 
 ## Prerequisites
 
@@ -111,6 +150,15 @@ This project involves deploying the Civic frontend, relying and backend canister
 - Create a new identity for secure mainnet operations.
 
 ## Steps to Deploy
+
+### Overview
+1. **[Create and use a secure identity](#1-create-and-use-a-secure-identity)**
+2. **[Ensure the wallet has enough cycles](#2-ensure-the-wallet-has-enough-cycles)**
+
+3. **[Deploy the Frontend Canister](#3-deploy-the-frontend-canister)**
+4. **[Deploy the Relying canister Canister](#4-deploy-the-relying-canister-canister)**
+
+5. **[Deploy the Backend Canister](#5-deploy-the-backend-canister)**
 
 ### 1. Create and Use a Secure Identity
 
@@ -184,15 +232,4 @@ Adjust the number of cycles as needed.
 
 #### Deploy the Backend Canister
 
-Run the deploy-civic.sh script
-
-## Summary
-
-1. **Create and use a secure identity:**
-
-2. **Ensure the wallet has enough cycles:**
-
-3. **Deploy the Frontend Canister:**
-4. **Deploy the Relying canister Canister:**
-
-5. **Deploy the Backend Canister:**
+Run the `deploy-civic.sh` script
