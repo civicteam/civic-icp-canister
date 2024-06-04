@@ -154,11 +154,11 @@ This section describes the steps to deploy the Civic frontend, relying and backe
 ### Overview
 1. **[Create and use a secure identity](#1-create-and-use-a-secure-identity)**
 2. **[Ensure the wallet has enough cycles](#2-ensure-the-wallet-has-enough-cycles)**
+3.  **[Create the canister IDs](#3-create-the-canister-ids)**
+4. **[Deploy the Frontend Canister](#4-deploy-the-frontend-canister)**
+5. **[Deploy the Relying Canister](#5-deploy-the-relying-canister)**
 
-3. **[Deploy the Frontend Canister](#3-deploy-the-frontend-canister)**
-4. **[Deploy the Relying canister Canister](#4-deploy-the-relying-canister-canister)**
-
-5. **[Deploy the Backend Canister](#5-deploy-the-backend-canister)**
+6. **[Deploy the Backend Canister](#6-deploy-the-backend-canister)**
 
 ### 1. Create and Use a Secure Identity
 
@@ -195,10 +195,11 @@ dfx canister --network ic create --all
 
 Export the IDs so that the frontend canisters are configured correctly. 
 ```bash
-scripts/set-env-vars-production.sh
+chmod +x scripts/set-env-vars-production.sh
+. scripts/set-env-vars-production.sh
 ```
 
-### 3. Deploy the Frontend Canister
+### 4. Deploy the Frontend Canister
 
 #### Top-Up the Frontend Canister with Cycles
 
@@ -214,13 +215,11 @@ Adjust the number of cycles as needed.
 dfx deploy civic_canister_frontend --network ic --identity mainnet_identity
 ```
 
-### 3. Relying canister
+### 5. Deploy the Relying Canister
 
 Follow the sames steps that you followed when deploying the frontend canister
 
-### 4. Deploy the Backend Canister
-
-#### Create the Backend Canister
+### 6. Deploy the Backend Canister
 
 #### Top-Up the Backend Canister with Cycles
 
