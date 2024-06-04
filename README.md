@@ -188,13 +188,17 @@ Use an external ICP wallet or exchange to transfer cycles to your wallet address
 # Transfer ICP equivalent to 10 trillion cycles to your wallet address obtained from `dfx identity get-wallet`.
 ```
 
-### 3. Deploy the Frontend Canister
-
-#### Create the Frontend Canister
-
+### 3. Create the canister IDs 
 ```bash
-dfx canister --network ic create civic_canister_frontend
+dfx canister --network ic create --all
 ```
+
+Export the IDs so that the frontend canisters are configured correctly. 
+```bash
+scripts/set-env-vars-production.sh
+```
+
+### 3. Deploy the Frontend Canister
 
 #### Top-Up the Frontend Canister with Cycles
 
@@ -218,10 +222,6 @@ Follow the sames steps that you followed when deploying the frontend canister
 
 #### Create the Backend Canister
 
-```bash
-dfx canister --network ic create civic_canister_backend
-```
-
 #### Top-Up the Backend Canister with Cycles
 
 ```bash
@@ -233,8 +233,9 @@ Adjust the number of cycles as needed.
 #### Deploy the Backend Canister
 
 To deploy run 
-`deploy-civic.sh --network ic` 
+`deploy-civic.sh --dfx-network ic` 
 
 To upgrade run 
-`upgrade-civic.sh --network ic` 
+`upgrade-civic.sh --dfx-network ic` 
+
 
