@@ -232,4 +232,9 @@ Adjust the number of cycles as needed.
 
 #### Deploy the Backend Canister
 
-Run the `deploy-civic.sh` script
+To deploy run 
+`deploy-civic.sh --network ic` 
+
+To upgrade run 
+`upgrade-civic.sh --network ic` 
+
