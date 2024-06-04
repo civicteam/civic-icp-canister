@@ -189,6 +189,13 @@ Use an external ICP wallet or exchange to transfer cycles to your wallet address
 ```
 
 ### 3. Create the canister IDs 
+Verify if the canister IDs were already created by running
+```bash
+dfx canister id civic_canister_backend 
+dfx canister id civic_canister_frontend
+dfx canister id relying_canister_frontend
+```
+If this prints the IDs for all three canisters, then they were already created. If not run
 ```bash
 dfx canister --network ic create --all
 ```
