@@ -23,3 +23,6 @@ dist/
 
 # environment variables
 .env
+
+# alternative frontend file should always contain placeholder string
+src/civic_canister_backend/dist/.well-known/ii-alternative-origins

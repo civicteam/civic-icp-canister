@@ -21,7 +21,6 @@ function App() {
   const handleLogin = useCallback(async () => {
     const principalService = new PrincipalService({
       identityProvider: config.internetIdentityUrl,
-      derivationOrigin: config.relyingFrontendCanisterUrl,
     });
 
     try {

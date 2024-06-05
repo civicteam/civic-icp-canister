@@ -81,9 +81,8 @@ This section provides steps to set up and run the project locally. Follow the st
    ```
 
 7. **Set environment variables**:
-   Make sure the `scripts/set-env-vars.sh` script is executable and run it:
+   Run the `scripts/set-env-vars.sh` script to set the environment variables:
    ```bash
-   chmod +x scripts/set-env-vars.sh
    source scripts/set-env-vars.sh
    ```
 
@@ -202,7 +201,6 @@ dfx canister --network ic create --all
 
 Export the IDs so that the frontend canisters are configured correctly. 
 ```bash
-chmod +x scripts/set-env-vars-production.sh
 . scripts/set-env-vars-production.sh
 ```
 
