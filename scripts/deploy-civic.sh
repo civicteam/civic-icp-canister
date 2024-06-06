@@ -86,7 +86,7 @@ if [ "$DFX_NETWORK" = "local" ]; then
 fi
 if [ "$DFX_NETWORK" = "ic" ]; then
   ISSUER_DERIVATION_ORIGIN="https://${ISSUER_CANISTER_ID}.icp0.io"
-  ISSUER_FRONTEND_HOSTNAME="https://${ISSUER_CANISTER_ID}.icp0.app"
+  ISSUER_FRONTEND_HOSTNAME="https://${ISSUER_CANISTER_ID}.icp0.io"
 fi
 
 
