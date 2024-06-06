@@ -22,6 +22,12 @@ export default defineConfig({
       define: {
         global: "globalThis",
       },
+      plugins: [
+        NodeGlobalsPolyfillPlugin({
+          process: true,
+          buffer: true
+        }),
+      ]
     },
   },
   server: {
@@ -33,14 +39,10 @@ export default defineConfig({
     },
   },
   plugins: [
-    react(),
+    rollupNodePolyFill(),
     environment("all", { prefix: "CANISTER_" }),
     environment("all", { prefix: "DFX_" }),
-    rollupNodePolyFill(),
-    NodeGlobalsPolyfillPlugin({
-      process: true,
-      buffer: true
-    })
+    react(),
   ],
   test: {
     environment: 'jsdom',
