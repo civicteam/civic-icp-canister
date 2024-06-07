@@ -7,7 +7,7 @@
     "@dfinity/verifiable-credentials": "^0.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "@civic/civic-sign": "^0.6.0-beta.7",
+    "@civic/civic-sign": "^0.6.0-beta.8",
     "axios": "^1.7.2"
   },
   "devDependencies": {
