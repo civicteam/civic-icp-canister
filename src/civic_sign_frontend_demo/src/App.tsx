@@ -90,7 +90,7 @@ const onSignChallenge = async (principal: string) => {
   // });
 
   const civicSignProve = CivicSignProveFactory.createWithICPWallet(
-    {principal: 'not known here'}, {url: 'http://aovwi-4maaa-aaaaa-qaagq-cai.localhost:4943/'});
+    {principal}, {url: 'http://aovwi-4maaa-aaaaa-qaagq-cai.localhost:4943/'});
   const proof = await civicSignProve.requestProof(nonce.toString());
   console.log(proof);
 
