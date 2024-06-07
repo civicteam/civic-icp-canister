@@ -14,7 +14,7 @@ const internetIdentityUrl = isProduction
   : `http://${internetIdentityCanisterId}.${host}`;
 
 const civicBackendCanisterUrl = isProduction
-  ? `https://${civicBackendCanisterId}.ic0.io`
+  ? `https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io`
   : `http://${civicBackendCanisterId}.${host}`;
 
 const civicFrontendCanisterUrl = isProduction
