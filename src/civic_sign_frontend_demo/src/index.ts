@@ -18,7 +18,7 @@ export const uint8ArrayToHexString = (bytes: Uint8Array | number[]) => {
   );
 };
 
-button.addEventListener("click", async () => {
+const onSignChallenge = async () => {
   // CALL CIVIC-SIGN BACKEND /nonce
   // const resp = await fetch("/challenge");
   // const obj: { challenge: string } = await resp.json();
@@ -59,7 +59,8 @@ button.addEventListener("click", async () => {
   //     "Content-Type": "application/json",
   //   }),
   // });
-});
+};
+button.addEventListener("click", onSignChallenge);
 
 button.disabled = false;
 
