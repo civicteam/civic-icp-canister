@@ -73,24 +73,11 @@ export const uint8ArrayToHexString = (bytes: Uint8Array | number[]) => {
 };
 
 const onSignChallenge = async (principal: string) => {
-  // CALL CIVIC-SIGN BACKEND /nonce
-  // const resp = await fetch("/challenge");
-  // const obj: { challenge: string } = await resp.json();
-  // const challenge = obj.challenge;
-
   const nonce = await getNonce('dev');
   console.log(nonce);
 
-  // CIVIC-SIGN HERE
-  // const delegationIdentity = await authWithII({
-  //   // The url needs to be aligned with the root key in the backend
-  //   // url: "http://internet_identity.localhost:5173",
-  //   url: "https://jqajs-xiaaa-aaaad-aab5q-cai.ic0.app/",
-  //   sessionPublicKey: new Uint8Array(Buffer.from(challenge, "base64")),
-  // });
-
   const civicSignProve = CivicSignProveFactory.createWithICPWallet(
-    {principal}, {url: 'http://aovwi-4maaa-aaaaa-qaagq-cai.localhost:4943/'});
+    { principal });
   const proof = await civicSignProve.requestProof(JSON.stringify(nonce));
   console.log(proof);
 
