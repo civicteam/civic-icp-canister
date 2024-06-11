@@ -14,11 +14,11 @@ const internetIdentityUrl = isProduction
   : `http://${internetIdentityCanisterId}.${host}`;
 
 const civicBackendCanisterUrl = isProduction
-  ? `https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io`
+  ? `https://${civicBackendCanisterId}.ic0.app`
   : `http://${civicBackendCanisterId}.${host}`;
 
 const civicFrontendCanisterUrl = isProduction
-  ? `https://${civicFrontendCanisterId}.ic0.io` 
+  ? `https://${civicFrontendCanisterId}.ic0.app` 
   : `http://${civicFrontendCanisterId}.${host}`;
 
 // This is for demo purposes but should be replaced with a more secure method
