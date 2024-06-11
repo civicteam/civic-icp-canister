@@ -3,7 +3,7 @@ import { Principal } from '@dfinity/principal';
 import { CredentialService } from './service/CredentialService.js';
 import { PrincipalService } from './service/PrincipalService.js';
 import { config } from './config.js';
-import { CivicSignProveFactory } from '@civic/civic-sign';
+import { CivicSignProveFactory, CivicSignVerify } from '@civic/civic-sign';
 import axios from 'axios';
 
 function App() {
@@ -81,6 +81,17 @@ const onSignChallenge = async (principal: string) => {
   const proof = await civicSignProve.requestProof(JSON.stringify(nonce));
   console.log(proof);
 
+  const did = await civicSignProve.requestDid();
+  const message = JSON.stringify(nonce);
+  const civicSignVerify = CivicSignVerify();
+  try {
+    const verifyResult = await civicSignVerify.verify(did.did, proof, message);
+    console.log('Verification result:', verifyResult);
+  } catch (error) {
+    console.error('Verification failed:', error);
+  }
+
+  // const verifyResult = civicSignVerify.verify('undefined', proof, {}, currentTimeNsOverride, iiCanisterIdOverride)).resolves.not.toThrow();
   // // SKIP FOR NOW
   // const data = { challenge, delegationIdentity };
   // await fetch("/verify", {
