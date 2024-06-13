@@ -3,7 +3,7 @@
 import { Actor, HttpAgent } from "@dfinity/agent";
 import { idlFactory as civic } from "../../../declarations/civic_canister_backend/civic_canister_backend.did.js";
 import { Secp256k1KeyIdentity } from "@dfinity/identity-secp256k1";
-import type { Principal } from "@dfinity/principal";
+import { Principal } from "@dfinity/principal";
 import { requestVerifiablePresentation } from "@dfinity/verifiable-credentials/request-verifiable-presentation";
 
 export type CredentialConfig = {
@@ -11,6 +11,7 @@ export type CredentialConfig = {
   dummyCivicSampleKey: Uint8Array;
   relyingFrontendCanisterUrl: string;
   internetIdentityUrl: string;
+  civicBackendCanisterId: string;
 }
 
 export class CredentialService {
@@ -22,7 +23,8 @@ export class CredentialService {
   async getCredentials(principal: Principal): Promise<void> {
     try {
       const issuerData = {
-        "origin": this.config.civicBackendCanisterUrl,
+        origin: this.config.civicBackendCanisterUrl,
+        canisterId: Principal.fromText(this.config.civicBackendCanisterId),
       };
 
       const credentialData = {
@@ -30,7 +32,7 @@ export class CredentialService {
           credentialType: 'VerifiedAdult',
           arguments: {}
         },
-        credentialSubject: principal.toText()
+        credentialSubject: principal
       };
 
       const onSuccess = (response: any) => 
@@ -39,9 +41,11 @@ export class CredentialService {
       const onError = (error: any) =>
         console.error('VC Request Failed:', error);
       
-      const identityProvider = this.config.internetIdentityUrl;
+      const identityProvider =  new URL(this.config.internetIdentityUrl);
       
       const derivationOrigin = undefined;
+
+      console.log('Requesting Verifiable Presentation...', derivationOrigin);
       
       const requestParams = {
         onSuccess,

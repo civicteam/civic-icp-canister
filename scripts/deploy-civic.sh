@@ -34,7 +34,6 @@ EOF
 }
 
 II_CANISTER_ID=
-DFX_NETWORK=
 ADMIN_PRINCIPAL_ID=tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae
 
 while [[ $# -gt 0  ]]
