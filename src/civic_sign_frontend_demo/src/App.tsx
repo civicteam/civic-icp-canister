@@ -3,8 +3,9 @@ import { Principal } from '@dfinity/principal';
 import { CredentialService } from './service/CredentialService.js';
 import { PrincipalService } from './service/PrincipalService.js';
 import { config } from './config.js';
-import { CivicSignProveFactory } from '@civic/civic-sign';
-import axios from 'axios';
+import { Chain, CivicSignProveFactory, SignedProof } from '@civic/civic-sign';
+import axios, { AxiosError, AxiosResponse } from 'axios';
+import { pollUntilConditionMet } from './retries.js';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -55,7 +56,7 @@ function App() {
       {isLoggedIn && <h1>Welcome to Civic Pass</h1>}
       {isLoggedIn && <p>Logged in as {principal?.toText()}</p>}
       {!isLoggedIn && <button onClick={handleLogin}>Login</button>}
-      {isLoggedIn && <button onClick={() => onSignChallenge(principal?.toString() as string)}>Auth</button>}
+      {isLoggedIn && <button onClick={() => onAuth(principal?.toString() as string)}>Auth</button>}
     </main>
   );
 }
@@ -72,38 +73,58 @@ export const uint8ArrayToHexString = (bytes: Uint8Array | number[]) => {
   );
 };
 
-const onSignChallenge = async (principal: string) => {
+const onAuth = async (principal: string) => {
+  // get challenge nonce
   const nonce = await getNonce('dev');
   console.log(nonce);
 
+  // sign challenge nonce
   const civicSignProve = CivicSignProveFactory.createWithICPWallet(
     { principal });
   const proof = await civicSignProve.requestProof(JSON.stringify(nonce));
   console.log(proof);
 
-  // // SKIP FOR NOW
-  // const data = { challenge, delegationIdentity };
-  // await fetch("/verify", {
-  //   method: "POST",
-  //   body: JSON.stringify(data, (_, v) => {
-  //     if (typeof v === "bigint") {
-  //       // We need to expiration date to be hex string.
-  //       return v.toString(16);
-  //     }
-  //     if (v instanceof Uint8Array) {
-  //       // We need the keys to be hex strings.
-  //       return uint8ArrayToHexString(v);
-  //     }
-  //     return v;
-  //   }),
-  //   headers: new Headers({
-  //     "Content-Type": "application/json",
-  //   }),
-  // });
+  // send to civic-sign-backend
+  await getCivicSignAuthToken({
+    did: `did:icp:v0:${principal}`,
+    proof,
+    address: principal,
+    chain: Chain.ICP.toString(),
+    network: ''
+  })
 };
 
 type Nonce = { nonce: string; timestamp: number };
 const getNonce = async (civicPassApiStage: string): Promise<Nonce> => {
   const response = await axios.get<Nonce>(`https://dev.api.civic.com/sign-${civicPassApiStage}/nonce`);
   return response.data;
+};
+
+export const getCivicSignAuthToken = async (
+  body: {
+    did: string;
+    proof: SignedProof;
+    address: string;
+    chain: string;
+    network: string;
+  },
+  civicSignBackendStage = 'dev'
+): Promise<string> => {
+  // the authenticate stage sometimes returns a 503, so use retries
+  const response = await pollUntilConditionMet(
+    async () => {
+      try {
+        return await axios.post<{ token: string }>(
+          //`https://dev.api.civic.com/sign-${civicSignBackendStage}/authenticate`,
+          'http://localhost:3000/authenticate',
+          body
+        );
+      } catch (error) {
+        const axiosError = error as AxiosError;
+        return { status: axiosError?.response?.status } as AxiosResponse;
+      }
+    },
+    (response: AxiosResponse) => response.status < 500
+  );
+  return response.data.token;
 };
