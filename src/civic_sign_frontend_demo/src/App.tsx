@@ -14,6 +14,7 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [principal, setPrincipal] = useState<Principal | undefined>(undefined);
   const [credentialService, setCredentialService] = useState<CredentialService>();
+  const [signSuccess, setSignSuccess] = useState<string | undefined>(undefined);
   const [authSuccess, setAuthSuccess] = useState(false);
   const [authToken, setAuthToken] = useState<string | undefined>(undefined);
 
@@ -69,6 +70,7 @@ function App() {
       { principal }, { url: config.internetIdentityUrl });
     const proof = await civicSignProve.requestProof(nonce.nonce);
     console.log(proof);
+    setSignSuccess(proof.proof);
 
     // Simulate token retrieval
     const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
@@ -97,12 +99,17 @@ function App() {
       {isLoggedIn && <h1>Welcome to Civic Pass</h1>}
       {isLoggedIn && <p>Logged in as {principal?.toText()}</p>}
       {!isLoggedIn && <button onClick={handleLogin}>Login</button>}
-      {isLoggedIn && <button onClick={() => onAuth(principal?.toString() as string, config)}>Auth</button>}
+      {isLoggedIn && !signSuccess && <button onClick={() => onAuth(principal?.toString() as string, config)}>Auth</button>}
+      {signSuccess && (
+        <div>
+          <p>Created POWO: {signSuccess}</p>
+        </div>
+      )}
       {authSuccess && (
         <div className="auth-success-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
           <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
             <FaCheckCircle color="green" className="checkmark-icon" />
-            <span style={{ color: 'green', marginRight: '10px' }}>Successfully generated and verified POWO</span>
+            <span style={{ color: 'green', marginRight: '10px' }}>Verified POWO</span>
           </div>
           <p className="auth-token">Civic Sign Authentication Token: {authToken}</p>
         </div>
