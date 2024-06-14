@@ -35,3 +35,26 @@ button[type="submit"] {
 #greeting:empty {
   display: none;
 }
+
+.auth-success-box {
+  border: 2px solid green;
+  padding: 10px;
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.checkmark-icon {
+  font-size: 24px;
+}
+
+.auth-success-box p {
+  margin: 5px 0;
+}
+
+.auth-token {
+  font-style: italic;
+  word-break: break-all;
+}

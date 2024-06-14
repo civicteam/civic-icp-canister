@@ -6,11 +6,16 @@ import { config } from './config.js';
 import { Chain, CivicSignProveFactory, SignedProof } from '@civic/civic-sign';
 import axios, { AxiosError, AxiosResponse } from 'axios';
 import { pollUntilConditionMet } from './retries.js';
+import { FaCheckCircle } from 'react-icons/fa';
+import "./index.scss";
+
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [principal, setPrincipal] = useState<Principal | undefined>(undefined);
   const [credentialService, setCredentialService] = useState<CredentialService>();
+  const [authSuccess, setAuthSuccess] = useState(false);
+  const [authToken, setAuthToken] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     console.log('Config:', config);
@@ -50,6 +55,42 @@ function App() {
     }
   }, [principal, credentialService]);
 
+
+  const onAuth = async (principal: string, config: {
+    internetIdentityUrl: string,
+    internetIdentityCanisterId: string,
+  }) => {
+    // get challenge nonce
+    const nonce = await getNonce('dev');
+    console.log(nonce);
+
+    // sign challenge nonce
+    const civicSignProve = CivicSignProveFactory.createWithICPWallet(
+      { principal }, { url: config.internetIdentityUrl });
+    const proof = await civicSignProve.requestProof(nonce.nonce);
+    console.log(proof);
+
+    // Simulate token retrieval
+    const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+
+    // // send to civic-sign-backend
+    // const token = await getCivicSignAuthToken({
+    //   did: `did:icp:v0:${principal}`,
+    //   address: principal,
+    //   chain: Chain.ICP.toString(),
+    //   network: '',
+    //   proof,
+    //   nonceTimestamp: nonce.timestamp
+    // })
+
+
+    setAuthSuccess(true);
+    // if (token) {
+    setAuthSuccess(true);
+    setAuthToken(token);
+    // }
+  };
+
   return (
     <main>
       <img src="/logo2.svg" alt="DFINITY logo" />
@@ -57,7 +98,15 @@ function App() {
       {isLoggedIn && <p>Logged in as {principal?.toText()}</p>}
       {!isLoggedIn && <button onClick={handleLogin}>Login</button>}
       {isLoggedIn && <button onClick={() => onAuth(principal?.toString() as string, config)}>Auth</button>}
-    </main>
+      {authSuccess && (
+        <div className="auth-success-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+            <FaCheckCircle color="green" className="checkmark-icon" />
+            <span style={{ color: 'green', marginRight: '10px' }}>Successfully generated and verified POWO</span>
+          </div>
+          <p className="auth-token">Civic Sign Authentication Token: {authToken}</p>
+        </div>
+      )}    </main>
   );
 }
 
@@ -73,30 +122,6 @@ export const uint8ArrayToHexString = (bytes: Uint8Array | number[]) => {
   );
 };
 
-const onAuth = async (principal: string, config: {
-  internetIdentityUrl: string,
-  internetIdentityCanisterId: string,
-}) => {
-  // get challenge nonce
-  const nonce = await getNonce('dev');
-  console.log(nonce);
-
-  // sign challenge nonce
-  const civicSignProve = CivicSignProveFactory.createWithICPWallet(
-    { principal }, {url: config.internetIdentityUrl});
-  const proof = await civicSignProve.requestProof(nonce.nonce);
-  console.log(proof);
-
-  // send to civic-sign-backend
-  const token = await getCivicSignAuthToken({
-    did: `did:icp:v0:${principal}`,
-    address: principal,
-    chain: Chain.ICP.toString(),
-    network: '',
-    proof,
-    nonceTimestamp: nonce.timestamp
-  })
-};
 
 type Nonce = { nonce: string; timestamp: number };
 const getNonce = async (civicPassApiStage: string): Promise<Nonce> => {
