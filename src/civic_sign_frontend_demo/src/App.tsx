@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Principal } from '@dfinity/principal';
-import { CredentialService } from './service/CredentialService.js';
+import { CredentialConfig, CredentialService } from './service/CredentialService.js';
 import { PrincipalService } from './service/PrincipalService.js';
 import { config } from './config.js';
 import { Chain, CivicSignProveFactory, SignedProof } from '@civic/civic-sign';
@@ -56,7 +56,7 @@ function App() {
       {isLoggedIn && <h1>Welcome to Civic Pass</h1>}
       {isLoggedIn && <p>Logged in as {principal?.toText()}</p>}
       {!isLoggedIn && <button onClick={handleLogin}>Login</button>}
-      {isLoggedIn && <button onClick={() => onAuth(principal?.toString() as string)}>Auth</button>}
+      {isLoggedIn && <button onClick={() => onAuth(principal?.toString() as string, config)}>Auth</button>}
     </main>
   );
 }
@@ -73,24 +73,28 @@ export const uint8ArrayToHexString = (bytes: Uint8Array | number[]) => {
   );
 };
 
-const onAuth = async (principal: string) => {
+const onAuth = async (principal: string, config: {
+  internetIdentityUrl: string,
+  internetIdentityCanisterId: string,
+}) => {
   // get challenge nonce
   const nonce = await getNonce('dev');
   console.log(nonce);
 
   // sign challenge nonce
   const civicSignProve = CivicSignProveFactory.createWithICPWallet(
-    { principal });
-  const proof = await civicSignProve.requestProof(JSON.stringify(nonce));
+    { principal }, {url: config.internetIdentityUrl});
+  const proof = await civicSignProve.requestProof(nonce.nonce);
   console.log(proof);
 
   // send to civic-sign-backend
-  await getCivicSignAuthToken({
+  const token = await getCivicSignAuthToken({
     did: `did:icp:v0:${principal}`,
-    proof,
     address: principal,
     chain: Chain.ICP.toString(),
-    network: ''
+    network: '',
+    proof,
+    nonceTimestamp: nonce.timestamp
   })
 };
 
@@ -103,10 +107,11 @@ const getNonce = async (civicPassApiStage: string): Promise<Nonce> => {
 export const getCivicSignAuthToken = async (
   body: {
     did: string;
-    proof: SignedProof;
     address: string;
     chain: string;
     network: string;
+    proof: SignedProof;
+    nonceTimestamp: number
   },
   civicSignBackendStage = 'dev'
 ): Promise<string> => {
@@ -116,7 +121,7 @@ export const getCivicSignAuthToken = async (
       try {
         return await axios.post<{ token: string }>(
           //`https://dev.api.civic.com/sign-${civicSignBackendStage}/authenticate`,
-          'http://localhost:3000/authenticate',
+          'http://localhost:3000/dev/authenticate',
           body
         );
       } catch (error) {
