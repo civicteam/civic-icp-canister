@@ -237,9 +237,9 @@ Adjust the number of cycles as needed.
 #### Deploy the Backend Canister
 
 To deploy run 
-`deploy-civic.sh --dfx-network ic` 
+`DFX_NETWORK=ic deploy-civic.sh` 
 
 To upgrade run 
-`upgrade-civic.sh --dfx-network ic` 
+`DFX_NETWORK=ic upgrade-civic.sh` 
 
 
