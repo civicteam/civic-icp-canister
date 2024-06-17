@@ -1,10 +1,17 @@
 #!/bin/bash
 
+# Function to enable verbose logging if the verbose flag is passed
+enable_verbose() {
+  if [ "$1" == "verbose" ]; then
+    set -x
+  fi
+}
+
 # Exit immediately if a command exits with a non-zero status
 set -e
 
-# Enable verbose output
-# set -x
+# Enable verbose output if 'verbose' is passed as the second argument
+enable_verbose $2
 
 # Function to check if canister IDs exist
 check_canister_id() {
@@ -155,9 +162,18 @@ main() {
     fi
   fi
 
+  # Stop the local DFX environment if it was started
+  if [ "$network" = "local" ]; then
+    echo "Stopping local DFX environment..."
+    if ! dfx stop >>$log_file 2>&1; then
+      echo "Error: Failed to stop local DFX environment. Check $log_file for details."
+      exit 1
+    fi
+  fi
+
   echo "Deployment completed successfully."
   echo "Please check deploy.log for details."
 }
 
 # Execute main function with provided network argument
-main $1
+main $1 $2
