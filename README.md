@@ -92,12 +92,17 @@ This section provides steps to set up and run the project locally. Follow the st
    dfx deploy internet_identity
    ```
 
+
 9. **Deploy the Civic Frontend Canister**:
+
+   **Note**: If it fails to deploy, try to deploy the RP canister first and then go back to the Civic Frontend Canister. (If you start with the RP first and it fails, try to deploy the Civic Frontend Canister and then go back to the RP.)
+
     ```bash
     dfx deploy civic_canister_frontend
     ```
 
-10. **Deploy the Relying Party (RP) canister**:
+
+11. **Deploy the Relying Party (RP) canister**:
    ```bash
    dfx deploy relying_canister_frontend
    ```
@@ -205,6 +210,9 @@ Export the IDs so that the frontend canisters are configured correctly.
 ```
 
 ### 4. Deploy the Frontend Canister
+#### Note: 
+If it fails to deploy, try to deploy the RP canister first and then go back to the Civic Frontend Canister. (If you start with the RP first and it fails, try to deploy the Civic Frontend Canister and then go back to the RP.)
+
 
 #### Top-Up the Frontend Canister with Cycles
 
