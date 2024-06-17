@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Principal } from '@dfinity/principal';
-import { CredentialConfig, CredentialService } from './service/CredentialService.js';
 import { PrincipalService } from './service/PrincipalService.js';
 import { config } from './config.js';
 import { Chain, CivicSignProveFactory, SignedProof } from '@civic/civic-sign';
@@ -13,7 +12,6 @@ import "./index.scss";
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [principal, setPrincipal] = useState<Principal | undefined>(undefined);
-  const [credentialService, setCredentialService] = useState<CredentialService>();
   const [signSuccess, setSignSuccess] = useState<string | undefined>(undefined);
   const [authSuccess, setAuthSuccess] = useState(false);
   const [authToken, setAuthToken] = useState<string | undefined>(undefined);
@@ -21,11 +19,6 @@ function App() {
   useEffect(() => {
     console.log('Config:', config);
   }, [config]);
-
-  useEffect(() => {
-    const service = new CredentialService(config);
-    setCredentialService(service);
-  }, []);
 
   const handleLogin = useCallback(async () => {
     const principalService = new PrincipalService({
@@ -42,19 +35,6 @@ function App() {
       console.error('Error logging in:', error);
     }
   }, []);
-
-  const retrieveCredential = useCallback(async () => {
-    if (principal && credentialService) {
-      try {
-        const result = await credentialService.getCredentials(principal);
-        console.log('Credential stored successfully:', result);
-      } catch (error) {
-        console.error('Error storing credential:', error);
-      }
-    } else {
-      console.error('Credential service or principal not available');
-    }
-  }, [principal, credentialService]);
 
 
   const onAuth = async (principal: string, config: {
