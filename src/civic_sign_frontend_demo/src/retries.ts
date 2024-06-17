@@ -1,4 +1,4 @@
-import { sleep } from './testUtils';
+import { sleep } from './testUtils.js';
 
 export const pollUntilConditionMet = async <T>(
   fnToRun: () => Promise<unknown>,
