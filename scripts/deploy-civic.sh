@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Exit immediately if a command exits with a non-zero status
+set -e
+
+# Enable verbose output
+# set -x
+
 # Function to check if canister IDs exist
 check_canister_id() {
   local canister_name=$1
@@ -16,75 +22,137 @@ check_canister_id() {
 deploy_canister() {
   local canister_name=$1
   local network=$2
-  local identity=$3
-  local log_file="deploy.log"
+  local log_file="../deploy.log"
 
   # Deploy the canister
   echo "Deploying $canister_name on network $network..."
-  if [ -n "$identity" ]; then
-    dfx deploy $canister_name --network $network --identity $identity >>$log_file 2>&1
-  else
-    dfx deploy $canister_name --network $network >>$log_file 2>&1
+  if ! dfx deploy $canister_name --network $network >>$log_file 2>&1; then
+    echo "Error: Failed to deploy $canister_name on network $network. Check $log_file for details."
+    exit 1
+  fi
+}
+
+# Function to build canisters with retries
+build_canisters_with_retries() {
+  local retries=3
+  local count=0
+  local success=false
+  local log_file="../deploy.log"
+
+  until [ $count -ge $retries ]; do
+    echo "Building canisters (attempt $((count+1))/$retries)..."
+    if dfx build >>$log_file 2>&1; then
+      success=true
+      break
+    else
+      echo "Error: Failed to build canisters. Retrying..."
+      count=$((count+1))
+      sleep 2
+    fi
+  done
+
+  if [ "$success" = false ]; then
+    echo "Error: Failed to build canisters after $retries attempts. Check $log_file for details."
+    exit 1
   fi
 }
 
 # Main deployment script
 main() {
   local network=${1:-local}  # Default network to 'local' if not provided
-  local identity=""          # Default identity to empty
-  local log_file="deploy.log"
+  local log_file="../deploy.log"
 
   # Clear previous log file
   >$log_file
 
-  # If deploying on mainnet, set identity
-  if [ "$network" = "ic" ]; then
-    identity="mainnet_identity"  # Set identity for mainnet operations
-  fi
-
   # Start the local DFX environment if deploying locally
   if [ "$network" = "local" ]; then
     echo "Starting local DFX environment..."
-    dfx start --clean --background >>$log_file 2>&1
+
+    # Stop any running dfx instances
+    if pgrep -f "dfx start" >/dev/null; then
+      echo "Stopping existing DFX instance..."
+      dfx stop >>$log_file 2>&1
+    fi
+
+    # Start DFX
+    if ! dfx start --clean --background >>$log_file 2>&1; then
+      echo "Error: Failed to start local DFX environment. Check $log_file for details."
+      exit 1
+    fi
+
+    # Check if the local DFX environment started successfully
+    sleep 5
+    if ! pgrep -f "dfx start" >/dev/null; then
+      echo "Error: Failed to start local DFX environment. Check $log_file for details."
+      exit 1
+    fi
+
+    # Deploy internet_identity canister
+    echo "Deploying internet_identity canister for local environment..."
+    if ! dfx canister create internet_identity --network $network >>$log_file 2>&1; then
+      echo "Error: Failed to create internet_identity canister. Check $log_file for details."
+      exit 1
+    fi
+    if ! dfx deploy internet_identity --network $network >>$log_file 2>&1; then
+      echo "Error: Failed to deploy internet_identity canister. Check $log_file for details."
+      exit 1
+    fi
   fi
 
   # Check if canister IDs exist, create if not
-  if ! check_canister_id "civic_canister_backend" $network; then
-    echo "Creating canister IDs on network $network..."
-    dfx canister --network $network create --all >>$log_file 2>&1
-  fi
+  for canister in civic_canister_backend civic_canister_frontend relying_canister_frontend; do
+    if ! check_canister_id $canister $network; then
+      echo "Creating canister $canister on network $network..."
+      if ! dfx canister --network $network create $canister >>$log_file 2>&1; then
+        echo "Error: Failed to create canister $canister. Check $log_file for details."
+        exit 1
+      fi
+    fi
+  done
 
-  # Build the canisters to ensure all necessary files are generated
-  echo "Building canisters..."
-  dfx build >>$log_file 2>&1
+  # Build the canisters with retries to ensure all necessary files are generated
+  build_canisters_with_retries
 
   # Export environment variables
   if [ "$network" = "ic" ]; then
+    if [ ! -f "./set-env-vars-production.sh" ]; then
+      echo "Error: set-env-vars-production.sh not found."
+      exit 1
+    fi
     echo "Setting environment variables for mainnet..."
-    . scripts/set-env-vars-production.sh >>$log_file 2>&1
+    . ./set-env-vars-production.sh >>$log_file 2>&1
   else
+    if [ ! -f "./set-env-vars.sh" ]; then
+      echo "Error: set-env-vars.sh not found."
+      exit 1
+    fi
     echo "Setting environment variables for local deployment..."
-    . scripts/set-env-vars.sh >>$log_file 2>&1
-  fi
-
-  # Deploy internet_identity canister if deploying locally
-  if [ "$network" = "local" ]; then
-    echo "Deploying internet_identity canister for local environment..."
-    dfx deploy internet_identity --network $network >>$log_file 2>&1
+    . ./set-env-vars.sh >>$log_file 2>&1
   fi
 
   # Deploy frontend canister
-  deploy_canister "civic_canister_frontend" $network $identity
+  deploy_canister "civic_canister_frontend" $network
 
   # Deploy relying canister
-  deploy_canister "relying_canister_frontend" $network $identity
+  deploy_canister "relying_canister_frontend" $network
 
   # Deploy backend canister
   echo "Deploying civic_canister_backend on network $network..."
   if [ "$network" = "ic" ]; then
-    DFX_NETWORK=ic ./scripts/deploy-civic-backend.sh >>$log_file 2>&1  # Use specific script for mainnet
+    if [ ! -f "./deploy-civic-backend.sh" ]; then
+      echo "Error: deploy-civic-backend.sh not found."
+      exit 1
+    fi
+    if ! DFX_NETWORK=ic ./deploy-civic-backend.sh >>$log_file 2>&1; then
+      echo "Error: Failed to deploy civic_canister_backend on network $network. Check $log_file for details."
+      exit 1
+    fi
   else
-    dfx deploy civic_canister_backend --network $network >>$log_file 2>&1  # Deploy for local or other networks
+    if ! dfx deploy civic_canister_backend --network $network >>$log_file 2>&1; then
+      echo "Error: Failed to deploy civic_canister_backend on network $network. Check $log_file for details."
+      exit 1
+    fi
   fi
 
   echo "Deployment completed successfully."
