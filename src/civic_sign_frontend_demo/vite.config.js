@@ -3,6 +3,9 @@ import { fileURLToPath, URL } from 'url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import environment from 'vite-plugin-environment';
+import dotenv from 'dotenv';
+import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
+import rollupNodePolyFill from 'rollup-plugin-polyfill-node';
 
 //dotenv.config({ path: '../../.env' });
 
@@ -19,6 +22,12 @@ export default defineConfig({
       define: {
         global: "globalThis",
       },
+      plugins: [
+        NodeGlobalsPolyfillPlugin({
+          process: true,
+          buffer: true
+        }),
+      ]
     },
   },
   server: {
@@ -30,6 +39,7 @@ export default defineConfig({
     },
   },
   plugins: [
+    rollupNodePolyFill(),
     environment("all", { prefix: "CANISTER_" }),
     environment("all", { prefix: "DFX_" }),
     react(),
@@ -50,6 +60,11 @@ export default defineConfig({
         find: '@identity.com/cryptid',
         replacement: '@identity.com/cryptid/dist/cryptid.esm.js'
       },
+      // {
+      //   // This will polyfill Buffer in your application
+      //   find: buffer,
+      //   replacement: 'buffer'
+      // }
     ],
   },
 });
