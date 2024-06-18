@@ -41,6 +41,7 @@ deploy_canister() {
 
 # Function to build canisters with retries
 build_canisters_with_retries() {
+  local network=$1
   local retries=3
   local count=0
   local success=false
@@ -48,7 +49,7 @@ build_canisters_with_retries() {
 
   until [ $count -ge $retries ]; do
     echo "Building canisters (attempt $((count+1))/$retries)..."
-    if dfx build >>$log_file 2>&1; then
+    if dfx build --network $network >>$log_file 2>&1; then
       success=true
       break
     else
@@ -118,8 +119,9 @@ main() {
     fi
   done
 
+  echo $(dfx canister id civic_canister_backend --ic)
   # Build the canisters with retries to ensure all necessary files are generated
-  build_canisters_with_retries
+  build_canisters_with_retries $network
 
   # Export environment variables
   if [ "$network" = "ic" ]; then
