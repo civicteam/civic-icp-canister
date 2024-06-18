@@ -191,7 +191,14 @@ Use an external ICP wallet or exchange to transfer cycles to your wallet address
 ```
 
 ## Deploy the canisters
-You can use the deploy script to deploy the canisters to mainnet in one step. Be sure that you have deployed locally first ([see](https://github.com/civicteam/civic-icp-canister/tree/develop?tab=readme-ov-file#deploy-the-canisters)), this is a necessity for the deployment to mainnet to work. 
+You can use the deploy script to deploy the canisters to mainnet in one step. Be sure that you have deployed locally first ([see](https://github.com/civicteam/civic-icp-canister/tree/develop?tab=readme-ov-file#deploy-the-canisters)), this is necessary for it to work.
+
+Ensure you have run `npm install` in your project folder. Deploy locally with 
+```bash
+./scripts/deploy-civic.sh local 
+```
+
+Afterwards you can deploy to mainnet with 
 ```bash
 ./scripts/deploy-civic.sh ic 
 ```
