@@ -53,8 +53,8 @@ This section provides steps to set up and run the project locally. Follow the st
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-repository.git
-   cd your-repository
+   git clone https://github.com/civicteam/civic-icp-canister.git
+   cd civic-icp-canister
    ```
 
 2. **Install DFX**:
@@ -74,26 +74,34 @@ This section provides steps to set up and run the project locally. Follow the st
    cargo install ic-wasm
    ```
 
-6. **Create canisters and start the local Internet Computer replica**:
+## Deploy the canisters 
+To simplify the deployment of the canisters we provide a script `deploy-civic.sh` you can find under `scripts`. To execute it make sure that you have run `npm install` beforehand inside the project. 
+  ```bash
+  ./scripts/deploy-civic.sh local 
+  ```
+
+### Manual deployment 
+Steps for the manual deployment: 
+1. **Create canisters and start the local Internet Computer replica**:
    ```bash
    dfx start --clean --background
    dfx canister create --all
    ```
 
-7. **Set environment variables**:
+2. **Set environment variables**:
    Run the `scripts/set-env-vars.sh` script to set the environment variables:
    ```bash
    source scripts/set-env-vars.sh
    ```
 
-8. **Deploy the Civic Canister and Internet Identity**:
+3. **Deploy the Civic Canister and Internet Identity**:
    ```bash
    ./scripts/deploy-civic.sh
    dfx deploy internet_identity
    ```
 
 
-9. **Deploy the Civic Frontend Canister**:
+4. **Deploy the Civic Frontend Canister**:
 
    **Note**: If it fails to deploy, try to deploy the RP canister first and then go back to the Civic Frontend Canister. (If you start with the RP first and it fails, try to deploy the Civic Frontend Canister and then go back to the RP.)
 
@@ -102,21 +110,21 @@ This section provides steps to set up and run the project locally. Follow the st
     ```
 
 
-11. **Deploy the Relying Party (RP) canister**:
+5. **Deploy the Relying Party (RP) canister**:
    ```bash
    dfx deploy relying_canister_frontend
    ```
 
-11. **Run tests**:
-    Ensure the test state machine binary is executable and run the tests:
-    ```bash
-    chmod +x ic-test-state-machine
-    cargo test --test integration_tests
-    ```
+## Testing
+To run the tests ensure the test state machine binary is executable first:
+```bash
+chmod +x ic-test-state-machine
+cargo test --test integration_tests
+```
 
-## Script for Storing and Fetching Credentials
+## Storing and Fetching Credentials
 
-The following script is located in `./src/civic_frontend_canister`. It demonstrates how to store and fetch credentials from the Civic Canister backend. The script uses environment variables to configure the canister ID and other settings.
+The following script is located in `src/civic_frontend_canister`. It demonstrates how to store and fetch credentials from the Civic Canister backend. The script uses environment variables to configure the canister ID and other settings.
 
 ### Script Explanation
 
@@ -144,26 +152,16 @@ This script performs the following tasks:
 - Ensure you have the required binaries in the `ic-test-machine-binaries` directory.
 - Modify the setup and deployment scripts as needed to suit your project's requirements.
 
-# Civic Canister Mainnet Deployment
+# Mainnet Deployment
 
 This section describes the steps to deploy the Civic frontend, relying and backend canisters on the Internet Computer (IC) network.
 
 ## Prerequisites
-
+- Ensure you can [deploy locally](https://github.com/civicteam/civic-icp-canister/edit/TECH-156__update-script-deployment-fix-paths/README.md#using-the-deploy-script).
 - Ensure you have an ICP wallet to add cycles.
 - Create a new identity for secure mainnet operations.
 
-## Steps to Deploy
-
-### Overview
-1. **[Create and use a secure identity](#1-create-and-use-a-secure-identity)**
-2. **[Ensure the wallet has enough cycles](#2-ensure-the-wallet-has-enough-cycles)**
-3.  **[Create the canister IDs](#3-create-the-canister-ids)**
-4. **[Deploy the Frontend Canister](#4-deploy-the-frontend-canister)**
-5. **[Deploy the Relying Canister](#5-deploy-the-relying-canister)**
-
-6. **[Deploy the Backend Canister](#6-deploy-the-backend-canister)**
-
+## Setup 
 ### 1. Create and Use a Secure Identity
 
 Create and use a new identity for secure operations on the mainnet.
@@ -191,6 +189,22 @@ Use an external ICP wallet or exchange to transfer cycles to your wallet address
 ```bash
 # Transfer ICP equivalent to 10 trillion cycles to your wallet address obtained from `dfx identity get-wallet`.
 ```
+
+## Deploy the canisters
+You can use the deploy script to deploy the canisters to mainnet in one step. Be sure that you have deployed locally first ([see](https://github.com/civicteam/civic-icp-canister/edit/TECH-156__update-script-deployment-fix-paths/README.md#using-the-deploy-script)), this is a necessity for the deployment to mainnet to work. 
+```bash
+./scripts/deploy-civic.sh ic 
+```
+
+### Manual deployment 
+Alternatively you can deploy manually with the following steps: 
+
+3. **[Create the canister IDs](#3-create-the-canister-ids)**
+
+4. **[Deploy the Frontend Canister](#4-deploy-the-frontend-canister)**
+5. **[Deploy the Relying Canister](#5-deploy-the-relying-canister)**
+
+6. **[Deploy the Backend Canister](#6-deploy-the-backend-canister)**
 
 ### 3. Create the canister IDs 
 Verify if the canister IDs were already created by running
