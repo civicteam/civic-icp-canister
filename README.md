@@ -157,7 +157,7 @@ This script performs the following tasks:
 This section describes the steps to deploy the Civic frontend, relying and backend canisters on the Internet Computer (IC) network.
 
 ## Prerequisites
-- Ensure you can [deploy locally](https://github.com/civicteam/civic-icp-canister/edit/TECH-156__update-script-deployment-fix-paths/README.md#using-the-deploy-script).
+- Ensure you can [deploy locally](https://github.com/civicteam/civic-icp-canister/tree/develop?tab=readme-ov-file#setup).
 - Ensure you have an ICP wallet to add cycles.
 - Create a new identity for secure mainnet operations.
 
@@ -191,7 +191,7 @@ Use an external ICP wallet or exchange to transfer cycles to your wallet address
 ```
 
 ## Deploy the canisters
-You can use the deploy script to deploy the canisters to mainnet in one step. Be sure that you have deployed locally first ([see](https://github.com/civicteam/civic-icp-canister/edit/TECH-156__update-script-deployment-fix-paths/README.md#using-the-deploy-script)), this is a necessity for the deployment to mainnet to work. 
+You can use the deploy script to deploy the canisters to mainnet in one step. Be sure that you have deployed locally first ([see](https://github.com/civicteam/civic-icp-canister/tree/develop?tab=readme-ov-file#deploy-the-canisters)), this is a necessity for the deployment to mainnet to work. 
 ```bash
 ./scripts/deploy-civic.sh ic 
 ```
