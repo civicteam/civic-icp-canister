@@ -3,19 +3,16 @@ import { fileURLToPath, URL } from 'url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import environment from 'vite-plugin-environment';
-import dotenv from 'dotenv';
+import topLevelAwait from "vite-plugin-top-level-await";
+import wasm from "vite-plugin-wasm";
 import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
-import rollupNodePolyFill from 'rollup-plugin-polyfill-node';
+import dotenv from 'dotenv';
 
 //dotenv.config({ path: '../../.env' });
 
 export default defineConfig({
   build: {
     emptyOutDir: true,
-  },
-  define: {
-    global: {},
-    'process.env': {}
   },
   optimizeDeps: {
     esbuildOptions: {
@@ -24,7 +21,6 @@ export default defineConfig({
       },
       plugins: [
         NodeGlobalsPolyfillPlugin({
-          process: true,
           buffer: true
         }),
       ]
@@ -39,7 +35,8 @@ export default defineConfig({
     },
   },
   plugins: [
-    rollupNodePolyFill(),
+    topLevelAwait(),
+    wasm(),
     environment("all", { prefix: "CANISTER_" }),
     environment("all", { prefix: "DFX_" }),
     react(),
