@@ -6,7 +6,6 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import environment from 'vite-plugin-environment';
 import topLevelAwait from "vite-plugin-top-level-await";
 import wasm from "vite-plugin-wasm";
-import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
 import dotenv from 'dotenv';
 
 //dotenv.config({ path: '../../.env' });
