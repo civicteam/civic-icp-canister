@@ -2,6 +2,7 @@
 import { fileURLToPath, URL } from 'url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import environment from 'vite-plugin-environment';
 import topLevelAwait from "vite-plugin-top-level-await";
 import wasm from "vite-plugin-wasm";
@@ -14,18 +15,6 @@ export default defineConfig({
   build: {
     emptyOutDir: true,
   },
-  optimizeDeps: {
-    esbuildOptions: {
-      define: {
-        global: "globalThis",
-      },
-      plugins: [
-        NodeGlobalsPolyfillPlugin({
-          buffer: true
-        }),
-      ]
-    },
-  },
   server: {
     proxy: {
       "/api": {
@@ -35,6 +24,7 @@ export default defineConfig({
     },
   },
   plugins: [
+    nodePolyfills(),
     topLevelAwait(),
     wasm(),
     environment("all", { prefix: "CANISTER_" }),
@@ -57,11 +47,6 @@ export default defineConfig({
         find: '@identity.com/cryptid',
         replacement: '@identity.com/cryptid/dist/cryptid.esm.js'
       },
-      // {
-      //   // This will polyfill Buffer in your application
-      //   find: buffer,
-      //   replacement: 'buffer'
-      // }
     ],
   },
 });
