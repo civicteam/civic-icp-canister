@@ -80,6 +80,8 @@ To simplify the deployment of the canisters we provide a script `deploy-civic.sh
   ./scripts/deploy-civic.sh local 
   ```
 
+Note: The script stops dfx after it executes. If you want to call your canisters, you have to start it again as `dfx start --background`. 
+
 ### Manual deployment 
 Steps for the manual deployment: 
 1. **Create canisters and start the local Internet Computer replica**:
@@ -89,14 +91,19 @@ Steps for the manual deployment:
    ```
 
 2. **Set environment variables**:
-   Run the `scripts/set-env-vars.sh` script to set the environment variables:
+
+   First set  
+   ```bash
+   export VITE_ENV="development"
+   ```
+   Run the `scripts/set-env-vars.sh` script to set the environment variables for local deployment:
    ```bash
    source scripts/set-env-vars.sh
    ```
 
 3. **Deploy the Civic Canister and Internet Identity**:
    ```bash
-   ./scripts/deploy-civic-backend.sh
+   ./scripts/deploy-civic.sh
    dfx deploy internet_identity
    ```
 
@@ -220,15 +227,16 @@ dfx canister id civic_canister_backend --network ic
 dfx canister id civic_canister_frontend --network ic
 dfx canister id relying_canister_frontend --network ic
 ```
-If this prints the IDs for all three canisters, then they were already created. If not run
+If this prints the IDs for for all three canisters, then they were already created. If not run
 ```bash
 dfx canister --network ic create --all
 ```
 
-Export the IDs so that the frontend canisters are configured correctly. 
-```bash
-. scripts/set-env-vars-production.sh
-```
+Export the IDs so that the frontend canisters are configured correctly for production.  
+   ```bash
+   export VITE_ENV="production"
+   source scripts/set-env-vars.sh
+   ```
 
 ### 4. Deploy the Frontend Canister
 #### Note: 
@@ -266,9 +274,9 @@ Adjust the number of cycles as needed.
 #### Deploy the Backend Canister
 
 To deploy run 
-`DFX_NETWORK=ic deploy-civic-backend.sh` 
+`DFX_NETWORK=ic deploy-civic.sh` 
 
 To upgrade run 
-`DFX_NETWORK=ic upgrade-civic-backend.sh` 
+`DFX_NETWORK=ic upgrade-civic.sh` 
 
 

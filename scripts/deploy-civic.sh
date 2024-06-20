@@ -123,19 +123,17 @@ main() {
   build_canisters_with_retries $network
 
   # Export environment variables
-  if [ "$network" = "ic" ]; then
-    if [ ! -f "./scripts/set-env-vars-production.sh" ]; then
-      echo "Error: set-env-vars-production.sh not found."
-      exit 1
-    fi
-    echo "Setting environment variables for mainnet..."
-    . ./scripts/set-env-vars-production.sh >>$log_file 2>&1
-  else
-    if [ ! -f "./scripts/set-env-vars.sh" ]; then
+  if [ ! -f "./scripts/set-env-vars.sh" ]; then
       echo "Error: set-env-vars.sh not found."
       exit 1
-    fi
+  fi
+  if [ "$network" = "ic" ]; then
+    echo "Setting environment variables for mainnet..."
+    export VITE_ENV="production"
+    . ./scripts/set-env-vars.sh >>$log_file 2>&1
+  else
     echo "Setting environment variables for local deployment..."
+    export VITE_ENV="development"
     . ./scripts/set-env-vars.sh >>$log_file 2>&1
   fi
 
@@ -167,6 +165,7 @@ main() {
 
   echo "Deployment completed successfully."
   echo "Please check deploy.log for details."
+
 }
 
 # Execute main function with provided network argument
