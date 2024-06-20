@@ -37,29 +37,10 @@ jobs:
       run: |
         npm install 
         cargo install ic-wasm
-    - name: Create canisters and start local ICP replica
+    - name: Run the deploy script to deploy all the canisters to local environment
       run: |
-        dfx start --clean --background
-        dfx canister create --all
-    - name: Set env variables
-      run: |
-        chmod +x scripts/set-env-vars.sh
-        . scripts/set-env-vars.sh
-    - name: Deploy Civic Canister and Internet Identity
-      run: |
-        scripts/deploy-civic.sh
-        dfx deploy internet_identity
-    - name: Deploy RP 
-      id: deploy_rp
-      continue-on-error: true
-      run: |
-        dfx deploy relying_canister_frontend
-    - name: Deploy Civic FE
-      run: dfx deploy civic_canister_frontend
-    - name: Try again to deploy RP if it previously failed
-      if:  steps.deploy_rp.outcome == 'failure'
-      run: dfx deploy relying_canister_frontend
- 
+        export VITE_ENV="development"
+        ./scripts/deploy-civic.sh
     - name: Run tests
       run: |
         chmod +x ic-test-state-machine
