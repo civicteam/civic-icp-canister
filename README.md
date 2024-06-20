@@ -96,7 +96,7 @@ Steps for the manual deployment:
 
 3. **Deploy the Civic Canister and Internet Identity**:
    ```bash
-   ./scripts/deploy-civic.sh
+   ./scripts/deploy-civic-backend.sh
    dfx deploy internet_identity
    ```
 
@@ -266,9 +266,9 @@ Adjust the number of cycles as needed.
 #### Deploy the Backend Canister
 
 To deploy run 
-`DFX_NETWORK=ic deploy-civic.sh` 
+`DFX_NETWORK=ic deploy-civic-backend.sh` 
 
 To upgrade run 
-`DFX_NETWORK=ic upgrade-civic.sh` 
+`DFX_NETWORK=ic upgrade-civic-backend.sh` 
 
 
