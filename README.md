@@ -274,9 +274,18 @@ Adjust the number of cycles as needed.
 #### Deploy the Backend Canister
 
 To deploy run 
-`DFX_NETWORK=ic deploy-civic.sh` 
+```bash
+DFX_NETWORK=ic ./scripts/deploy-civic.sh
+```
 
 To upgrade run 
-`DFX_NETWORK=ic upgrade-civic.sh` 
+```bash
+DFX_NETWORK=ic ./scripts/upgrade-civic.sh
+```
 
-
+# Upgrading the Civic Canister
+The Civic Canister supports stable storage and the credential data and configuration (including whitelisted issuers) will be restored when the canister is upgraded. To upgrade the canister run 
+```bash
+DFX_NETWORK=network ./scripts/upgrade-civic.sh
+```
+setting network to `ic` or `local`. This also allows you to test the stable storage without having to change the canister code. 
