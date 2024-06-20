@@ -119,25 +119,24 @@ main() {
     fi
   done
 
-  echo $(dfx canister id civic_canister_backend --ic)
   # Build the canisters with retries to ensure all necessary files are generated
   build_canisters_with_retries $network
 
   # Export environment variables
   if [ "$network" = "ic" ]; then
-    if [ ! -f "./set-env-vars-production.sh" ]; then
+    if [ ! -f "./scripts/set-env-vars-production.sh" ]; then
       echo "Error: set-env-vars-production.sh not found."
       exit 1
     fi
     echo "Setting environment variables for mainnet..."
-    . ./set-env-vars-production.sh >>$log_file 2>&1
+    . ./scripts/set-env-vars-production.sh >>$log_file 2>&1
   else
-    if [ ! -f "./set-env-vars.sh" ]; then
+    if [ ! -f "./scripts/set-env-vars.sh" ]; then
       echo "Error: set-env-vars.sh not found."
       exit 1
     fi
     echo "Setting environment variables for local deployment..."
-    . ./set-env-vars.sh >>$log_file 2>&1
+    . ./scripts/set-env-vars.sh >>$log_file 2>&1
   fi
 
   # Deploy frontend canister
@@ -149,7 +148,7 @@ main() {
   # Deploy backend canister
   echo "Deploying civic_canister_backend on network $network..."
   if [ "$network" = "ic" ]; then
-    if [ ! -f "./deploy-civic-backend.sh" ]; then
+    if [ ! -f "./scripts/deploy-civic-backend.sh" ]; then
       echo "Error: deploy-civic-backend.sh not found."
       exit 1
     fi
