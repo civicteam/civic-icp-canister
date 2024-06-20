@@ -29,7 +29,7 @@ check_canister_id() {
 deploy_canister() {
   local canister_name=$1
   local network=$2
-  local log_file="../deploy.log"
+  local log_file="./deploy.log"
 
   # Deploy the canister
   echo "Deploying $canister_name on network $network..."
@@ -45,7 +45,7 @@ build_canisters_with_retries() {
   local retries=3
   local count=0
   local success=false
-  local log_file="../deploy.log"
+  local log_file="./deploy.log"
 
   until [ $count -ge $retries ]; do
     echo "Building canisters (attempt $((count+1))/$retries)..."
@@ -68,7 +68,7 @@ build_canisters_with_retries() {
 # Main deployment script
 main() {
   local network=${1:-local}  # Default network to 'local' if not provided
-  local log_file="../deploy.log"
+  local log_file="./deploy.log"
 
   # Clear previous log file
   >$log_file
@@ -119,25 +119,22 @@ main() {
     fi
   done
 
-  echo $(dfx canister id civic_canister_backend --ic)
   # Build the canisters with retries to ensure all necessary files are generated
   build_canisters_with_retries $network
 
   # Export environment variables
-  if [ "$network" = "ic" ]; then
-    if [ ! -f "./set-env-vars-production.sh" ]; then
-      echo "Error: set-env-vars-production.sh not found."
-      exit 1
-    fi
-    echo "Setting environment variables for mainnet..."
-    . ./set-env-vars-production.sh >>$log_file 2>&1
-  else
-    if [ ! -f "./set-env-vars.sh" ]; then
+  if [ ! -f "./scripts/set-env-vars.sh" ]; then
       echo "Error: set-env-vars.sh not found."
       exit 1
-    fi
+  fi
+  if [ "$network" = "ic" ]; then
+    echo "Setting environment variables for mainnet..."
+    export VITE_ENV="production"
+    . ./scripts/set-env-vars.sh >>$log_file 2>&1
+  else
     echo "Setting environment variables for local deployment..."
-    . ./set-env-vars.sh >>$log_file 2>&1
+    export VITE_ENV="development"
+    . ./scripts/set-env-vars.sh >>$log_file 2>&1
   fi
 
   # Deploy frontend canister
@@ -148,21 +145,14 @@ main() {
 
   # Deploy backend canister
   echo "Deploying civic_canister_backend on network $network..."
-  if [ "$network" = "ic" ]; then
-    if [ ! -f "./deploy-civic-backend.sh" ]; then
+    if [ ! -f "./scripts/deploy-civic-backend.sh" ]; then
       echo "Error: deploy-civic-backend.sh not found."
       exit 1
     fi
-    if ! DFX_NETWORK=ic ./deploy-civic-backend.sh >>$log_file 2>&1; then
+    if ! DFX_NETWORK=$network ./scripts/deploy-civic-backend.sh >>$log_file 2>&1; then
       echo "Error: Failed to deploy civic_canister_backend on network $network. Check $log_file for details."
       exit 1
     fi
-  else
-    if ! dfx deploy civic_canister_backend --network $network >>$log_file 2>&1; then
-      echo "Error: Failed to deploy civic_canister_backend on network $network. Check $log_file for details."
-      exit 1
-    fi
-  fi
 
   # Stop the local DFX environment if it was started
   if [ "$network" = "local" ]; then
@@ -175,6 +165,7 @@ main() {
 
   echo "Deployment completed successfully."
   echo "Please check deploy.log for details."
+
 }
 
 # Execute main function with provided network argument
