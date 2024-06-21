@@ -43,7 +43,7 @@ function App() {
     internetIdentityCanisterId: string,
   }) => {
     // get challenge nonce
-    const nonce = await getNonce('dev');
+    const nonce = await getNonce('dan');
     console.log(nonce);
 
     // sign challenge nonce
