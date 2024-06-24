@@ -21,7 +21,7 @@ candid = "0.10"
 ic-cdk = "0.12"
 ic-cdk-macros = "0.8"
 ic-certification = "2.2"
-ic-stable-structures = "0.6.0"
+ic-stable-structures = "0.6.4"
 ic-representation-independent-hash = "2.2"
 ic-test-state-machine-client = "3"
 ic-crypto-standalone-sig-verifier = { git = "https://github.com/dfinity/ic", rev = "e69bcc7b319cbb3ebc22ec55af35287741244db6" }

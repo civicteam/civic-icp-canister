@@ -20,7 +20,7 @@ asset_util = { path = "../../lib/asset_util" }
 # ic dependencies 
 candid = "0.10"
 ic-cdk = "0.12"
-ic-stable-structures = "0.6.0"
+ic-stable-structures = "0.6.4"
 ic-cdk-macros = "0.8"
 ic-certification = "2.2"
 ic-http-certification = "2.2"
