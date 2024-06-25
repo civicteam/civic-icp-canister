@@ -7,6 +7,7 @@ import axios, { AxiosError, AxiosResponse } from 'axios';
 import { pollUntilConditionMet } from './retries.js';
 import { FaCheckCircle } from 'react-icons/fa';
 import "./index.scss";
+import { jwtDecode } from 'jwt-decode';
 
 
 function App() {
@@ -52,18 +53,15 @@ function App() {
     console.log(proof);
     setSignSuccess(proof.proof);
 
-    // Simulate token retrieval
-    const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
-
-    // // send to civic-sign-backend
-    // const token = await getCivicSignAuthToken({
-    //   did: `did:icp:v0:${principal}`,
-    //   address: principal,
-    //   chain: Chain.ICP.toString(),
-    //   network: '',
-    //   proof,
-    //   nonceTimestamp: nonce.timestamp
-    // })
+    // send to civic-sign-backend
+    const token = await getCivicSignAuthToken({
+      did: `did:icp:v0:${principal}`,
+      address: principal,
+      chain: Chain.ICP.toString(),
+      network: '',
+      proof,
+      nonceTimestamp: nonce.timestamp
+    })
 
 
     setAuthSuccess(true);
@@ -92,6 +90,8 @@ function App() {
             <span style={{ color: 'green', marginRight: '10px' }}>Verified POWO</span>
           </div>
           <p className="auth-token">Civic Sign Authentication Token: {authToken}</p>
+          <p className="auth-token">Decoded Authentication Token</p>
+          {authToken && <p className="auth-token">{JSON.stringify(jwtDecode(authToken as string), undefined, '\n')}</p>}
         </div>
       )}    </main>
   );
@@ -132,8 +132,8 @@ export const getCivicSignAuthToken = async (
     async () => {
       try {
         return await axios.post<{ token: string }>(
-          //`https://dev.api.civic.com/sign-${civicSignBackendStage}/authenticate`,
-          'http://localhost:3000/dev/authenticate',
+          `https://dev.api.civic.com/sign-${civicSignBackendStage}/authenticate`,
+          //'http://localhost:3000/dev/authenticate',
           body
         );
       } catch (error) {
