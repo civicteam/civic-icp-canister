@@ -125,7 +125,7 @@ export const getCivicSignAuthToken = async (
     proof: SignedProof;
     nonceTimestamp: number
   },
-  civicSignBackendStage = 'dev'
+  civicSignBackendStage = 'dan'
 ): Promise<string> => {
   // the authenticate stage sometimes returns a 503, so use retries
   const response = await pollUntilConditionMet(
