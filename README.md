@@ -1,6 +1,6 @@
 # Introduction
 
-The Civic Canister is a component of a decentralized application deployed on the Internet Computer (IC) network by Civic. It is designed to handle secure storage and retrieval of credentials under Internet Identity, the authentication service for the Internet Computer. Internet Identity provides different, unlinkable identities for each app a user logs in to. 
+The Civic Canister is a component of a decentralized application deployed on the Internet Computer Protocol (ICP) blockchain by Civic. It is designed to handle secure storage and retrieval of credentials under Internet Identity, the authentication service for the Internet Computer. Internet Identity provides different, unlinkable identities for each app a user logs in to. 
 
 Civic (or other issuers) can issue credentials for the user as part of its identity verification flow. 3rd parties integrating Civic Pass on ICP can request these credentials from the Civic Canister. Through Internet Identity, the credential can be shared securely between the two dApps without linking the user's identities between the two dApps. 
 
