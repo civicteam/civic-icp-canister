@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-export VITE_ENV=production # set to production if you want to deploy to the internet computer
-
 if [[ "${VITE_ENV}" == "production" ]]; then
   export VITE_CIVIC_FRONTEND_CANISTER_ID=$(dfx canister id civic_canister_frontend --network ic)
   export VITE_INTERNET_IDENTITY_CANISTER_ID=$(dfx canister id internet_identity --network ic)

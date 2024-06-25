@@ -18,5 +18,8 @@
   "workspaces": [
     "src/civic_canister_frontend",
     "src/relying_canister_frontend"
-  ]
+  ],
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
 }
