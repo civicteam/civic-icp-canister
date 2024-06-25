@@ -16,7 +16,7 @@ jobs:
     - name: Set up environment
       run: |
         echo "Setting up on ubuntu-latest"
-        mv ic-test-machine-binaries/ic-test-state-machine${{ matrix.file_suffix }} ic-test-state-machine
+        mv ic-test-machine-binaries/ic-test-state-machine-linux ic-test-state-machine
     - name: Install dfx  
       uses: dfinity/setup-dfx@main
     - name: Confirm successful installation
