@@ -3,6 +3,7 @@ const isProduction = import.meta.env.VITE_ENV === 'production';
 console.log('isProduction:', isProduction);
 
 const internetIdentityCanisterId = import.meta.env.VITE_INTERNET_IDENTITY_CANISTER_ID;
+const civicBackendCanisterId = import.meta.env.VITE_CIVIC_BACKEND_CANISTER_ID;
 const host = import.meta.env.VITE_HOST;
 
 console.log('env', { internetIdentityCanisterId, host }, import.meta.env.VITE_ENV);
@@ -14,4 +15,5 @@ const internetIdentityUrl = isProduction
 export const config = {
   internetIdentityUrl,
   internetIdentityCanisterId,
+  civicBackendCanisterId,
 };
