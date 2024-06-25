@@ -43,7 +43,7 @@ function App() {
     internetIdentityCanisterId: string,
   }) => {
     // get challenge nonce
-    const nonce = await getNonce('dan');
+    const nonce = await getNonce('dev');
     console.log(nonce);
 
     // sign challenge nonce
@@ -125,7 +125,7 @@ export const getCivicSignAuthToken = async (
     proof: SignedProof;
     nonceTimestamp: number
   },
-  civicSignBackendStage = 'dan'
+  civicSignBackendStage = 'dev'
 ): Promise<string> => {
   // the authenticate stage sometimes returns a 503, so use retries
   const response = await pollUntilConditionMet(
