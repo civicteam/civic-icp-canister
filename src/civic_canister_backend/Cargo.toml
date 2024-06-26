@@ -9,7 +9,7 @@ edition = "2021"
 cdylib = []
 
 [lib]
-crate-type = ["lib"]
+crate-type = ["cdylib", "lib"]
 
 [target.'cfg(feature = "cdylib")'.lib]
 crate-type = ["cdylib"]
