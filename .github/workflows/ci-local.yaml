@@ -60,7 +60,4 @@ jobs:
         run: dfx deploy relying_canister_frontend
 
       - name: Run tests
-        run: cargo test
-
-      - name: Build cdylib for deployment
-        run: cargo build --features cdylib
+        run: cargo test --no-default-features --features cdylib
