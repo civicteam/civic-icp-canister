@@ -39,7 +39,7 @@ jobs:
         . scripts/set-env-vars.sh
     - name: Deploy Civic Canister and Internet Identity
       run: |
-        scripts/deploy-civic.sh
+        scripts/deploy-civic.sh local verbose
         dfx deploy internet_identity
     - name: Deploy RP 
       id: deploy_rp
