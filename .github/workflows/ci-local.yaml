@@ -1,58 +1,66 @@
-name: CI Build and Test (Local setup)
+name: CI Build and Test (Linux)
 
 on: [push, pull_request]
-  
-env:
-  CARGO_TERM_COLOR: always
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
-     
+    env:
+      CARGO_TERM_COLOR: always
+
     steps:
-    - name: Check out repository code
-      uses: actions/checkout@v4
-    - name: Set up environment
-      run: |
-        echo "Setting up on ubuntu-latest"
-        mv ic-test-machine-binaries/ic-test-state-machine-linux ic-test-state-machine
-    - name: Install dfx  
-      uses: dfinity/setup-dfx@main
-    - name: Confirm successful installation
-      run: dfx --version
-    - name: Install Rust target
-      run: rustup target add wasm32-unknown-unknown
-    - name: Rust Cache
-      uses: Swatinem/rust-cache@v2.7.3
-    - name: Install dependencies
-      run: |
-        npm install 
-        cargo install ic-wasm
-    - name: Create canisters and start local ICP replica
-      run: |
-        dfx start --clean --background
-        dfx canister create --all
-    - name: Set env variables
-      run: |
-        chmod +x scripts/set-env-vars.sh
-        . scripts/set-env-vars.sh
-    - name: Deploy Civic Canister and Internet Identity
-      run: |
-        scripts/deploy-civic.sh local verbose
-        dfx deploy internet_identity
-    - name: Deploy RP 
-      id: deploy_rp
-      continue-on-error: true
-      run: |
-        dfx deploy relying_canister_frontend
-    - name: Deploy Civic FE
-      run: dfx deploy civic_canister_frontend
-    - name: Try again to deploy RP if it previously failed
-      if:  steps.deploy_rp.outcome == 'failure'
-      run: dfx deploy relying_canister_frontend
- 
-    - name: Run tests
-      run: |
-        chmod +x ic-test-state-machine
-        cargo test --test integration_tests
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Setup DFINITY environment
+        uses: dfinity/setup-dfx@main
+
+      - name: Confirm DFINITY installation
+        run: dfx --version
+
+      - name: Install Rust target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-rust-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Install ic-wasm tool
+        run: cargo install ic-wasm
+
+      - name: Start local IC replica
+        run: dfx start --clean --background
+
+      - name: Create canisters
+        run: dfx canister create --all
+
+      - name: Set environment variables
+        run: chmod +x scripts/set-env-vars.sh && . scripts/set-env-vars.sh
+
+      - name: Deploy Civic Canister and Internet Identity
+        run: |
+          scripts/deploy-civic.sh
+          dfx deploy internet_identity
+
+      - name: Deploy Relying Party (RP) Canister Frontend
+        id: deploy_rp
+        continue-on-error: true
+        run: dfx deploy relying_canister_frontend
+
+      - name: Deploy Civic Canister Frontend
+        run: dfx deploy civic_canister_frontend
+
+      - name: Retry deploying RP if it failed
+        if: ${{ steps.deploy_rp.outcome == 'failure' }}
+        run: dfx deploy relying_canister_frontend
+
+      - name: Run tests
+        run: cargo test
+
+      - name: Build cdylib for deployment
+        run: cargo build --features cdylib

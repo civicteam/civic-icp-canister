@@ -5,8 +5,11 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+cdylib = []
+
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["lib", "cdylib"]
 
 [dependencies]
 internet_identity_interface.workspace = true
@@ -43,6 +46,3 @@ mockall = "0.10.2"
 serde_json.workspace = true
 sha2.workspace = true
 ciborium = "0.2.2"
-
-
-
