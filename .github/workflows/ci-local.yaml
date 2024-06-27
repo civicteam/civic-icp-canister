@@ -31,11 +31,11 @@ jobs:
       - name: Install npm dependencies
         run: npm install
 
-      - name: Install ic-wasm tool
-        run: cargo install ic-wasm
+      # - name: Install ic-wasm tool
+      #   run: cargo install ic-wasm
 
       - name: Run tests
-        run: cargo test --target wasm32-unknown-unknown
+        run: cargo test
 
       # - name: Start local IC replica
       #   run: dfx start --clean --background
