@@ -35,7 +35,7 @@ jobs:
         run: cargo install ic-wasm
 
       - name: Build cdylib for deployment
-        run: ccargo build --target wasm32-unknown-unknown
+        run: cargo build --target wasm32-unknown-unknown
 
       - name: Start local IC replica
         run: dfx start --clean --background
