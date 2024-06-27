@@ -1,33 +1,62 @@
-name: Rust
+name: Canister Tests
 
-on: [push, pull_request]
+on:
+  push:
+
 jobs:
-  build:
-
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 1  # Fetch only the latest commit to save space
+    - uses: actions/checkout@v4
 
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-    - name: Install build essentials and clang
+    - name: Cache Docker layers
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+
+    - name: Build Docker image
       run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential clang
+        docker buildx create --use --name mybuilder
+        docker buildx inspect mybuilder --bootstrap
+        docker buildx build --cache-from=type=local,src=/tmp/.buildx-cache --cache-to=type=local,dest=/tmp/.buildx-cache-new --output type=docker --tag my-rust-builder .
 
-    - name: Rust version
-      run: rustc --version
+    - name: Test Docker image
+      run: |
+        docker run --rm my-rust-builder cargo test --verbose
 
-    - name: Build project
-      run: cargo build
+    - name: Upload WASM artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: civic_canister_backend.wasm
+        path: target/wasm32-unknown-unknown/release/civic_canister_backend.wasm
 
-    - name: Run tests
-      run: cargo test
+    - name: Move new cache
+      run: mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+  wasm-size:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 'Download WASM artifact'
+        uses: actions/download-artifact@v4
+        with:
+          name: civic_canister_backend.wasm
+          path: .
+
+      - name: Check WASM size
+        run: |
+          max_size=2097152 # maximum canister size in bytes
+          actual_size=$(stat -c %s "civic_canister_backend.wasm")
+          echo "WASM size: $actual_size"
+          if (( actual_size > max_size )); then
+            echo "Canister size too big ($actual_size > $max_size)"
+            exit 1
