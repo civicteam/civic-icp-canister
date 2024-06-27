@@ -12,9 +12,9 @@ const civicBackendCanisterUrl = isProduction
   ? `https://${civicBackendCanisterId}.icp0.io` // consistently use the icp0.io domain, don't use the ic0.app domain
   : `http://${civicBackendCanisterId}.${host}`;
 
-const internetIdentityUrl = "https://jqajs-xiaaa-aaaad-aab5q-cai.ic0.app/";
-// ? "https://identity.ic0.app"
-// : `http://${internetIdentityCanisterId}.${host}`;
+const internetIdentityUrl = isProduction
+  ? "https://identity.ic0.app"
+  : `http://${internetIdentityCanisterId}.${host}`;
 
 export const config = {
   internetIdentityUrl,
