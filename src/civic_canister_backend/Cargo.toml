@@ -9,7 +9,7 @@ edition = "2021"
 cdylib = []
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["cdylib", "lib"]
 
 [dependencies]
 internet_identity_interface.workspace = true
