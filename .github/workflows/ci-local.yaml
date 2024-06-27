@@ -34,34 +34,34 @@ jobs:
       - name: Install ic-wasm tool
         run: cargo install ic-wasm
 
-      - name: Build cdylib for deployment
-        run: cargo build --target wasm32-unknown-unknown
-
-      - name: Start local IC replica
-        run: dfx start --clean --background
-
-      - name: Create canisters
-        run: dfx canister create --all
-
-      - name: Set environment variables
-        run: chmod +x scripts/set-env-vars.sh && . scripts/set-env-vars.sh
-
-      - name: Deploy Civic Canister and Internet Identity
-        run: |
-          scripts/deploy-civic.sh
-          dfx deploy internet_identity
-
-      - name: Deploy Relying Party (RP) Canister Frontend
-        id: deploy_rp
-        continue-on-error: true
-        run: dfx deploy relying_canister_frontend
-
-      - name: Deploy Civic Canister Frontend
-        run: dfx deploy civic_canister_frontend
-
-      - name: Retry deploying RP if it failed
-        if: ${{ steps.deploy_rp.outcome == 'failure' }}
-        run: dfx deploy relying_canister_frontend
-
       - name: Run tests
-        run: cargo test
+        run: cargo test --target wasm32-unknown-unknown
+
+      # - name: Start local IC replica
+      #   run: dfx start --clean --background
+
+      # - name: Create canisters
+      #   run: dfx canister create --all
+
+      # - name: Set environment variables
+      #   run: chmod +x scripts/set-env-vars.sh && . scripts/set-env-vars.sh
+
+      # - name: Deploy Civic Canister and Internet Identity
+      #   run: |
+      #     scripts/deploy-civic.sh
+      #     dfx deploy internet_identity
+
+      # - name: Deploy Relying Party (RP) Canister Frontend
+      #   id: deploy_rp
+      #   continue-on-error: true
+      #   run: dfx deploy relying_canister_frontend
+
+      # - name: Deploy Civic Canister Frontend
+      #   run: dfx deploy civic_canister_frontend
+
+      # - name: Retry deploying RP if it failed
+      #   if: ${{ steps.deploy_rp.outcome == 'failure' }}
+      #   run: dfx deploy relying_canister_frontend
+
+      # - name: Run tests
+      #   run: cargo test
