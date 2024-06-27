@@ -26,9 +26,6 @@ jobs:
     - name: Rust version
       run: rustc --version
 
-    - name: Clean up disk space
-      run: sudo rm -rf /usr/share/dotnet /opt/ghc
-
     - name: Build project
       run: cargo build
 
