@@ -110,9 +110,9 @@ echo "Parsed rootkey: ${rootkey_did:0:20}..." >&2
 
 # Add also dev server to alternative origins when deploying locally
 if [ "$DFX_NETWORK" = "local" ]; then
-  ALTERNATIVE_ORIGINS="\"http://$CIVIC_FRONTEND_CANISTER_ID.localhost:4943\""
+  ALTERNATIVE_ORIGINS="\"http://$CIVIC_FRONTEND_CANISTER_ID.localhost:4943\", \"https://icp-civic-sign-frontend-demo-git-tech-200add-verce-655ea2-civic.vercel.app\""
   else
-  ALTERNATIVE_ORIGINS="\"https://$CIVIC_FRONTEND_CANISTER_ID.icp0.io\""
+  ALTERNATIVE_ORIGINS="\"https://$CIVIC_FRONTEND_CANISTER_ID.icp0.io\", \"https://icp-civic-sign-frontend-demo-git-tech-200add-verce-655ea2-civic.vercel.app\""
 fi
 
 echo "Using Alternative Origin: $ALTERNATIVE_ORIGINS $ISSUER_FRONTEND_HOSTNAME"
@@ -122,6 +122,7 @@ echo "Using Alternative Origin: $ALTERNATIVE_ORIGINS $ISSUER_FRONTEND_HOSTNAME"
 mv src/civic_canister_backend/dist/.well-known/ii-alternative-origins ./ii-alternative-origins-template
 cat ./ii-alternative-origins-template | sed "s+ISSUER_FE_HOSTNAME_PLACEHOLDER+$ALTERNATIVE_ORIGINS+g"  > src/civic_canister_backend/dist/.well-known/ii-alternative-origins
 rm ./ii-alternative-origins-template
+cat src/civic_canister_backend/dist/.well-known/ii-alternative-origins > output.txt
 
 dfx deploy --upgrade-unchanged civic_canister_backend --network "$DFX_NETWORK" --argument '(
     opt record {
