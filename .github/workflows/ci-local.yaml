@@ -30,7 +30,7 @@ jobs:
       run: sudo rm -rf /usr/share/dotnet /opt/ghc
 
     - name: Build project
-      run: cargo build --verbose
+      run: cargo build
 
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test
