@@ -16,6 +16,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
+      with:
+        fetch-depth: 1  # Fetch only the latest commit to save space
 
     - name: Install Rust
       uses: actions-rs/toolchain@v1
@@ -30,6 +32,9 @@ jobs:
 
     - name: Rust version
       run: rustc --version
+
+    - name: Clean up disk space
+      run: sudo rm -rf /usr/share/dotnet /opt/ghc
 
     - name: Build project
       run: cargo build --verbose
