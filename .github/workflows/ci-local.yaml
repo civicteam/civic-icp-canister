@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CARGO_TERM_COLOR: always
-      RUSTFLAGS: "-C code-model=large -C link-arg=-fuse-ld=lld"
+      RUSTFLAGS: "-C code-model=large -C"
       RUST_BACKTRACE: 1
 
     steps:
@@ -23,8 +23,8 @@ jobs:
       - name: Install Rust target
         run: rustup target add wasm32-unknown-unknown
 
-      - name: Install `lld` linker
-        run: sudo apt-get install -y lld
+      # - name: Install `lld` linker
+      #   run: sudo apt-get install -y lld
 
       - name: Cache Rust dependencies
         uses: actions/cache@v2
@@ -37,6 +37,9 @@ jobs:
 
       - name: Install ic-wasm tool
         run: cargo install ic-wasm
+
+      - name: Build cdylib for deployment
+        run: cargo build --no-default-features --features cdylib --verbose
 
       - name: Start local IC replica
         run: dfx start --clean --background
@@ -63,9 +66,6 @@ jobs:
       - name: Retry deploying RP if it failed
         if: ${{ steps.deploy_rp.outcome == 'failure' }}
         run: dfx deploy relying_canister_frontend
-
-      - name: Build cdylib for deployment
-        run: cargo build --no-default-features --features cdylib --verbose
 
       - name: Run tests
         run: cargo test
