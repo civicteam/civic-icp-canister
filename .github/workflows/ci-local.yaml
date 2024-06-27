@@ -64,5 +64,8 @@ jobs:
         if: ${{ steps.deploy_rp.outcome == 'failure' }}
         run: dfx deploy relying_canister_frontend
 
+      - name: Build cdylib for deployment
+        run: cargo build --no-default-features --features cdylib --verbose
+
       - name: Run tests
         run: cargo test
