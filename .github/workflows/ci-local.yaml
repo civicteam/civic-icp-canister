@@ -7,8 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CARGO_TERM_COLOR: always
-      RUSTFLAGS: "-C code-model=large -C"
-      RUST_BACKTRACE: 1
+      RUSTFLAGS: "-C code-model=large"
 
     steps:
       - name: Checkout repository code
@@ -22,9 +21,6 @@ jobs:
 
       - name: Install Rust target
         run: rustup target add wasm32-unknown-unknown
-
-      # - name: Install `lld` linker
-      #   run: sudo apt-get install -y lld
 
       - name: Cache Rust dependencies
         uses: actions/cache@v2
