@@ -22,7 +22,8 @@
 
     "civic_canister_frontend": {
       "source": [
-        "src/civic_canister_frontend/dist"
+        "src/civic_canister_frontend/dist",
+        "src/relying_canister_frontend/src/assets"
       ],
       "type": "assets",
       "workspace": "civic_canister_frontend"
