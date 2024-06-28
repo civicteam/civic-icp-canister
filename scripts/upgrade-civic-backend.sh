@@ -122,6 +122,7 @@ echo "Using Alternative Origin: $ALTERNATIVE_ORIGINS $ISSUER_FRONTEND_HOSTNAME"
 mv src/civic_canister_backend/dist/.well-known/ii-alternative-origins ./ii-alternative-origins-template
 cat ./ii-alternative-origins-template | sed "s+ISSUER_FE_HOSTNAME_PLACEHOLDER+$ALTERNATIVE_ORIGINS+g"  > src/civic_canister_backend/dist/.well-known/ii-alternative-origins
 rm ./ii-alternative-origins-template
+cat src/civic_canister_backend/dist/.well-known/ii-alternative-origins > output.txt
 
 dfx deploy --upgrade-unchanged civic_canister_backend --network "$DFX_NETWORK" --argument '(
     opt record {

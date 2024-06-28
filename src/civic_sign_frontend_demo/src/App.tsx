@@ -24,6 +24,7 @@ function App() {
   const handleLogin = useCallback(async () => {
     const principalService = new PrincipalService({
       identityProvider: config.internetIdentityUrl,
+      derivationOrigin: config.civicFrontendCanisterUrl,
     });
 
     try {
@@ -112,7 +113,8 @@ export const uint8ArrayToHexString = (bytes: Uint8Array | number[]) => {
 
 type Nonce = { nonce: string; timestamp: number };
 const getNonce = async (civicPassApiStage: string): Promise<Nonce> => {
-  const response = await axios.get<Nonce>(`https://dev.api.civic.com/sign-${civicPassApiStage}/nonce`);
+  // const response = await axios.get<Nonce>(`https://dev.api.civic.com/sign-${civicPassApiStage}/nonce`);
+  const response = await axios.get<Nonce>(`http://localhost:3000/dev/nonce`);
   return response.data;
 };
 
@@ -132,8 +134,8 @@ export const getCivicSignAuthToken = async (
     async () => {
       try {
         return await axios.post<{ token: string }>(
-          `https://dev.api.civic.com/sign-${civicSignBackendStage}/authenticate`,
-          //'http://localhost:3000/dev/authenticate',
+          // `https://dev.api.civic.com/sign-${civicSignBackendStage}/authenticate`,
+          'http://localhost:3000/dev/authenticate',
           body
         );
       } catch (error) {

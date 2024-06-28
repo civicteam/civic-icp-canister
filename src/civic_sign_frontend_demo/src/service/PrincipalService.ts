@@ -5,6 +5,7 @@ import type { Principal } from "@dfinity/principal";
 
 export type PrincipalConfig = {
   identityProvider: string;
+  derivationOrigin: string;
 }
 
 export class PrincipalService implements PrincipalService {
@@ -23,9 +24,10 @@ export class PrincipalService implements PrincipalService {
     }
 
     const loginResult = new Promise((resolve, reject) => {
-      const { identityProvider } = this.config;
+      const { identityProvider, derivationOrigin } = this.config;
       this.authClient?.login({
         identityProvider,
+        derivationOrigin,
         onSuccess: resolve,
         onError: reject
       });
