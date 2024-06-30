@@ -37,10 +37,10 @@ jobs:
       run: |
         npm install 
         cargo install ic-wasm
-    - name: Run the deploy script to deploy all the canisters to local environment
-      run: |
-        export VITE_ENV="development"
-        ./scripts/deploy-civic.sh
+    # - name: Run the deploy script to deploy all the canisters to local environment
+    #   run: |
+    #     export VITE_ENV="development"
+    #     ./scripts/deploy-civic.sh
     - name: Run tests
       run: |
         chmod +x ic-test-state-machine
