@@ -13,6 +13,15 @@ set -e
 # Enable verbose output if 'verbose' is passed as the second argument
 enable_verbose $2
 
+# Function to print log file and exit
+print_log_and_exit() {
+  local log_file=$1
+  echo "---- Deploy log ----"
+  cat $log_file
+  echo "--------------------"
+  exit 1
+}
+
 # Function to check if canister IDs exist
 check_canister_id() {
   local canister_name=$1
@@ -35,7 +44,7 @@ deploy_canister() {
   echo "Deploying $canister_name on network $network..."
   if ! dfx deploy $canister_name --network $network >>$log_file 2>&1; then
     echo "Error: Failed to deploy $canister_name on network $network. Check $log_file for details."
-    exit 1
+    print_log_and_exit $log_file
   fi
 }
 
@@ -61,7 +70,7 @@ build_canisters_with_retries() {
 
   if [ "$success" = false ]; then
     echo "Error: Failed to build canisters after $retries attempts. Check $log_file for details."
-    exit 1
+    print_log_and_exit $log_file
   fi
 }
 
@@ -86,25 +95,25 @@ main() {
     # Start DFX
     if ! dfx start --clean --background >>$log_file 2>&1; then
       echo "Error: Failed to start local DFX environment. Check $log_file for details."
-      exit 1
+      print_log_and_exit $log_file
     fi
 
     # Check if the local DFX environment started successfully
     sleep 5
     if ! pgrep -f "dfx start" >/dev/null; then
       echo "Error: Failed to start local DFX environment. Check $log_file for details."
-      exit 1
+      print_log_and_exit $log_file
     fi
 
     # Deploy internet_identity canister
     echo "Deploying internet_identity canister for local environment..."
     if ! dfx canister create internet_identity --network $network >>$log_file 2>&1; then
       echo "Error: Failed to create internet_identity canister. Check $log_file for details."
-      exit 1
+      print_log_and_exit $log_file
     fi
     if ! dfx deploy internet_identity --network $network >>$log_file 2>&1; then
       echo "Error: Failed to deploy internet_identity canister. Check $log_file for details."
-      exit 1
+      print_log_and_exit $log_file
     fi
   fi
 
@@ -114,7 +123,7 @@ main() {
       echo "Creating canister $canister on network $network..."
       if ! dfx canister --network $network create $canister >>$log_file 2>&1; then
         echo "Error: Failed to create canister $canister. Check $log_file for details."
-        exit 1
+        print_log_and_exit $log_file
       fi
     fi
   done
@@ -151,7 +160,7 @@ main() {
     fi
     if ! DFX_NETWORK=$network ./scripts/deploy-civic-backend.sh >>$log_file 2>&1; then
       echo "Error: Failed to deploy civic_canister_backend on network $network. Check $log_file for details."
-      exit 1
+      print_log_and_exit $log_file
     fi
 
   # Stop the local DFX environment if it was started
@@ -159,7 +168,7 @@ main() {
     echo "Stopping local DFX environment..."
     if ! dfx stop >>$log_file 2>&1; then
       echo "Error: Failed to stop local DFX environment. Check $log_file for details."
-      exit 1
+      print_log_and_exit $log_file
     fi
   fi
 
