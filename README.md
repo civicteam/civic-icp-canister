@@ -1,4 +1,4 @@
-# Introduction
+# Introduction 
 
 The Civic Canister is a component of a decentralized application deployed on the Internet Computer Protocol (ICP) blockchain by Civic. It is designed to handle secure storage and retrieval of credentials under Internet Identity, the authentication service for the Internet Computer. Internet Identity provides different, unlinkable identities for each app a user logs in to. 
 
@@ -11,7 +11,7 @@ As you can see in the diagram, the user has two "versions" of their Internet Ide
 This repository contains the code to demo the above flow. `civic_canister_backend` contains the code for the Civic Canister, `relying_canister_frontend` contains the code for the example 3rd party, and `civic_canister_frontend` contains the code for an example frontend through which credentials can be issued to the canister. See [CI Build and Test (Local Setup)](#ci-build-and-test-local-setup) for instructions how to run the demo locally. 
 
 
-## What does the Credential issued by the Civic Canister looks like? 
+## What does the Credential issued by the Civic Canister look like? 
 The credentials issued by the Civic Canister adhere to the W3C Verifiable Credentials specification, ensuring compatibility and interoperability with various systems and platforms. 
 
 Here is an example of a credential the Civic Canister can issue:
