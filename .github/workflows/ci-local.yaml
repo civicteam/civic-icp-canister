@@ -1,49 +1,61 @@
 name: CI Build and Test (Local setup)
 
 on: [push, pull_request]
-  
+
 env:
   CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
 
 jobs:
-
   build:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [macos-latest] #, ubuntu-latest]
+        os: [ubuntu-latest]
         include: 
-          # - os: ubuntu-latest
-          #   file_suffix: "-linux"
-          - os: macos-latest
-            file_suffix: "-mac"
+          - os: ubuntu-latest
+            file_suffix: "-linux"
      
     steps:
     - name: Check out repository code
       uses: actions/checkout@v4
+
     - name: Set up environment
       run: |
         echo "Setting up on ${{ matrix.os }}"
         mv ic-test-machine-binaries/ic-test-state-machine${{ matrix.file_suffix }} ic-test-state-machine
+
     - name: Install dfx  
       uses: dfinity/setup-dfx@main
+
     - name: Confirm successful installation
       run: dfx --version
+
     - name: Install Rust target
       run: rustup target add wasm32-unknown-unknown
-    - name: Rust Cache
+
+    - name: Cache Cargo dependencies
       uses: Swatinem/rust-cache@v2.7.3
-    - name: Install dependencies
-      run: |
-        npm install 
-        cargo install ic-wasm
+
+    - name: Cache npm dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+
+    - name: Install npm dependencies
+      run: npm install
+
+    - name: Install additional Cargo tools
+      run: cargo install ic-wasm
+
+    - name: Build WASM module
+      run: cargo build --target wasm32-unknown-unknown --release
+
     - name: Build project
-      run: |
-        cargo build
-    # - name: Run the deploy script to deploy all the canisters to local environment
-    #   run: |
-    #     export VITE_ENV="development"
-    #     ./scripts/deploy-civic.sh local verbose
+      run: cargo build
 
     - name: Run tests
       run: |
