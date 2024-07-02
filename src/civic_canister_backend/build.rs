@@ -2,8 +2,9 @@ use std::env;
 use std::fs;
 
 fn main() {
-    let target = env::var("TARGET").unwrap_or_default();
-    if target.contains("linux-gnu") {
+    let target = env::var("TARGET_ENV").unwrap();
+    println!("Target: {}", target);
+    if target != "macos" {
         let mut content = fs::read_to_string("Cargo.toml").expect("Unable to read Cargo.toml");
 
         // Remove the crate-type if present

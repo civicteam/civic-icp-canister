@@ -51,6 +51,15 @@ jobs:
     - name: Install additional Cargo tools
       run: cargo install ic-wasm
 
+    - name: Set ENV
+      run: TARGET_ENV=ubuntu
+
+    - name: Export ENV
+      run: export TARGET_ENV
+
+    - name: Print ENV
+      run:  echo $TARGET_ENV
+
     - name: Build WASM module
       run: sh scripts/build-wasm.sh
 
@@ -65,9 +74,6 @@ jobs:
           echo "WASM module not found."
           exit 1
         fi
-
-    - name: Set WASM path environment variable
-      run: echo "CIVIC_CANISTER_BACKEND_WASM_PATH=$(pwd)/target/wasm32-unknown-unknown/release/civic_canister_backend.wasm" >> $GITHUB_ENV
 
     - name: Build project
       run: cargo build
