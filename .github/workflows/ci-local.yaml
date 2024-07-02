@@ -54,6 +54,9 @@ jobs:
     - name: Build WASM module
       run: cargo build --target wasm32-unknown-unknown --release
 
+    - name: List contents of target directory
+      run: ls -R target
+
     - name: Verify WASM module exists
       run: |
         if [ -f target/wasm32-unknown-unknown/release/civic_canister_backend.wasm ]; then
