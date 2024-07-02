@@ -57,9 +57,6 @@ jobs:
     - name: Print ENV
       run: echo $TARGET_ENV
 
-    - name: Build WASM module
-      run: sh scripts/build-wasm.sh
-
     - name: Build project
       run: cargo build
 

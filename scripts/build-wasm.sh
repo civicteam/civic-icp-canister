@@ -3,7 +3,7 @@
 # Define the output location
 TARGET_DIR=./target
 OUTPUT_DIR=./src/civic_canister_backend/
-TARGET_ENV=ubuntu
+TARGET_ENV=macos
 
 # Export the TARGET_ENV environment variable
 export TARGET_ENV=$TARGET_ENV
