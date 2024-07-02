@@ -51,20 +51,14 @@ jobs:
     - name: Install additional Cargo tools
       run: cargo install ic-wasm
 
-    - name: Set ENV
-      run: TARGET_ENV=ubuntu
-
-    - name: Export ENV
-      run: export TARGET_ENV
+    - name: Set and Export ENV
+      run: echo "TARGET_ENV=ubuntu" >> $GITHUB_ENV
 
     - name: Print ENV
-      run:  echo $TARGET_ENV
+      run: echo $TARGET_ENV
 
     - name: Build WASM module
       run: sh scripts/build-wasm.sh
-
-    - name: List contents of target directory
-      run: ls -R target
 
     - name: Build project
       run: cargo build

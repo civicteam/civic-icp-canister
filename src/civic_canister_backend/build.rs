@@ -2,7 +2,7 @@ use std::env;
 use std::fs;
 
 fn main() {
-    let target = env::var("TARGET_ENV").unwrap();
+    let target = env::var("TARGET").unwrap_or_else(|_| "unknown".to_string());
     println!("Target: {}", target);
     if target != "macos" {
         let mut content = fs::read_to_string("Cargo.toml").expect("Unable to read Cargo.toml");
