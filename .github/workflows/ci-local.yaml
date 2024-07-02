@@ -52,7 +52,7 @@ jobs:
       run: cargo install ic-wasm
 
     - name: Build WASM module
-      run: cargo build --target wasm32-unknown-unknown --release
+      run: sh scripts/build-wasm.sh
 
     - name: List contents of target directory
       run: ls -R target

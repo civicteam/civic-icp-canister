@@ -47,7 +47,7 @@ const DUMMY_ALIAS_ID_DAPP_PRINCIPAL: &str =
 
     lazy_static! {
         pub static ref CIVIV_CANISTER_BACKEND_WASM: Vec<u8> = {
-            let def_path = PathBuf::from("../../target/wasm32-unknown-unknown/release/civic_canister_backend.wasm");
+            let def_path = PathBuf::from("../civic_canister_backend.wasm");
             let err = format!(
                 "
             Could not find VC Issuer Wasm module for current build.
