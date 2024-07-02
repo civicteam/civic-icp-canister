@@ -50,7 +50,6 @@ jobs:
 
     - name: Install additional Cargo tools
       run: cargo install ic-wasm
-
     - name: Set and Export ENV
       run: echo "TARGET_ENV=ubuntu" >> $GITHUB_ENV
 
@@ -58,7 +57,7 @@ jobs:
       run: echo $TARGET_ENV
 
     - name: Build project
-      run: cargo build
+      run: cargo build --target wasm32-unknown-unknown --release -vv
 
     - name: Run tests
       run: |
