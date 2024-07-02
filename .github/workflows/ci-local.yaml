@@ -70,7 +70,7 @@ jobs:
       run: echo "CIVIC_CANISTER_BACKEND_WASM_PATH=$(pwd)/target/wasm32-unknown-unknown/release/civic_canister_backend.wasm" >> $GITHUB_ENV
 
     - name: Build project
-      run: RUSTFLAGS="-C linker-flavor=ld.lld" cargo build
+      run: apt-get install lld && RUSTFLAGS="-C linker-flavor=ld.lld" cargo build
 
     - name: Run tests
       run: |
