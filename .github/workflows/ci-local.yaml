@@ -54,10 +54,22 @@ jobs:
     - name: Build WASM module
       run: cargo build --target wasm32-unknown-unknown --release
 
+    - name: Verify WASM module exists
+      run: |
+        if [ -f target/wasm32-unknown-unknown/release/civic_canister_backend.wasm ]; then
+          echo "WASM module found."
+        else
+          echo "WASM module not found."
+          exit 1
+        fi
+
+    - name: Set WASM path environment variable
+      run: echo "CIVIC_CANISTER_BACKEND_WASM_PATH=$(pwd)/target/wasm32-unknown-unknown/release/civic_canister_backend.wasm" >> $GITHUB_ENV
+
     - name: Build project
       run: cargo build
 
     - name: Run tests
       run: |
         chmod +x ic-test-state-machine
-        cargo test
+        cargo test -- --nocapture
