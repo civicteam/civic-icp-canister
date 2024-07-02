@@ -2,7 +2,7 @@ use std::env;
 use std::fs;
 
 fn main() {
-    let target = env::var("TARGET").unwrap_or_else(|_| "unknown".to_string());
+    let target = env::var("TARGET_ENV").unwrap();
     println!("Target: {}", target);
     // When we build for Ubuntu on CI, we need to remove the crate-type otherwise it fails with linker issues
     // We need the crate-type for the wasm build
