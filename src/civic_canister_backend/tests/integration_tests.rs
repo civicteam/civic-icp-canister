@@ -45,33 +45,34 @@ const DUMMY_ALIAS_JWS: &str ="eyJqd2siOnsia3R5Ijoib2N0IiwiYWxnIjoiSWNDcyIsImsiOi
 const DUMMY_ALIAS_ID_DAPP_PRINCIPAL: &str =
     "nugva-s7c6v-4yszt-koycv-5b623-an7q6-ha2nz-kz6rs-hawgl-nznbe-rqe";
 
-    lazy_static! {
-        pub static ref CIVIV_CANISTER_BACKEND_WASM: Vec<u8> = {
-            let def_path = PathBuf::from("../civic_canister_backend.wasm");
-            let err = format!(
-                "
-            Could not find VC Issuer Wasm module for current build.
-            I will look for it at {:?} (note that I run from {:?}).
-            ",
-                &def_path,
-                &std::env::current_dir()
-                    .map(|x| x.display().to_string())
-                    .unwrap_or_else(|_| "an unknown directory".to_string())
-            );
-            get_wasm_path("CIVIC_CANISTER_BACKEND_WASM".to_string(), &def_path).expect(&err)
-        };
-        pub static ref DUMMY_ISSUER_INIT: IssuerInit = IssuerInit {
-            ic_root_key_der: hex::decode(DUMMY_ROOT_KEY).unwrap(),
-            idp_canister_ids: vec![Principal::from_text(DUMMY_II_CANISTER_ID).unwrap()],
-            derivation_origin: DUMMY_DERIVATION_ORIGIN.to_string(),
-            frontend_hostname: DUMMY_FRONTEND_HOSTNAME.to_string(),
-            admin: Principal::from_text(ISSUER_PRINCIPAL).unwrap(),
-            authorized_issuers: vec![Principal::from_text(ISSUER_PRINCIPAL).unwrap()],
-        };
-        pub static ref DUMMY_SIGNED_ID_ALIAS: SignedIssuerIdAlias = SignedIssuerIdAlias {
-            credential_jws: DUMMY_ALIAS_JWS.to_string(),
-        };
-    }
+lazy_static! {
+    pub static ref CIVIV_CANISTER_BACKEND_WASM: Vec<u8> = {
+        let def_path = PathBuf::from("./")
+            .join("civic_canister_backend.wasm");
+        let err = format!(
+            "
+        Could not find VC Issuer Wasm module for current build.
+        I will look for it at {:?} (note that I run from {:?}).
+        ",
+            &def_path,
+            &std::env::current_dir()
+                .map(|x| x.display().to_string())
+                .unwrap_or_else(|_| "an unknown directory".to_string())
+        );
+        get_wasm_path("CIVIV_CANISTER_BACKEND_WASM".to_string(), &def_path).expect(&err)
+    };
+    pub static ref DUMMY_ISSUER_INIT: IssuerInit = IssuerInit {
+        ic_root_key_der: hex::decode(DUMMY_ROOT_KEY).unwrap(),
+        idp_canister_ids: vec![Principal::from_text(DUMMY_II_CANISTER_ID).unwrap()],
+        derivation_origin: DUMMY_DERIVATION_ORIGIN.to_string(),
+        frontend_hostname: DUMMY_FRONTEND_HOSTNAME.to_string(),
+        admin: Principal::from_text(ISSUER_PRINCIPAL).unwrap(),
+        authorized_issuers: vec![Principal::from_text(ISSUER_PRINCIPAL).unwrap()],
+    };
+    pub static ref DUMMY_SIGNED_ID_ALIAS: SignedIssuerIdAlias = SignedIssuerIdAlias {
+        credential_jws: DUMMY_ALIAS_JWS.to_string(),
+    };
+}
 
 pub fn install_canister(env: &StateMachine, wasm: Vec<u8>) -> CanisterId {
     let canister_id = env.create_canister(None);
