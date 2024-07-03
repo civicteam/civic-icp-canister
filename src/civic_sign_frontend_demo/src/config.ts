@@ -5,7 +5,7 @@ console.log('isProduction:', isProduction);
 const internetIdentityCanisterId = import.meta.env.VITE_INTERNET_IDENTITY_CANISTER_ID;
 const host = import.meta.env.VITE_HOST;
 
-const civicCanisterBackendUrl = "https://icp.civic.com/";
+const civicCanisterBackendUrl = "https://73ncn-4qaaa-aaaag-alddq-cai.icp0.io";
 
 console.log('env', { internetIdentityCanisterId, host }, import.meta.env.VITE_ENV);
 
