@@ -134,7 +134,6 @@ export const getCivicSignAuthToken = async (
       try {
         return await axios.post<{ token: string }>(
           `https://dev.api.civic.com/sign-${civicSignBackendStage}/authenticate`,
-          //'http://localhost:3000/dev/authenticate',
           body
         );
       } catch (error) {
