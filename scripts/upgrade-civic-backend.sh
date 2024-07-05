@@ -112,7 +112,7 @@ echo "Parsed rootkey: ${rootkey_did:0:20}..." >&2
 if [ "$DFX_NETWORK" = "local" ]; then
   ALTERNATIVE_ORIGINS="\"http://$CIVIC_FRONTEND_CANISTER_ID.localhost:4943\""
   else
-  ALTERNATIVE_ORIGINS="\"https://$CIVIC_FRONTEND_CANISTER_ID.icp0.io\""
+  ALTERNATIVE_ORIGINS="\"https://$CIVIC_FRONTEND_CANISTER_ID.icp0.io\", \"https://icp-sign.civic.me\""
 fi
 
 echo "Using Alternative Origin: $ALTERNATIVE_ORIGINS $ISSUER_FRONTEND_HOSTNAME"

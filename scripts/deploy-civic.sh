@@ -80,7 +80,10 @@ main() {
     # Stop any running dfx instances
     if pgrep -f "dfx start" >/dev/null; then
       echo "Stopping existing DFX instance..."
-      dfx stop >>$log_file 2>&1
+      if ! dfx stop >>$log_file 2>&1; then
+        echo "Error: Failed to stop existing DFX instance. Check $log_file for details."
+        exit 1
+      fi
     fi
 
     # Start DFX
