@@ -1132,5 +1132,3 @@ fn should_issue_credential_e2e() -> Result<(), CallError> {
 
     Ok(())
 }
-
-ic_cdk::export_candid!();
