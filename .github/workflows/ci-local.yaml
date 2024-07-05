@@ -70,7 +70,7 @@ jobs:
       run: echo "CIVIC_CANISTER_BACKEND_WASM_PATH=$(pwd)/target/wasm32-unknown-unknown/release/civic_canister_backend.wasm" >> $GITHUB_ENV
 
     - name: Build project
-      run: sudo apt-get install build-essential llvm-dev clang lld && RUSTFLAGS="-C linker-flavor=ld.lld" cargo build
+      run: sudo apt-get install lld build-essential pkg-config libssl-dev llvm-dev liblmdb-dev clang cmake jq && RUSTFLAGS="-C linker-flavor=ld.lld" cargo build
 
     - name: Run tests
       run: |
