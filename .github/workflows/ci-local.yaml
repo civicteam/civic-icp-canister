@@ -8,15 +8,13 @@ env:
 jobs:
 
   build:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [macos-latest] #, ubuntu-latest]
+        os: [ubuntu-latest]
         include: 
-          # - os: ubuntu-latest
-          #   file_suffix: "-linux"
-          - os: macos-latest
-            file_suffix: "-mac"
+          - os: ubuntu-latest
+            file_suffix: "-linux"
      
     steps:
     - name: Check out repository code
