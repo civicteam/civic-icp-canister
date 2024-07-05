@@ -17,4 +17,6 @@ updated_content=$(echo "$cargo_toml_content" | sed '/crate-type = \["cdylib", "l
 # Write the updated content back to Cargo.toml
 echo "$updated_content" > $CARGO_TOML
 
-echo "crate-type line removed from Cargo.toml"
+echo "Updated Cargo.toml:"
+cat $CARGO_TOML
+git status
