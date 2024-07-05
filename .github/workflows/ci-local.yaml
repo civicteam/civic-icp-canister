@@ -39,8 +39,14 @@ jobs:
         cargo install ic-wasm
     - name: Run the deploy script to deploy all the canisters to local environment
       run: |
-        export VITE_ENV="development"
-        ./scripts/deploy-civic.sh
+        cargo build --target wasm32-unknown-unknown --release
+    - name: List contents of the directory
+      run: |
+        ls -R target/wasm32-unknown-unknown/release
+    - name: Update Cargo.toml
+      run: |
+        chmod +x ./scripts/build-ubuntu.sh
+        ./scripts/build-ubuntu.sh
     - name: Run tests
       run: |
         chmod +x ic-test-state-machine
