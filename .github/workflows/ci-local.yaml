@@ -48,4 +48,4 @@ jobs:
     - name: Run tests
       run: |
         chmod +x ic-test-state-machine
-        cargo test --test integration_tests
+        cargo test -- --nocapture
