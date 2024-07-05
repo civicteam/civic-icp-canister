@@ -71,9 +71,9 @@ jobs:
 
     - name: Build project
       #run: sudo apt-get install lld build-essential pkg-config libssl-dev llvm-dev liblmdb-dev clang cmake jq && RUSTFLAGS="-C linker-flavor=ld.lld" cargo build
-      run: cargo clean && cargo build
+      run: cargo build --target wasm32-unknown-unknown
       
     - name: Run tests
       run: |
         chmod +x ic-test-state-machine
-        cargo test -- --nocapture
+        cargo test --target wasm32-unknown-unknown -- --nocapture
