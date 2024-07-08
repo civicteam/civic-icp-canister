@@ -60,9 +60,14 @@ do
             shift; # shift past --issuer-canister & value
             shift;
             ;;
-        --civic)
-            CIVIC_DOMAIN="icp.civic.com"
-            shift; # shift past --civic
+        --domain*)
+            if [[ "$1" == *=* ]]; then
+                CANISTER_DOMAIN="${1#*=}" # Pass your own custom domain if you want to use one for the canister
+                shift;
+            else
+                CANISTER_DOMAIN="${2:-icp.civic.com}" # Default to icp.civic.com
+                shift; # shift past the value
+            fi
             ;;
         *)
             echo "ERROR: unknown argument $1"
@@ -116,7 +121,7 @@ echo "Parsed rootkey: ${rootkey_did:0:20}..." >&2
 if [ "$DFX_NETWORK" = "local" ]; then
   ALTERNATIVE_ORIGINS="\"http://$CIVIC_FRONTEND_CANISTER_ID.localhost:4943\""
   else
-  if [ -n "${CIVIC_DOMAIN:-}" ]; then
+  if [ -n "${CANISTER_DOMAIN:-}" ]; then
     ALTERNATIVE_ORIGINS="\"https://$CIVIC_FRONTEND_CANISTER_ID.icp0.io\", \"https://icp-sign.civic.me\""
   else
     ALTERNATIVE_ORIGINS="\"https://$CIVIC_FRONTEND_CANISTER_ID.icp0.io\""
@@ -131,10 +136,10 @@ mv src/civic_canister_backend/dist/.well-known/ii-alternative-origins ./ii-alter
 cat ./ii-alternative-origins-template | sed "s+ISSUER_FE_HOSTNAME_PLACEHOLDER+$ALTERNATIVE_ORIGINS+g"  > src/civic_canister_backend/dist/.well-known/ii-alternative-origins
 rm ./ii-alternative-origins-template
 
-# Set the Civic Canister domain if this is a civic deployment
-if [ -n "${CIVIC_DOMAIN:-}" ]; then
-    echo "$CIVIC_DOMAIN" > src/civic_canister_backend/dist/.well-known/ic-domains
-    echo "Civic domain set to $CIVIC_DOMAIN"
+# Set the canister domain 
+if [ -n "${CANISTER_DOMAIN:-}" ]; then
+    echo "$CANISTER_DOMAIN" > src/civic_canister_backend/dist/.well-known/ic-domains
+    echo "Canister domain set to $CANISTER_DOMAIN"
 fi
 
 
