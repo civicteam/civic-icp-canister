@@ -16,7 +16,7 @@ function usage() {
     cat >&2 << EOF
 
 Usage:
-  $0 [--ii-canister-id CANISTER_ID] [--dfx-network NETWORK]
+  $0 [--ii-canister-id CANISTER_ID] [--dfx-network NETWORK] 
 
 Options:
   --ii-canister-id CANISTER_ID  The canister ID to use as IDP, defaults to the local internet_identity canister
@@ -59,6 +59,15 @@ do
             ISSUER_CANISTER_ID="${2:?missing value for '--issuer-canister-id'}"
             shift; # shift past --issuer-canister & value
             shift;
+            ;;
+        --domain*)
+            if [[ "$1" == *=* ]]; then
+                CANISTER_DOMAIN="${1#*=}" # Pass your own custom domain if you want to use one for the canister
+                shift;
+            else
+                CANISTER_DOMAIN="${2:-icp.civic.com}" # Default to icp.civic.com
+                shift; # shift past the value
+            fi
             ;;
         *)
             echo "ERROR: unknown argument $1"
@@ -112,7 +121,11 @@ echo "Parsed rootkey: ${rootkey_did:0:20}..." >&2
 if [ "$DFX_NETWORK" = "local" ]; then
   ALTERNATIVE_ORIGINS="\"http://$CIVIC_FRONTEND_CANISTER_ID.localhost:4943\""
   else
-  ALTERNATIVE_ORIGINS="\"https://$CIVIC_FRONTEND_CANISTER_ID.icp0.io\", \"https://icp-sign.civic.me\""
+  if [ -n "${CANISTER_DOMAIN:-}" ]; then
+    ALTERNATIVE_ORIGINS="\"https://$CIVIC_FRONTEND_CANISTER_ID.icp0.io\", \"https://icp-sign.civic.me\""
+  else
+    ALTERNATIVE_ORIGINS="\"https://$CIVIC_FRONTEND_CANISTER_ID.icp0.io\""
+  fi
 fi
 
 echo "Using Alternative Origin: $ALTERNATIVE_ORIGINS $ISSUER_FRONTEND_HOSTNAME"
@@ -122,6 +135,13 @@ echo "Using Alternative Origin: $ALTERNATIVE_ORIGINS $ISSUER_FRONTEND_HOSTNAME"
 mv src/civic_canister_backend/dist/.well-known/ii-alternative-origins ./ii-alternative-origins-template
 cat ./ii-alternative-origins-template | sed "s+ISSUER_FE_HOSTNAME_PLACEHOLDER+$ALTERNATIVE_ORIGINS+g"  > src/civic_canister_backend/dist/.well-known/ii-alternative-origins
 rm ./ii-alternative-origins-template
+
+# Set the canister domain 
+if [ -n "${CANISTER_DOMAIN:-}" ]; then
+    echo "$CANISTER_DOMAIN" > src/civic_canister_backend/dist/.well-known/ic-domains
+    echo "Canister domain set to $CANISTER_DOMAIN"
+fi
+
 
 dfx deploy --upgrade-unchanged civic_canister_backend --network "$DFX_NETWORK" --argument '(
     opt record {
