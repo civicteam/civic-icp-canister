@@ -1,12 +1,12 @@
 name: CI Build and Test (Local setup)
 
 on: [push, pull_request]
-  
+
 env:
   CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
     strategy:
@@ -19,32 +19,44 @@ jobs:
     steps:
     - name: Check out repository code
       uses: actions/checkout@v4
+
     - name: Set up environment
       run: |
         echo "Setting up on ${{ matrix.os }}"
         mv ic-test-machine-binaries/ic-test-state-machine${{ matrix.file_suffix }} ic-test-state-machine
+
     - name: Install dfx  
       uses: dfinity/setup-dfx@main
+
     - name: Confirm successful installation
       run: dfx --version
+
     - name: Install Rust target
       run: rustup target add wasm32-unknown-unknown
-    - name: Rust Cache
+
+    - name: Cache Cargo dependencies
       uses: Swatinem/rust-cache@v2.7.3
-    - name: Install dependencies
-      run: |
-        npm install 
-        cargo install ic-wasm
-    - name: Run the deploy script to deploy all the canisters to local environment
-      run: |
-        cargo build --target wasm32-unknown-unknown --release
-    - name: List contents of the directory
-      run: |
-        ls -R target/wasm32-unknown-unknown/release
-    - name: Update Cargo.toml
-      run: |
-        chmod +x ./scripts/build-ubuntu.sh
-        ./scripts/build-ubuntu.sh
+    - name: Cache npm dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+
+    - name: Install npm dependencies
+      run: npm install
+
+    - name: Install additional Cargo tools
+      run: cargo install ic-wasm
+    - name: Set and Export ENV
+      run: echo "TARGET_ENV=ubuntu" >> $GITHUB_ENV
+
+    - name: Print ENV
+      run: echo $TARGET_ENV
+
+    - name: Build project
+      run: cargo build --target wasm32-unknown-unknown --release -vv
     - name: Run tests
       run: |
         chmod +x ic-test-state-machine
