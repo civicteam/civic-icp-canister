@@ -24,6 +24,7 @@ function App() {
   const handleLogin = useCallback(async () => {
     const principalService = new PrincipalService({
       identityProvider: config.internetIdentityUrl,
+      derivationOrigin: config.civicCanisterBackendUrl,
     });
 
     try {
@@ -133,7 +134,6 @@ export const getCivicSignAuthToken = async (
       try {
         return await axios.post<{ token: string }>(
           `https://dev.api.civic.com/sign-${civicSignBackendStage}/authenticate`,
-          //'http://localhost:3000/dev/authenticate',
           body
         );
       } catch (error) {

@@ -231,7 +231,7 @@
   dependencies:
     bs58 "^5.0.0"
 
-"@civic/civic-sign@^0.6.0-beta.17":
+"@civic/civic-sign@^0.6.0-beta.23":
   version "0.6.0-beta.25"
   resolved "https://registry.yarnpkg.com/@civic/civic-sign/-/civic-sign-0.6.0-beta.25.tgz#1f222a400a2f631c955def399f0e8bbd67fed895"
   integrity sha512-ZBzLl+J2gU96K3y6lXWHytuRtrfV5KoIyaZfr91RLArT/lxLg0FUQSyvyg2EG7xs3/Tlr1lBv6d3XaY/LV6aeQ==

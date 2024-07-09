@@ -36,7 +36,6 @@ jobs:
 
     - name: Cache Cargo dependencies
       uses: Swatinem/rust-cache@v2.7.3
-
     - name: Cache npm dependencies
       uses: actions/cache@v3
       with:
@@ -58,7 +57,6 @@ jobs:
 
     - name: Build project
       run: cargo build --target wasm32-unknown-unknown --release -vv
-
     - name: Run tests
       run: |
         chmod +x ic-test-state-machine
