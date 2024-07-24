@@ -144,7 +144,11 @@ This script performs the following tasks:
 5. **Fetch Credentials**: Fetches and logs all credentials associated with a specified principal.
 
 ### Usage Instructions
+Note that the script uses a dummy issuer principal which needs to be added to your canister config (inside the deploy/upgrade scripts): 
+```
+        authorized_issuers = vec { principal "'"$ADMIN_PRINCIPAL_ID"'"; principal "'"tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae"'" };
 
+```  
 1. **Ensure Environment Variables are Set**: Make sure the `.env.local` file contains the necessary environment variables.
 
 2. **Run the Script**:
