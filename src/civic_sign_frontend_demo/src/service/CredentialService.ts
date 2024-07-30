@@ -1,7 +1,7 @@
 // src/service/CredentialService.ts
 
 import { Actor, HttpAgent } from "@dfinity/agent";
-import { idlFactory as civic } from "../../../declarations/civic_canister_backend/civic_canister_backend.did.js";
+import { idlFactory as civic } from "../declarations/civic_canister_backend/civic_canister_backend.did.js";
 import { Principal } from "@dfinity/principal";
 import { requestVerifiablePresentation } from "@dfinity/verifiable-credentials/request-verifiable-presentation";
 
