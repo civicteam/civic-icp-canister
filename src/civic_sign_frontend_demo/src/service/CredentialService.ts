@@ -40,7 +40,7 @@ export class CredentialService {
     try {
       const issuerData = {
         origin: this.config.civicBackendCanisterUrl,
-        canisterId: this.config.civicBackendCanisterId,
+        canisterId: Principal.fromText(this.config.civicBackendCanisterId),
       };
 
       const credentialData = {
