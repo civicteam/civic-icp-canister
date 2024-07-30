@@ -139,7 +139,7 @@ function App() {
           <img src="/logo2.svg" alt="DFINITY logo" />
           {isLoggedIn && <h1>Welcome to the ICP Relying Canister</h1>}
           {isLoggedIn && <p>Logged in as {principal?.toText()}</p>}
-          {isLoggedIn && <button onClick={retrieveCredential}>Retrieve Credential</button>}
+          {/* {isLoggedIn && <button onClick={retrieveCredential}>Retrieve Credential</button>} */}
           {!isLoggedIn && urlCode !== 'ACTIVE' && <button onClick={handleLogin}>Login</button>}
         </GatewayStatusLookup>
       </GatewayProvider>

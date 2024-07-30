@@ -1,7 +1,7 @@
 // src/service/CredentialService.ts
 
 import { Actor, HttpAgent } from "@dfinity/agent";
-import { idlFactory as civic } from "../../../declarations/civic_canister_backend/civic_canister_backend.did.js";
+import { idlFactory as civic } from "../declarations/civic_canister_backend/civic_canister_backend.did.js";
 import { Secp256k1KeyIdentity } from "@dfinity/identity-secp256k1";
 import { Principal } from "@dfinity/principal";
 import { requestVerifiablePresentation } from "@dfinity/verifiable-credentials/request-verifiable-presentation";
@@ -55,29 +55,29 @@ export class CredentialService {
 
       console.log('Requesting Verifiable Credentials...', await this.getCredentialsFromCanister(p));
 
-      // const onSuccess = (response: any) => 
-      //   console.log('VC Request Successful:', response);
+      const onSuccess = (response: any) => 
+        console.log('VC Request Successful:', response);
       
-      // const onError = (error: any) =>
-      //   console.error('VC Request Failed:', error);
+      const onError = (error: any) =>
+        console.error('VC Request Failed:', error);
       
-      // const iiUrl = 'https://identity.ic0.app';
-      // const identityProvider =  new URL(this.config.internetIdentityUrl);
+      const iiUrl = 'https://identity.ic0.app';
+      const identityProvider =  new URL(this.config.internetIdentityUrl);
       
-      // const derivationOrigin = undefined;
+      const derivationOrigin = undefined;
 
-      // console.log('Requesting Verifiable Presentation...', derivationOrigin);
+      console.log('Requesting Verifiable Presentation...', derivationOrigin);
       
-      // const requestParams = {
-      //   onSuccess,
-      //   onError,
-      //   credentialData,
-      //   issuerData,
-      //   identityProvider,
-      //   derivationOrigin
-      // };
+      const requestParams = {
+        onSuccess,
+        onError,
+        credentialData,
+        issuerData,
+        identityProvider,
+        derivationOrigin
+      };
       
-      // requestVerifiablePresentation(requestParams);
+      requestVerifiablePresentation(requestParams);
     } catch (error) {
       console.error("Error getting credentials:", error);
     }
