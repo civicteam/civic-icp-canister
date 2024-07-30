@@ -2,7 +2,6 @@
 
 import { Actor, HttpAgent } from "@dfinity/agent";
 import { idlFactory as civic } from "../declarations/civic_canister_backend/civic_canister_backend.did.js";
-import { Secp256k1KeyIdentity } from "@dfinity/identity-secp256k1";
 import { Principal } from "@dfinity/principal";
 import { requestVerifiablePresentation } from "@dfinity/verifiable-credentials/request-verifiable-presentation";
 
