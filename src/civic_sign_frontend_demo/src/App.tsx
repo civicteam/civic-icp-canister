@@ -82,7 +82,7 @@ function App() {
   const [principal, setPrincipal] = useState<Principal | undefined>(undefined);
   const [credentialService, setCredentialService] = useState<CredentialService>();
   const icpWallet = useMemo(() => ({ principal: principal?.toText() ?? undefined }), [principal]);
-  const gatekeeperNetwork = "tigoYhp9SpCDoCQmXGj2im5xa3mnjR1zuXrpCJ5ZRmi";
+  const gatekeeperNetwork = "tunQheuPpHhjjsbrUDp4rikqYez9UXv4SXLRHf9Kzsv";
 
   const [urlCode, setUrlCode] = useState<string | null>(null);
 
