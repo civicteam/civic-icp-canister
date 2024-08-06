@@ -52,7 +52,7 @@ function GatewayStatusLookup({ children, isLoggedIn }: { children: React.ReactNo
   const retrievePass = () => {
     const currentUrl = window.location.href;
     const encodedRedirectUri = encodeURIComponent(currentUrl);
-    const passPortalUrl = `https://icp-pass-portal-l79vhikf3-civic.vercel.app?redirect_uri=${encodedRedirectUri}`;
+    const passPortalUrl = `https://icp-pass-portal-2szpd49e6-civic.vercel.app?redirect_uri=${encodedRedirectUri}`;
     window.location.href = passPortalUrl;
   };
 
@@ -82,7 +82,8 @@ function App() {
   const [principal, setPrincipal] = useState<Principal | undefined>(undefined);
   const [credentialService, setCredentialService] = useState<CredentialService>();
   const icpWallet = useMemo(() => ({ principal: principal?.toText() ?? undefined }), [principal]);
-  const gatekeeperNetwork = "tunQheuPpHhjjsbrUDp4rikqYez9UXv4SXLRHf9Kzsv";
+  const gatekeeperNetwork = "tgnuXXNMDLK8dy7Xm1TdeGyc95MDym4bvAQCwcW21Bf";
+  
 
   const [urlCode, setUrlCode] = useState<string | null>(null);
 
