@@ -145,8 +145,7 @@ if [ -n "${CANISTER_DOMAIN:-}" ]; then
     echo "Canister domain set to $CANISTER_DOMAIN"
 fi
 
-
-dfx deploy --upgrade-unchanged civic_canister_backend --network "$DFX_NETWORK" --argument '(
+dfx canister install --mode reinstall civic_canister_backend --network "$DFX_NETWORK" --argument '(
     opt record {
         idp_canister_ids = vec { principal "'"$II_CANISTER_ID"'" };
         ic_root_key_der = vec '"$rootkey_did"';
