@@ -8,7 +8,6 @@ import { requestVerifiablePresentation } from "@dfinity/verifiable-credentials/r
 export type CredentialConfig = {
   civicBackendCanisterUrl: string;
   dummyCivicSampleKey: Uint8Array;
-  relyingFrontendCanisterUrl: string;
   internetIdentityUrl: string;
   civicBackendCanisterId: string;
 }

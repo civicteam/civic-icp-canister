@@ -3,11 +3,10 @@ const isDev = import.meta.env.VITE_ENV === 'development';
 console.log('isDev:', isDev);
 
 const internetIdentityCanisterId = import.meta.env.VITE_INTERNET_IDENTITY_CANISTER_ID;
-const civicBackendCanisterId = import.meta.env.VITE_CIVIC_BACKEND_CANISTER_ID;
-const relyingFrontendCanisterId = import.meta.env.VITE_RELYING_FRONTEND_CANISTER_ID;
+const civicBackendCanisterId = isDev ? import.meta.env.VITE_CIVIC_BACKEND_CANISTER_ID : '73ncn-4qaaa-aaaag-alddq-cai';
 const host = import.meta.env.VITE_HOST;
 
-console.log('env', { internetIdentityCanisterId, civicBackendCanisterId, relyingFrontendCanisterId, host }, import.meta.env.VITE_ENV);
+console.log('env', { internetIdentityCanisterId, civicBackendCanisterId, host });
 
 const internetIdentityUrl = !isDev
   ? 'https://identity.ic0.app'
@@ -16,10 +15,6 @@ const internetIdentityUrl = !isDev
 const civicBackendCanisterUrl = !isDev
   ? `https://${civicBackendCanisterId}.icp0.io` // consistently use the icp0.io domain, don't use the ic0.app domain
   : `http://${civicBackendCanisterId}.${host}`;
-
-const relyingFrontendCanisterUrl = !isDev
-  ? `https://${relyingFrontendCanisterId}.icp0.io`
-  : `http://${relyingFrontendCanisterId}.${host}`;
 
 
 const portalUrl = `https://icp-getpass.civic.com`;
@@ -36,7 +31,6 @@ export const config = {
   civicBackendCanisterUrl,
   civicBackendCanisterId,
   internetIdentityCanisterId,
-  relyingFrontendCanisterUrl,
   dummyCivicSampleKey,
   portalUrl,
   gatekeeperNetwork,
