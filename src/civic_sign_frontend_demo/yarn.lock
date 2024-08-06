@@ -317,6 +317,19 @@
     tweetnacl "^1.0.3"
     yargs "^17.7.2"
 
+"@civic/gateway-client-core@1.0.8-beta.1":
+  version "1.0.8-beta.1"
+  resolved "https://registry.yarnpkg.com/@civic/gateway-client-core/-/gateway-client-core-1.0.8-beta.1.tgz#c987f121f24f366654c8b93d58a39fcaf8d91b3f"
+  integrity sha512-J+GgTHsC+NZFg6LmvQFHNS5qsvhRlvVwUUtHD7D7MfYRltS1CB2Q9UFQE9OchmNTYlIzmnskexUfdkDVc+bWXA==
+  dependencies:
+    fetch-retry "^6.0.0"
+    immer "^10.0.4"
+    isomorphic-fetch "^3.0.0"
+    ramda "^0.30.0"
+    uuid "^9.0.1"
+    zustand "^4.5.2"
+    zustand-computed-state "^0.1.3"
+
 "@civic/gateway-client-core@1.0.9-beta.0":
   version "1.0.9-beta.0"
   resolved "https://registry.npmjs.org/@civic/gateway-client-core/-/gateway-client-core-1.0.9-beta.0.tgz"
@@ -330,12 +343,12 @@
     zustand "^4.5.2"
     zustand-computed-state "^0.1.3"
 
-"@civic/gateway-client-react@1.0.9-beta.0":
-  version "1.0.9-beta.0"
-  resolved "https://registry.npmjs.org/@civic/gateway-client-react/-/gateway-client-react-1.0.9-beta.0.tgz"
-  integrity sha512-gp+pICJwO+unX5HsfySa32jDQpkCgVfdhCECoOH/R/TBmgaSXJ4XikpxQXYfmVGmnTOw+AMPRVhMgHH0/l7ktQ==
+"@civic/gateway-client-react@1.0.8-beta.4":
+  version "1.0.8-beta.4"
+  resolved "https://registry.yarnpkg.com/@civic/gateway-client-react/-/gateway-client-react-1.0.8-beta.4.tgz#4f1f8b5c0a3f406b57bbcde974aca3fe6ce86224"
+  integrity sha512-Ev5TUXPQuUqBqZc6cY4NtV2vajhyse1o9aUgCQnMUA7CegLoOznyKKuyTLgqVVLZPA53hVOWjq9+Qd3Hyhh0dQ==
   dependencies:
-    "@civic/gateway-client-core" "1.0.9-beta.0"
+    "@civic/gateway-client-core" "1.0.8-beta.1"
     "@testing-library/react-hooks" "^8.0.1"
     fetch-retry "^5.0.6"
     iframe-resizer-react "^1.0.8"
@@ -357,13 +370,13 @@
     prop-types "^15.8.1"
     ramda "^0.30.0"
 
-"@civic/icp-gateway-react@^0.0.4-beta.3":
-  version "0.0.4-beta.3"
-  resolved "https://registry.npmjs.org/@civic/icp-gateway-react/-/icp-gateway-react-0.0.4-beta.3.tgz"
-  integrity sha512-zAIebp/vvVShR8t6I+xot+wYlNO9pZHYGV5mQK2LeUDlbalJKMrP+GpREbqeefvXQn6QoRr3dqxOq43RA15neQ==
+"@civic/icp-gateway-react@^0.0.5-beta.1":
+  version "0.0.5-beta.1"
+  resolved "https://registry.yarnpkg.com/@civic/icp-gateway-react/-/icp-gateway-react-0.0.5-beta.1.tgz#c0b566d72c82049b97b10dbecb90842d9b031424"
+  integrity sha512-ds8CORcn1472Yndu0kjTquRdGPCbneAKQ1hM9tEer1VaCgbRLht0u1WzvzairCo5wRVqpIyvm1xjDI34DhITPQ==
   dependencies:
-    "@civic/gateway-client-core" "1.0.9-beta.0"
-    "@civic/gateway-client-react" "1.0.9-beta.0"
+    "@civic/gateway-client-core" "1.0.8-beta.1"
+    "@civic/gateway-client-react" "1.0.8-beta.4"
     "@civic/icp-gateway-chain-client" "0.0.4-beta.1"
     "@dfinity/principal" "^2.0.0"
     ethers "^6.12.1"
@@ -430,7 +443,7 @@
 
 "@dfinity/verifiable-credentials@^0.0.2":
   version "0.0.2"
-  resolved "https://registry.yarnpkg.com/@dfinity/verifiable-credentials/-/verifiable-credentials-0.0.2.tgz#a4a0f941a4d482003998bc5e97d112e2403f3375"
+  resolved "https://registry.npmjs.org/@dfinity/verifiable-credentials/-/verifiable-credentials-0.0.2.tgz"
   integrity sha512-9vJYyXRPaXSPO74CS5zFLMoqtAaKINUSaYY9+rvRLvBXoGppNQQNWn/ZMCS+zCRyqfan01dlRlG8nap7xPx7KQ==
   dependencies:
     nanoid "^5.0.7"
@@ -3451,7 +3464,7 @@ nanoid@^3.3.7:
 
 nanoid@^5.0.7:
   version "5.0.7"
-  resolved "https://registry.yarnpkg.com/nanoid/-/nanoid-5.0.7.tgz#6452e8c5a816861fd9d2b898399f7e5fd6944cc6"
+  resolved "https://registry.npmjs.org/nanoid/-/nanoid-5.0.7.tgz"
   integrity sha512-oLxFY2gd2IqnjcYyOXD8XGCftpGtZP2AbHbOkthDkvRywH5ayNtPVy9YlOPcHckXzbLTCHpkb7FB+yuxKV13pQ==
 
 node-addon-api@^2.0.0:

@@ -52,7 +52,7 @@ function GatewayStatusLookup({ children, isLoggedIn }: { children: React.ReactNo
   const retrievePass = () => {
     const currentUrl = window.location.href;
     const encodedRedirectUri = encodeURIComponent(currentUrl);
-    const passPortalUrl = `https://icp-pass-portal-l79vhikf3-civic.vercel.app?redirect_uri=${encodedRedirectUri}`;
+    const passPortalUrl = `${config.portalUrl}/?redirect_uri=${encodedRedirectUri}`;
     window.location.href = passPortalUrl;
   };
 
@@ -82,7 +82,7 @@ function App() {
   const [principal, setPrincipal] = useState<Principal | undefined>(undefined);
   const [credentialService, setCredentialService] = useState<CredentialService>();
   const icpWallet = useMemo(() => ({ principal: principal?.toText() ?? undefined }), [principal]);
-  const gatekeeperNetwork = "tunQheuPpHhjjsbrUDp4rikqYez9UXv4SXLRHf9Kzsv";
+  const { gatekeeperNetwork } = config;
 
   const [urlCode, setUrlCode] = useState<string | null>(null);
 
@@ -139,7 +139,7 @@ function App() {
           <img src="/logo2.svg" alt="DFINITY logo" />
           {isLoggedIn && <h1>Welcome to the ICP Relying Canister</h1>}
           {isLoggedIn && <p>Logged in as {principal?.toText()}</p>}
-          {/* {isLoggedIn && <button onClick={retrieveCredential}>Retrieve Credential</button>} */}
+          {isLoggedIn && <button onClick={retrieveCredential}>Retrieve Credential</button>}
           {!isLoggedIn && urlCode !== 'ACTIVE' && <button onClick={handleLogin}>Login</button>}
         </GatewayStatusLookup>
       </GatewayProvider>

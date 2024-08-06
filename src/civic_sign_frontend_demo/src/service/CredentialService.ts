@@ -37,22 +37,21 @@ export class CredentialService {
 
   // Retrieve all credentials for a given principal
   async getCredentials(principal: Principal): Promise<void> {
-    const p = 'jptln-iaf7q-52y5h-a374c-rtd4a-j3oby-i7tfm-cuis6-7lsx5-zor6m-aqe';
     try {
       const issuerData = {
-        origin: 'https://73ncn-4qaaa-aaaag-alddq-cai.icp0.io',
-        canisterId: Principal.fromText('73ncn-4qaaa-aaaag-alddq-cai'),
+        origin: this.config.civicBackendCanisterUrl,
+        canisterId: Principal.fromText(this.config.civicBackendCanisterId),
       };
 
       const credentialData = {
         credentialSpec: {
-          credentialType: 'VerifiedAdult',
+          credentialType: 'CivicPass',
           arguments: {}
         },
         credentialSubject: principal
       };
 
-      console.log('Requesting Verifiable Credentials...', await this.getCredentialsFromCanister(p));
+      console.log('Requesting Verifiable Credentials...', await this.getCredentialsFromCanister(principal.toText()));
 
       const onSuccess = (response: any) => 
         console.log('VC Request Successful:', response);
@@ -60,12 +59,11 @@ export class CredentialService {
       const onError = (error: any) =>
         console.error('VC Request Failed:', error);
       
-      const iiUrl = 'https://identity.ic0.app';
       const identityProvider =  new URL(this.config.internetIdentityUrl);
       
       const derivationOrigin = undefined;
 
-      console.log('Requesting Verifiable Presentation...', derivationOrigin);
+      console.log('Requesting Verifiable Presentation...', this.config);
       
       const requestParams = {
         onSuccess,

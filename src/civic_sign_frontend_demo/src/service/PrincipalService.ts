@@ -24,7 +24,7 @@ export class PrincipalService implements PrincipalService {
 
     const loginResult = new Promise((resolve, reject) => {
       const { identityProvider } = this.config;
-      const iiUrl = 'https://identity.ic0.app';
+      const iiUrl = identityProvider;
       this.authClient?.login({
         identityProvider: iiUrl,
         onSuccess: resolve,
