@@ -560,14 +560,17 @@ fn verify_authorized_principal(
     }
     // No (matching) credential found for this user
     println!(
-        "*** Principal {} it is not authorized for credential type {:?}",
+        "*** Principal {} has no credential of type {:?}",
         alias_tuple.id_dapp.to_text(),
         credential_type
     );
-    Err(IssueCredentialError::UnauthorizedSubject(format!(
-        "Unauthorized principal {}",
-        alias_tuple.id_dapp.to_text()
-    )))
+    // Return an empty response 
+    Ok(StoredCredential {
+        id: "".to_string(),
+        type_: vec![],
+        context_issuer_id: 0,
+        claim: vec![],
+    })
 }
 
 /// Verifies if the credential spec is supported and returns the corresponding credential type.
@@ -616,6 +619,10 @@ fn prepare_credential_jwt(
     };
     // Currently only supports VerifiedAdults spec
     let credential = verify_authorized_principal(credential_type, alias_tuple)?;
+    // If no credential is found, return an empty response
+    if credential.id == "" {
+        return Ok("".to_string());
+    }
     Ok(build_credential(
         alias_tuple.id_alias,
         credential_spec,
