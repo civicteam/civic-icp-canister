@@ -29,7 +29,7 @@ export class CredentialService {
 
       const credentialData = {
         credentialSpec: {
-          credentialType: 'VerifiedAdult',
+          credentialType: 'CivicPass',
           arguments: {}
         },
         credentialSubject: principal
@@ -44,8 +44,6 @@ export class CredentialService {
       const identityProvider =  new URL(this.config.internetIdentityUrl);
       
       const derivationOrigin = undefined;
-
-      console.log('Requesting Verifiable Presentation...', derivationOrigin);
       
       const requestParams = {
         onSuccess,

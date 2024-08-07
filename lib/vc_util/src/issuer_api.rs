@@ -25,6 +25,7 @@ pub enum IssueCredentialError {
     SignatureNotFound(String),
     Internal(String),
     UnsupportedCredentialSpec(String),
+    CredentialNotFound(String)
 }
 
 #[derive(Clone, Debug, CandidType, Deserialize, Eq, PartialEq)]

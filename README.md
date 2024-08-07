@@ -80,8 +80,6 @@ To simplify the deployment of the canisters we provide a script `deploy-civic.sh
   ./scripts/deploy-civic.sh local 
   ```
 
-Note: The script stops dfx after it executes. If you want to call your canisters, you have to start it again as `dfx start --background`. 
-
 ### Manual deployment 
 Steps for the manual deployment: 
 1. **Create canisters and start the local Internet Computer replica**:

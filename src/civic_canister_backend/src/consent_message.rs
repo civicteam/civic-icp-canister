@@ -10,24 +10,24 @@ use vc_util::issuer_api::{
 };
 use SupportedLanguage::{English, German};
 
-/// Consent messages for the VerifiedAdult VC to be shown and approved to the user during the VC sharing flow 
-const ADULT_VC_DESCRIPTION_EN: &str = r###"# Verified Adult
+/// Consent messages for the CivicPass VC to be shown and approved to the user during the VC sharing flow 
+const CIVIC_PASS_VC_DESCRIPTION_EN: &str = r###"# Civic Pass
 
-Credential that states that the holder's age is at least 18 years."###;
-const ADULT_VC_DESCRIPTION_DE: &str = r###"# Erwachsene Person
+Credential that states that the holder possesses a Civic Pass."###;
+const CIVIC_PASS_VC_DESCRIPTION_DE: &str = r###"# Erwachsene Person
 
-Ausweis, der bestätigt, dass der Besitzer oder die Besitzerin mindestens 18 Jahre alt ist."###;
+Bescheinigung, aus der hervorgeht, dass der Inhaber einen Civic Pass besitzt."###;
 
 lazy_static! {
     static ref CONSENT_MESSAGE_TEMPLATES: HashMap<(CredentialTemplateType, SupportedLanguage), &'static str> =
         HashMap::from([
             (
-                (CredentialTemplateType::VerifiedAdult, English),
-                ADULT_VC_DESCRIPTION_EN
+                (CredentialTemplateType::CivicPass, English),
+                CIVIC_PASS_VC_DESCRIPTION_EN
             ),
             (
-                (CredentialTemplateType::VerifiedAdult, German),
-                ADULT_VC_DESCRIPTION_DE
+                (CredentialTemplateType::CivicPass, German),
+                CIVIC_PASS_VC_DESCRIPTION_DE
             )
         ]);
 }
@@ -35,7 +35,7 @@ lazy_static! {
 /// Supported consent message types
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub enum CredentialTemplateType {
-    VerifiedAdult,
+    CivicPass,
 }
 
 /// Supported languages for consent messages
@@ -48,7 +48,7 @@ pub enum SupportedLanguage {
 impl From<&SupportedCredentialType> for CredentialTemplateType {
     fn from(value: &SupportedCredentialType) -> Self {
         match value {
-            SupportedCredentialType::VerifiedAdult => CredentialTemplateType::VerifiedAdult,
+            SupportedCredentialType::CivicPass => CredentialTemplateType::CivicPass,
         }
     }
 }

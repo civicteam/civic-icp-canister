@@ -48,12 +48,13 @@ lazy_static! {
 /// Supported types of credentials that can be issued by this canister.
 #[derive(Debug)]
 pub enum SupportedCredentialType {
-    VerifiedAdult,
+    CivicPass,
 }
+
 impl fmt::Display for SupportedCredentialType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SupportedCredentialType::VerifiedAdult => write!(f, "VerifiedAdult"),
+            SupportedCredentialType::CivicPass => write!(f, "CivicPass"),
         }
     }
 }
@@ -211,13 +212,6 @@ impl From<Vec<FullCredential>> for CredentialList {
     }
 }
 
-/// Enumerates potential errors that can occur during credential operations.
-#[derive(CandidType, Deserialize, Debug)]
-pub enum CredentialError {
-    NoCredentialFound(String),
-    UnauthorizedSubject(String),
-}
-
 fn is_authorized_issuer(caller: Principal) -> bool {
     CONFIG.with(|config_cell| {
         let config = config_cell.borrow();
@@ -232,10 +226,10 @@ fn is_authorized_issuer(caller: Principal) -> bool {
 async fn add_credentials(
     principal: Principal,
     new_credentials: Vec<Credential>,
-) -> Result<String, CredentialError> {
+) -> Result<String, IssueCredentialError> {
     // Check if the caller is the authorized principal
     if !is_authorized_issuer(caller()) {
-        return Err(CredentialError::UnauthorizedSubject(
+        return Err(IssueCredentialError::UnauthorizedSubject(
             "Unauthorized: You do not have permission to add credentials.".to_string(),
         ));
     }
@@ -280,10 +274,10 @@ async fn add_credentials(
 async fn remove_credential(
     principal: Principal,
     credential_id: String,
-) -> Result<String, CredentialError> {
+) -> Result<String, IssueCredentialError> {
     // Check if the caller is an authorized issuer
     if !is_authorized_issuer(caller()) {
-        return Err(CredentialError::UnauthorizedSubject(
+        return Err(IssueCredentialError::UnauthorizedSubject(
             "Unauthorized: You do not have permission to remove credentials.".to_string(),
         ));
     }
@@ -313,20 +307,20 @@ async fn remove_credential(
                     credentials.insert(principal, CredentialList(existing_credentials_vec));
                     Ok("Credential removed successfully".to_string())
                 } else {
-                    Err(CredentialError::UnauthorizedSubject(
+                    Err(IssueCredentialError::UnauthorizedSubject(
                         "Unauthorized: You do not have permission to remove this credential."
                             .to_string(),
                     ))
                 }
             } else {
-                Err(CredentialError::NoCredentialFound(format!(
+                Err(IssueCredentialError::UnauthorizedSubject(format!(
                     "Credential not found with id {} for principal {}",
                     credential_id,
                     principal.to_text()
                 )))
             }
         } else {
-            Err(CredentialError::NoCredentialFound(format!(
+            Err(IssueCredentialError::UnauthorizedSubject(format!(
                 "No credentials found for principal {}",
                 principal.to_text()
             )))
@@ -343,12 +337,12 @@ async fn update_credential(
     principal: Principal,
     credential_id: String,
     updated_credential: Credential,
-) -> Result<String, CredentialError> {
+) -> Result<String, IssueCredentialError> {
     let caller = caller();
 
     // Check if the caller is an authorized issuer
     if !is_authorized_issuer(caller) {
-        return Err(CredentialError::UnauthorizedSubject(
+        return Err(IssueCredentialError::UnauthorizedSubject(
             "Unauthorized: You do not have permission to update credentials.".to_string(),
         ));
     }
@@ -380,20 +374,20 @@ async fn update_credential(
                         updated_stored_credential
                     ))
                 } else {
-                    Err(CredentialError::UnauthorizedSubject(
+                    Err(IssueCredentialError::UnauthorizedSubject(
                         "Unauthorized: You do not have permission to update this credential."
                             .to_string(),
                     ))
                 }
             } else {
-                Err(CredentialError::NoCredentialFound(format!(
+                Err(IssueCredentialError::UnauthorizedSubject(format!(
                     "No credential found with ID {} for principal {}",
                     credential_id,
                     principal.to_text()
                 )))
             }
         } else {
-            Err(CredentialError::NoCredentialFound(format!(
+            Err(IssueCredentialError::UnauthorizedSubject(format!(
                 "No credentials found for principal {}",
                 principal.to_text()
             )))
@@ -405,11 +399,11 @@ async fn update_credential(
 /// Retrieves all credentials for a given principal.
 #[query]
 #[candid_method(query)]
-fn get_all_credentials(principal: Principal) -> Result<Vec<FullCredential>, CredentialError> {
+fn get_all_credentials(principal: Principal) -> Result<Vec<FullCredential>, IssueCredentialError> {
     if let Some(c) = CREDENTIALS.with(|c| c.borrow().get(&principal)) {
         Ok(c.into())
     } else {
-        Err(CredentialError::NoCredentialFound(format!(
+        Err(IssueCredentialError::UnauthorizedSubject(format!(
             "No credentials found for the principal {}",
             principal.to_text()
         )))
@@ -564,8 +558,9 @@ fn verify_authorized_principal(
         alias_tuple.id_dapp.to_text(),
         credential_type
     );
-    Err(IssueCredentialError::UnauthorizedSubject(format!(
-        "Unauthorized principal {}",
+    
+    Err(IssueCredentialError::CredentialNotFound(format!(
+        "Credential not found for principal {}",
         alias_tuple.id_dapp.to_text()
     )))
 }
@@ -575,7 +570,7 @@ pub(crate) fn verify_credential_spec(
     spec: &CredentialSpec,
 ) -> Result<SupportedCredentialType, String> {
     match spec.credential_type.as_str() {
-        "VerifiedAdult" => Ok(SupportedCredentialType::VerifiedAdult),
+        "CivicPass" => Ok(SupportedCredentialType::CivicPass),
         other => Err(format!("Credential {} is not supported", other)),
     }
 }
@@ -614,13 +609,26 @@ fn prepare_credential_jwt(
             return Err(IssueCredentialError::UnsupportedCredentialSpec(err));
         }
     };
-    // Currently only supports VerifiedAdults spec
-    let credential = verify_authorized_principal(credential_type, alias_tuple)?;
-    Ok(build_credential(
-        alias_tuple.id_alias,
-        credential_spec,
-        credential,
-    ))
+
+    let credential = verify_authorized_principal(credential_type, alias_tuple);
+
+    match credential {
+        Err(err) => {
+            match err {
+                IssueCredentialError::CredentialNotFound(_) => {
+                    // If the user does not have the credential, return an empty string so the identity canister does not show an error message
+                    return Ok("".to_string());
+                }
+                _ => {
+                    return Err(err);
+                }
+                
+            }
+        },
+        Ok(credential) => {
+            return Ok(build_credential(alias_tuple.id_dapp, credential_spec, credential));
+        }
+    }
 }
 
 /// Internal parameters to pass to the build_credential_jwt function.
@@ -671,7 +679,6 @@ fn build_credential_jwt(params: CredentialParams) -> String {
     let mut credential = CredentialBuilder::default()
         .id(Url::parse(params.credential_id).unwrap())
         .issuer(Url::parse(params.issuer).unwrap())
-        .type_("VerifiedCredential".to_string())
         .type_(params.spec.credential_type)
         .subjects(subjects) // add objects to the credentialSubject
         .expiration_date(expiration_date);

@@ -157,18 +157,8 @@ main() {
       exit 1
     fi
 
-  # Stop the local DFX environment if it was started
-  if [ "$network" = "local" ]; then
-    echo "Stopping local DFX environment..."
-    if ! dfx stop >>$log_file 2>&1; then
-      echo "Error: Failed to stop local DFX environment. Check $log_file for details."
-      exit 1
-    fi
-  fi
-
   echo "Deployment completed successfully."
   echo "Please check deploy.log for details."
-
 }
 
 # Execute main function with provided network argument

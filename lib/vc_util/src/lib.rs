@@ -1328,11 +1328,11 @@ mod tests {
         }
     }
 
-    fn verified_adult_vc_spec() -> CredentialSpec {
+    fn verified_civic_pass_vc_spec() -> CredentialSpec {
         let mut args = HashMap::new();
         args.insert("minAge".to_string(), ArgumentValue::Int(18));
         CredentialSpec {
-            credential_type: "VerifiedAdult".to_string(),
+            credential_type: "CivicPass".to_string(),
             arguments: Some(args),
         }
     }
@@ -1352,7 +1352,7 @@ mod tests {
             &vp_jwt,
             id_dapp,
             &default_test_vc_flow_signers(),
-            &verified_adult_vc_spec(),
+            &verified_civic_pass_vc_spec(),
             &test_ic_root_pk_raw(),
             CURRENT_TIME_BEFORE_EXPIRY_NS,
         )
@@ -1379,7 +1379,7 @@ mod tests {
                 ii_canister_id: test_issuer_canister_sig_pk().canister_id,
                 ..default_test_vc_flow_signers()
             },
-            &verified_adult_vc_spec(),
+            &verified_civic_pass_vc_spec(),
             &test_ic_root_pk_raw(),
             CURRENT_TIME_BEFORE_EXPIRY_NS,
         );
@@ -1393,7 +1393,7 @@ mod tests {
                 issuer_canister_id: test_canister_sig_pk().canister_id,
                 ..default_test_vc_flow_signers()
             },
-            &verified_adult_vc_spec(),
+            &verified_civic_pass_vc_spec(),
             &test_ic_root_pk_raw(),
             CURRENT_TIME_BEFORE_EXPIRY_NS,
         );
@@ -1407,7 +1407,7 @@ mod tests {
                 issuer_origin: "https://wrong.origin.com".to_string(),
                 ..default_test_vc_flow_signers()
             },
-            &verified_adult_vc_spec(),
+            &verified_civic_pass_vc_spec(),
             &test_ic_root_pk_raw(),
             CURRENT_TIME_BEFORE_EXPIRY_NS,
         );
@@ -1430,7 +1430,7 @@ mod tests {
             &vp_jwt,
             id_alias, // wrong effective subject
             &default_test_vc_flow_signers(),
-            &verified_adult_vc_spec(),
+            &verified_civic_pass_vc_spec(),
             &test_ic_root_pk_raw(),
             CURRENT_TIME_BEFORE_EXPIRY_NS,
         );
@@ -1452,7 +1452,7 @@ mod tests {
             &vp_jwt,
             id_dapp,
             &default_test_vc_flow_signers(),
-            &verified_adult_vc_spec(),
+            &&verified_civic_pass_vc_spec(),
             &test_ic_root_pk_raw(),
             CURRENT_TIME_AFTER_EXPIRY_NS,
         );
@@ -1474,7 +1474,7 @@ mod tests {
             &vp_jwt,
             id_dapp,
             &default_test_vc_flow_signers(),
-            &verified_adult_vc_spec(),
+            &verified_civic_pass_vc_spec(),
             &test_ic_root_pk_raw(),
             CURRENT_TIME_BEFORE_EXPIRY_NS,
         );
@@ -1492,11 +1492,11 @@ mod tests {
 
     #[test]
     fn should_build_credential_jwt() {
-        let example_jwt = "{\"exp\":1620329470,\"iss\":\"https://age_verifier.info/\",\"nbf\":1707817485,\"jti\":\"https://age_verifier.info/credentials/42\",\"sub\":\"did:icp:p2nlc-3s5ul-lcu74-t6pn2-ui5im-i4a5f-a4tga-e6znf-tnvlh-wkmjs-dqe\",\"vc\":{\"@context\":\"https://www.w3.org/2018/credentials/v1\",\"type\":[\"VerifiableCredential\",\"VerifiedAdult\"],\"credentialSubject\":{\"VerifiedAdult\":{\"minAge\":18}}}}";
-        let example_jwt_without_nbf = "{\"exp\":1620329470,\"iss\":\"https://age_verifier.info/\",\"jti\":\"https://age_verifier.info/credentials/42\",\"sub\":\"did:icp:p2nlc-3s5ul-lcu74-t6pn2-ui5im-i4a5f-a4tga-e6znf-tnvlh-wkmjs-dqe\",\"vc\":{\"@context\":\"https://www.w3.org/2018/credentials/v1\",\"type\":[\"VerifiableCredential\",\"VerifiedAdult\"],\"credentialSubject\":{\"VerifiedAdult\":{\"minAge\":18}}}}";
+        let example_jwt = "{\"exp\":1620329470,\"iss\":\"https://age_verifier.info/\",\"nbf\":1707817485,\"jti\":\"https://age_verifier.info/credentials/42\",\"sub\":\"did:icp:p2nlc-3s5ul-lcu74-t6pn2-ui5im-i4a5f-a4tga-e6znf-tnvlh-wkmjs-dqe\",\"vc\":{\"@context\":\"https://www.w3.org/2018/credentials/v1\",\"type\":[\"VerifiableCredential\",\"CivicPass\"],\"credentialSubject\":{\"CivicPass\":{\"minAge\":18}}}}";
+        let example_jwt_without_nbf = "{\"exp\":1620329470,\"iss\":\"https://age_verifier.info/\",\"jti\":\"https://age_verifier.info/credentials/42\",\"sub\":\"did:icp:p2nlc-3s5ul-lcu74-t6pn2-ui5im-i4a5f-a4tga-e6znf-tnvlh-wkmjs-dqe\",\"vc\":{\"@context\":\"https://www.w3.org/2018/credentials/v1\",\"type\":[\"VerifiableCredential\",\"CivicPass\"],\"credentialSubject\":{\"CivicPass\":{\"minAge\":18}}}}";
         let id_dapp = Principal::from_text(ID_RP_FOR_VP).expect("wrong principal");
         let params = CredentialParams {
-            spec: verified_adult_vc_spec(),
+            spec: verified_civic_pass_vc_spec(),
             subject_id: did_for_principal(id_dapp),
             credential_id_url: "https://age_verifier.info/credentials/42".to_string(),
             issuer_url: "https://age_verifier.info".to_string(),
