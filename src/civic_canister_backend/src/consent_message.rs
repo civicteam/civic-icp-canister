@@ -14,7 +14,7 @@ use SupportedLanguage::{English, German};
 const CIVIC_PASS_VC_DESCRIPTION_EN: &str = r###"# Civic Pass
 
 Credential that states that the holder possesses a Civic Pass."###;
-const CIVIC_PASS_VC_DESCRIPTION_DE: &str = r###"# Erwachsene Person
+const CIVIC_PASS_VC_DESCRIPTION_DE: &str = r###"# Civic Pass
 
 Bescheinigung, aus der hervorgeht, dass der Inhaber einen Civic Pass besitzt."###;
 
