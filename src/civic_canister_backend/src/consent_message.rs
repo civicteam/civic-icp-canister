@@ -10,10 +10,10 @@ use vc_util::issuer_api::{
 use SupportedLanguage::{English, German};
 
 /// Consent messages for the CivicPass VC to be shown and approved to the user during the VC sharing flow 
-const CIVIC_PASS_VC_DESCRIPTION_EN: &str = r###"# Verifiable Credential
+const VC_DESCRIPTION_EN: &str = r###"# Verifiable Credential
 
 Credential that states that the holder possesses a Verifiable Credential."###;
-const CIVIC_PASS_VC_DESCRIPTION_DE: &str = r###"# Verifiable Credential
+const VC_DESCRIPTION_DE: &str = r###"# Verifiable Credential
 
 Bescheinigung, aus der hervorgeht, dass der Inhaber einen Verifiable Credential besitzt."###;
 
@@ -22,11 +22,11 @@ lazy_static! {
         HashMap::from([
             (
                 (CredentialTemplateType::Credential, English),
-                CIVIC_PASS_VC_DESCRIPTION_EN
+                VC_DESCRIPTION_EN
             ),
             (
                 (CredentialTemplateType::Credential, German),
-                CIVIC_PASS_VC_DESCRIPTION_DE
+                VC_DESCRIPTION_DE
             )
         ]);
 }
