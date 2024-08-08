@@ -742,7 +742,7 @@ fn should_update_compressed_fields_successfully() {
 
 /// Test: VC consent message for adult VC
 #[test]
-fn should_return_vc_consent_message_for_adult_vc() {
+fn should_return_vc_consent_message_for_civic_pass_vc() {
     let test_cases = [
         ("en-US", "en", "# Civic Pass"),
         ("de-DE", "de", "# Civic Pass"),
