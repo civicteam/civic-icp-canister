@@ -20,7 +20,6 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
-use std::fmt;
 use std::iter::repeat;
 use vc_util::issuer_api::{
     CredentialSpec, GetCredentialRequest, IssueCredentialError, IssuedCredentialData,
@@ -43,20 +42,6 @@ lazy_static! {
     /// Seed and public key used for signing the credentials.
     pub(crate) static ref CANISTER_SIG_SEED: Vec<u8> = hash_bytes("a_random_seed").to_vec();
     static ref CANISTER_SIG_PK: CanisterSigPublicKey = CanisterSigPublicKey::new(ic_cdk::id(), CANISTER_SIG_SEED.clone());
-}
-
-/// Supported types of credentials that can be issued by this canister.
-#[derive(Debug)]
-pub enum SupportedCredentialType {
-    CivicPass,
-}
-
-impl fmt::Display for SupportedCredentialType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            SupportedCredentialType::CivicPass => write!(f, "CivicPass"),
-        }
-    }
 }
 
 /// Represents different types of claim values that can be part of a credential.
@@ -455,11 +440,6 @@ fn get_credential(req: GetCredentialRequest) -> Result<IssuedCredentialData, Iss
     if let Err(err) = authorize_vc_request(&req.signed_id_alias, &caller(), time().into()) {
         return Result::<IssuedCredentialData, IssueCredentialError>::Err(err);
     };
-    if let Err(err) = verify_credential_spec(&req.credential_spec) {
-        return Result::<IssuedCredentialData, IssueCredentialError>::Err(
-            IssueCredentialError::UnsupportedCredentialSpec(err),
-        );
-    }
     // Check if the prepared context is present in the request. This context should contain the JWT of the VC, get it as a string
     let prepared_context = match req.prepared_context {
         Some(context) => context,
@@ -539,7 +519,6 @@ fn authorize_vc_request(
 
 /// Check if the given user has a credential of the type and return it.
 fn verify_authorized_principal(
-    credential_type: SupportedCredentialType,
     alias_tuple: &AliasTuple,
 ) -> Result<StoredCredential, IssueCredentialError> {
     // Get the credentials of this user
@@ -547,32 +526,14 @@ fn verify_authorized_principal(
         // Check if the user has a credential of the type and return it
         let v: Vec<StoredCredential> = credentials.into();
         for c in v {
-            if c.type_.contains(&credential_type.to_string()) {
-                return Ok(c);
-            }
+            return Ok(c);
         }
     }
-    // No (matching) credential found for this user
-    println!(
-        "*** Principal {} it is not authorized for credential type {:?}",
-        alias_tuple.id_dapp.to_text(),
-        credential_type
-    );
     
     Err(IssueCredentialError::CredentialNotFound(format!(
         "Credential not found for principal {}",
         alias_tuple.id_dapp.to_text()
     )))
-}
-
-/// Verifies if the credential spec is supported and returns the corresponding credential type.
-pub(crate) fn verify_credential_spec(
-    spec: &CredentialSpec,
-) -> Result<SupportedCredentialType, String> {
-    match spec.credential_type.as_str() {
-        "CivicPass" => Ok(SupportedCredentialType::CivicPass),
-        other => Err(format!("Credential {} is not supported", other)),
-    }
 }
 
 fn internal_error(msg: &str) -> IssueCredentialError {
@@ -603,14 +564,7 @@ fn prepare_credential_jwt(
     credential_spec: &CredentialSpec,
     alias_tuple: &AliasTuple,
 ) -> Result<String, IssueCredentialError> {
-    let credential_type = match verify_credential_spec(credential_spec) {
-        Ok(credential_type) => credential_type,
-        Err(err) => {
-            return Err(IssueCredentialError::UnsupportedCredentialSpec(err));
-        }
-    };
-
-    let credential = verify_authorized_principal(credential_type, alias_tuple);
+    let credential = verify_authorized_principal(alias_tuple);
 
     match credential {
         Err(err) => {

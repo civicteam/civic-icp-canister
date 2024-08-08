@@ -4,29 +4,28 @@ use std::fmt::{Display, Formatter};
 use candid::candid_method;
 use ic_cdk_macros::update;
 use lazy_static::lazy_static;
-use crate::credential::{SupportedCredentialType, verify_credential_spec};
 use vc_util::issuer_api::{
-    CredentialSpec, Icrc21ConsentInfo,Icrc21VcConsentMessageRequest,  Icrc21ConsentPreferences, Icrc21Error, Icrc21ErrorInfo,
+    Icrc21ConsentInfo,Icrc21VcConsentMessageRequest,  Icrc21ConsentPreferences, Icrc21Error, Icrc21ErrorInfo,
 };
 use SupportedLanguage::{English, German};
 
 /// Consent messages for the CivicPass VC to be shown and approved to the user during the VC sharing flow 
-const CIVIC_PASS_VC_DESCRIPTION_EN: &str = r###"# Civic Pass
+const CIVIC_PASS_VC_DESCRIPTION_EN: &str = r###"# Verifiable Credential
 
-Credential that states that the holder possesses a Civic Pass."###;
-const CIVIC_PASS_VC_DESCRIPTION_DE: &str = r###"# Civic Pass
+Credential that states that the holder possesses a Verifiable Credential."###;
+const CIVIC_PASS_VC_DESCRIPTION_DE: &str = r###"# Verifiable Credential
 
-Bescheinigung, aus der hervorgeht, dass der Inhaber einen Civic Pass besitzt."###;
+Bescheinigung, aus der hervorgeht, dass der Inhaber einen Verifiable Credential besitzt."###;
 
 lazy_static! {
     static ref CONSENT_MESSAGE_TEMPLATES: HashMap<(CredentialTemplateType, SupportedLanguage), &'static str> =
         HashMap::from([
             (
-                (CredentialTemplateType::CivicPass, English),
+                (CredentialTemplateType::Credential, English),
                 CIVIC_PASS_VC_DESCRIPTION_EN
             ),
             (
-                (CredentialTemplateType::CivicPass, German),
+                (CredentialTemplateType::Credential, German),
                 CIVIC_PASS_VC_DESCRIPTION_DE
             )
         ]);
@@ -35,7 +34,7 @@ lazy_static! {
 /// Supported consent message types
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub enum CredentialTemplateType {
-    CivicPass,
+    Credential,
 }
 
 /// Supported languages for consent messages
@@ -43,14 +42,6 @@ pub enum CredentialTemplateType {
 pub enum SupportedLanguage {
     English,
     German,
-}
-
-impl From<&SupportedCredentialType> for CredentialTemplateType {
-    fn from(value: &SupportedCredentialType) -> Self {
-        match value {
-            SupportedCredentialType::CivicPass => CredentialTemplateType::CivicPass,
-        }
-    }
 }
 
 impl From<Icrc21ConsentPreferences> for SupportedLanguage {
@@ -79,17 +70,15 @@ async fn vc_consent_message(
     req: Icrc21VcConsentMessageRequest,
 ) -> Result<Icrc21ConsentInfo, Icrc21Error> {
     get_vc_consent_message(
-        &req.credential_spec,
         &SupportedLanguage::from(req.preferences),
     )
 }
 
 /// Retrieve the consent message for the given credential type and language.
 fn get_vc_consent_message(
-    credential_spec: &CredentialSpec,
     language: &SupportedLanguage,
 ) -> Result<Icrc21ConsentInfo, Icrc21Error> {
-    render_consent_message(credential_spec, language).map(|message| Icrc21ConsentInfo {
+    render_consent_message(language).map(|message| Icrc21ConsentInfo {
         consent_message: message,
         language: format!("{}", language),
     })
@@ -97,20 +86,11 @@ fn get_vc_consent_message(
 
 /// Show the consent message with any arguments 
 fn render_consent_message(
-    credential_spec: &CredentialSpec,
     language: &SupportedLanguage,
 ) -> Result<String, Icrc21Error> {
-    let credential_type = match verify_credential_spec(credential_spec) {
-        Ok(credential_type) => credential_type,
-        Err(err) => {
-            return Err(Icrc21Error::UnsupportedCanisterCall(Icrc21ErrorInfo {
-                description: err,
-            }));
-        }
-    };
     let template = CONSENT_MESSAGE_TEMPLATES
         .get(&(
-            CredentialTemplateType::from(&credential_type),
+            CredentialTemplateType::Credential,
             language.clone(),
         ))
         .ok_or(Icrc21Error::ConsentMessageUnavailable(Icrc21ErrorInfo {
