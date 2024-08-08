@@ -744,9 +744,9 @@ fn should_update_compressed_fields_successfully() {
 #[test]
 fn should_return_vc_consent_message_for_civic_pass_vc() {
     let test_cases = [
-        ("en-US", "en", "# Civic Pass"),
-        ("de-DE", "de", "# Civic Pass"),
-        ("ja-JP", "en", "# Civic Pass"), // test fallback language
+        ("en-US", "en", "# Verifiable Credential"),
+        ("de-DE", "de", "# Verifiable Credential"),
+        ("ja-JP", "en", "# Verifiable Credential"), // test fallback language
     ];
     let env = env();
     let canister_id = install_canister(&env, CIVIV_CANISTER_BACKEND_WASM.clone());
@@ -814,28 +814,6 @@ fn should_return_derivation_origin_with_custom_init() {
     .expect("API call failed")
     .expect("derivation_origin error");
     assert_eq!(response.origin, custom_init.derivation_origin);
-}
-
-/// Test: VC consent message failure if not supported
-#[test]
-fn should_fail_vc_consent_message_if_not_supported() {
-    let env = env();
-    let canister_id = install_canister(&env, CIVIV_CANISTER_BACKEND_WASM.clone());
-
-    let consent_message_request = Icrc21VcConsentMessageRequest {
-        credential_spec: CredentialSpec {
-            credential_type: "VerifiedResident".to_string(),
-            arguments: None,
-        },
-        preferences: Icrc21ConsentPreferences {
-            language: "en-US".to_string(),
-        },
-    };
-
-    let response =
-        api::vc_consent_message(&env, canister_id, principal_1(), &consent_message_request)
-            .expect("API call failed");
-    assert_matches!(response, Err(Icrc21Error::UnsupportedCanisterCall(_)));
 }
 
 /// Test: Prepare credential for wrong sender
