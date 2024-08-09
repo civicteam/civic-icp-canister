@@ -637,10 +637,10 @@ fn prepare_credential_jwt(
     match credential {
         Err(err) => {
             match err {
-                // IssueCredentialError::CredentialNotFound(_) => {
-                //     // If the user does not have the credential, return an empty string so the identity canister does not show an error message
-                //     return Ok("".to_string());
-                // }
+                IssueCredentialError::CredentialNotFound(_) => {
+                    // If the user does not have the credential, return an empty string so the identity canister does not show an error message
+                    return Ok("".to_string());
+                }
                 _ => {
                     return Err(err);
                 }
