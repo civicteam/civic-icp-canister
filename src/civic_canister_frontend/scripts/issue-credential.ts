@@ -20,24 +20,17 @@ const dummyCivicSampleKey = new Uint8Array([
 // Dummy principal for testing purposes - this is the principal from the vc-flows that represents the user id from the civic POV (the same user that logs into the demo RP)
 const principal = Principal.fromText("your-principal-here");
 
-// Define the dummy credential
-const id = ["id", { Text: "did:example:c276e12ec21ebfeb1f712ebc6f1" }];
-const name = ["name", { Text: "Example University" }];
-const degreeType = ["degreeType", { Text: "MBA" }];
-const alumniOfClaim = {
-  claims: [id, name, degreeType]
-};
 const mixedClaim = {
   claims: [
-    ["tigoYhp9SpCDoCQmXGj2im5xa3mnjR1zuXrpCJ5ZRmi", { Boolean: true }],
-    ["Status", { Text: "ACTIVE" }],
+    ["passType", { Text: "tigoYhp9SpCDoCQmXGj2im5xa3mnjR1zuXrpCJ5ZRmi" }],
+    ["status", { Text: "active" }],
     ["expirationDate", { Number: 1000 + 365 * 24 * 60 * 60 * 1000 }]
   ]
 };
 
 const credential = {
   id: "urn:uuid:6a9c92a9-2530-4e2b-9776-530467e9bbe0",
-  type_: ["VerifiableCredential", "CivicPass", "tigoYhp9SpCDoCQmXGj2im5xa3mnjR1zuXrpCJ5ZRmi"],
+  type_: ["VerifiableCredential", "CivicPass"],
   context: ["https://www.w3.org/2018/credentials/v1", "https://www.w3.org/2018/credentials/examples/v1"],
   claim: [mixedClaim]
 };
