@@ -568,13 +568,6 @@ pub fn verify_claims_match(
     vc_claims: &Map<String, Value>,
     spec: &CredentialSpec,
 ) -> Result<(), IssueCredentialError> {
-    let spec_arguments_count = spec.arguments.as_ref().map_or(0, |args| args.len());
-    if spec_arguments_count != vc_claims.len() {
-        return Err(IssueCredentialError::UnsupportedCredentialSpec(
-            format!("wrong number of credential arguments"),
-        ));
-    }
-
     if let Some(spec_arguments) = spec.arguments.as_ref() {
         for (key, expected_value) in spec_arguments.iter() {
             if let Some(claim_value) = vc_claims.get(key) {
