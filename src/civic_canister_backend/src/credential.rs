@@ -16,8 +16,11 @@ use identity_credential::credential::{CredentialBuilder, Subject};
 use lazy_static::lazy_static;
 use serde::Serialize;
 use serde_bytes::ByteBuf;
+use serde_json::json;
+use serde_json::Map;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
+use vc_util::issuer_api::ArgumentValue;
 use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
 use std::iter::repeat;
@@ -517,23 +520,88 @@ fn authorize_vc_request(
     })
 }
 
-/// Check if the given user has a credential of the type and return it.
 fn verify_authorized_principal(
+    credential_spec: &CredentialSpec,
     alias_tuple: &AliasTuple,
 ) -> Result<StoredCredential, IssueCredentialError> {
-    // Get the credentials of this user
     if let Some(credentials) = CREDENTIALS.with(|c| c.borrow().get(&alias_tuple.id_dapp)) {
-        // Check if the user has a credential of the type and return it
         let v: Vec<StoredCredential> = credentials.into();
         for c in v {
-            return Ok(c);
+            // Check if the credential type matches
+            if c.type_.contains(&credential_spec.credential_type) {
+                let vc_claims = stored_credential_to_vc_claims(&c);
+                
+                if verify_claims_match(&vc_claims, credential_spec).is_ok() {
+                    return Ok(c);
+                }
+            }
         }
     }
     
     Err(IssueCredentialError::CredentialNotFound(format!(
-        "Credential not found for principal {}",
+        "Matching credential not found for principal {}",
         alias_tuple.id_dapp.to_text()
     )))
+}
+
+// Helper function to convert StoredCredential to the format expected by validate_claims_match_spec
+fn stored_credential_to_vc_claims(cred: &StoredCredential) -> Map<String, Value> {
+    let mut vc_claims = Map::new();
+
+    for claim in &cred.claim {
+        for (key, value) in &claim.claims {
+            let json_value = match value {
+                ClaimValue::Boolean(b) => json!(b),
+                ClaimValue::Date(s) => json!(s),
+                ClaimValue::Text(s) => json!(s),
+                ClaimValue::Number(n) => json!(n),
+                ClaimValue::Claim(_) => continue, // Skip nested claims for now
+            };
+            vc_claims.insert(key.clone(), json_value);
+        }
+    }
+
+    vc_claims
+}
+
+pub fn verify_claims_match(
+    vc_claims: &Map<String, Value>,
+    spec: &CredentialSpec,
+) -> Result<(), IssueCredentialError> {
+    let spec_arguments_count = spec.arguments.as_ref().map_or(0, |args| args.len());
+    if spec_arguments_count != vc_claims.len() {
+        return Err(IssueCredentialError::UnsupportedCredentialSpec(
+            format!("wrong number of credential arguments"),
+        ));
+    }
+
+    if let Some(spec_arguments) = spec.arguments.as_ref() {
+        for (key, expected_value) in spec_arguments.iter() {
+            if let Some(claim_value) = vc_claims.get(key) {
+                if !values_match(expected_value, claim_value) {
+                    return Err(IssueCredentialError::UnsupportedCredentialSpec(format!(
+                        "Mismatch in credential argument '{}': expected {:?}, found {:?}",
+                        key, expected_value, claim_value
+                    )));
+                }
+            } else {
+                return Err(IssueCredentialError::UnsupportedCredentialSpec(format!(
+                    "Missing credential argument: '{}' (expected {:?})",
+                    key, expected_value
+                )));
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn values_match(spec_value: &ArgumentValue, claim_value: &Value) -> bool {
+    match spec_value {
+        ArgumentValue::String(s) => claim_value.as_str().map_or(false, |v| v == s),
+        ArgumentValue::Int(i) => claim_value.as_i64().map_or(false, |v| v == *i as i64)
+        // Add more cases if ArgumentValue has other variants
+    }
 }
 
 fn internal_error(msg: &str) -> IssueCredentialError {
@@ -564,15 +632,15 @@ fn prepare_credential_jwt(
     credential_spec: &CredentialSpec,
     alias_tuple: &AliasTuple,
 ) -> Result<String, IssueCredentialError> {
-    let credential = verify_authorized_principal(alias_tuple);
+    let credential = verify_authorized_principal(credential_spec, alias_tuple);
 
     match credential {
         Err(err) => {
             match err {
-                IssueCredentialError::CredentialNotFound(_) => {
-                    // If the user does not have the credential, return an empty string so the identity canister does not show an error message
-                    return Ok("".to_string());
-                }
+                // IssueCredentialError::CredentialNotFound(_) => {
+                //     // If the user does not have the credential, return an empty string so the identity canister does not show an error message
+                //     return Ok("".to_string());
+                // }
                 _ => {
                     return Err(err);
                 }
