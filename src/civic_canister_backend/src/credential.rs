@@ -130,6 +130,12 @@ struct StoredCredential {
     claim: Vec<Claim>,
 }
 
+#[derive(CandidType, Deserialize, Debug)]
+ pub enum RemoveCredentialError {
+     CredentialNotFound(String),
+     UnauthorizedIssuer(String),
+ }
+
 /// Convert from a single full credential to a single stored credential
 impl From<FullCredential> for StoredCredential {
     fn from(full_credential: FullCredential) -> Self {
@@ -217,8 +223,8 @@ async fn add_credentials(
 ) -> Result<String, IssueCredentialError> {
     // Check if the caller is the authorized principal
     if !is_authorized_issuer(caller()) {
-        return Err(IssueCredentialError::UnauthorizedSubject(
-            "Unauthorized: You do not have permission to add credentials.".to_string(),
+        return Err(IssueCredentialError::UnauthorizedIssuer(
+            "UnauthorizedIssuer: You do not have permission to add credentials.".to_string(),
         ));
     }
     let full_credentials: Vec<FullCredential> = new_credentials.into_iter().map(FullCredential::from).collect();
@@ -262,10 +268,10 @@ async fn add_credentials(
 async fn remove_credential(
     principal: Principal,
     credential_id: String,
-) -> Result<String, IssueCredentialError> {
+) -> Result<String, RemoveCredentialError> {
     // Check if the caller is an authorized issuer
     if !is_authorized_issuer(caller()) {
-        return Err(IssueCredentialError::UnauthorizedSubject(
+        return Err(RemoveCredentialError::UnauthorizedIssuer(
             "Unauthorized: You do not have permission to remove credentials.".to_string(),
         ));
     }
@@ -295,20 +301,20 @@ async fn remove_credential(
                     credentials.insert(principal, CredentialList(existing_credentials_vec));
                     Ok("Credential removed successfully".to_string())
                 } else {
-                    Err(IssueCredentialError::UnauthorizedSubject(
+                    Err(RemoveCredentialError::UnauthorizedIssuer(
                         "Unauthorized: You do not have permission to remove this credential."
                             .to_string(),
                     ))
                 }
             } else {
-                Err(IssueCredentialError::UnauthorizedSubject(format!(
+                Err(RemoveCredentialError::CredentialNotFound(format!(
                     "Credential not found with id {} for principal {}",
                     credential_id,
                     principal.to_text()
                 )))
             }
         } else {
-            Err(IssueCredentialError::UnauthorizedSubject(format!(
+            Err(RemoveCredentialError::CredentialNotFound(format!(
                 "No credentials found for principal {}",
                 principal.to_text()
             )))
@@ -330,7 +336,7 @@ async fn update_credential(
 
     // Check if the caller is an authorized issuer
     if !is_authorized_issuer(caller) {
-        return Err(IssueCredentialError::UnauthorizedSubject(
+        return Err(IssueCredentialError::UnauthorizedIssuer(
             "Unauthorized: You do not have permission to update credentials.".to_string(),
         ));
     }
@@ -362,20 +368,20 @@ async fn update_credential(
                         updated_stored_credential
                     ))
                 } else {
-                    Err(IssueCredentialError::UnauthorizedSubject(
+                    Err(IssueCredentialError::UnauthorizedIssuer(
                         "Unauthorized: You do not have permission to update this credential."
                             .to_string(),
                     ))
                 }
             } else {
-                Err(IssueCredentialError::UnauthorizedSubject(format!(
+                Err(IssueCredentialError::CredentialNotFound(format!(
                     "No credential found with ID {} for principal {}",
                     credential_id,
                     principal.to_text()
                 )))
             }
         } else {
-            Err(IssueCredentialError::UnauthorizedSubject(format!(
+            Err(IssueCredentialError::CredentialNotFound(format!(
                 "No credentials found for principal {}",
                 principal.to_text()
             )))

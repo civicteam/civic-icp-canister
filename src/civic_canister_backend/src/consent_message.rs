@@ -7,15 +7,13 @@ use lazy_static::lazy_static;
 use vc_util::issuer_api::{
     Icrc21ConsentInfo,Icrc21VcConsentMessageRequest,  Icrc21ConsentPreferences, Icrc21Error, Icrc21ErrorInfo,
 };
-use SupportedLanguage::{English, German};
+use SupportedLanguage::English;
 
 /// Consent messages for the CivicPass VC to be shown and approved to the user during the VC sharing flow 
+/// Currently we only support English language
 const VC_DESCRIPTION_EN: &str = r###"# Verifiable Credential
 
 Credential that states that the holder possesses a Verifiable Credential."###;
-const VC_DESCRIPTION_DE: &str = r###"# Verifiable Credential
-
-Bescheinigung, aus der hervorgeht, dass der Inhaber einen Verifiable Credential besitzt."###;
 
 lazy_static! {
     static ref CONSENT_MESSAGE_TEMPLATES: HashMap<(CredentialTemplateType, SupportedLanguage), &'static str> =
@@ -23,10 +21,6 @@ lazy_static! {
             (
                 (CredentialTemplateType::Credential, English),
                 VC_DESCRIPTION_EN
-            ),
-            (
-                (CredentialTemplateType::Credential, German),
-                VC_DESCRIPTION_DE
             )
         ]);
 }
@@ -41,13 +35,11 @@ pub enum CredentialTemplateType {
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub enum SupportedLanguage {
     English,
-    German,
 }
 
 impl From<Icrc21ConsentPreferences> for SupportedLanguage {
     fn from(value: Icrc21ConsentPreferences) -> Self {
         match &value.language.to_lowercase()[..2] {
-            "de" => German,
             _ => English, // english is also the fallback
         }
     }
@@ -57,7 +49,6 @@ impl Display for SupportedLanguage {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             English => write!(f, "en"),
-            German => write!(f, "de"),
         }
     }
 }

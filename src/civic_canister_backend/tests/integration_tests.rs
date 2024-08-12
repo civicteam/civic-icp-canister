@@ -11,7 +11,7 @@ use canister_tests::framework::{
 };
 use civic_canister_backend::config::IssuerInit;
 use civic_canister_backend::credential::{
-    Claim, ClaimValue, Credential, FullCredential,
+    Claim, ClaimValue, Credential, FullCredential, RemoveCredentialError,
 };
 use ic_cdk::api::management_canister::provisional::CanisterId;
 use ic_test_state_machine_client::{call_candid, call_candid_as};
@@ -86,6 +86,7 @@ pub fn install_issuer(env: &StateMachine, init: &IssuerInit) -> CanisterId {
 }
 
 mod api {
+    use civic_canister_backend::credential::RemoveCredentialError;
     use vc_util::issuer_api::IssueCredentialError;
 
     use super::*;
@@ -230,7 +231,7 @@ mod api {
         canister_id: CanisterId,
         user: Principal,
         credential_id: String,
-    ) -> Result<Result<String, IssueCredentialError>, CallError> {
+    ) -> Result<Result<String, RemoveCredentialError>, CallError> {
         call_candid_as(
             env,
             canister_id,
@@ -366,7 +367,7 @@ fn should_fail_to_add_credentials_for_unauthorized_principal() {
     .expect("API call failed");
 
     // Ensure the error is returned
-    assert_matches!(response, Err(IssueCredentialError::UnauthorizedSubject(ref msg)) if msg == "Unauthorized: You do not have permission to add credentials.");
+    assert_matches!(response, Err(IssueCredentialError::UnauthorizedIssuer(ref msg)) if msg == "UnauthorizedIssuer: You do not have permission to add credentials.");
 }
 
 #[test]
@@ -411,7 +412,7 @@ fn should_fail_to_remove_credentials_for_unauthorized_principal() {
     .expect("API call failed");
 
     // Ensure the correct error is returned
-    assert_matches!(response, Err(IssueCredentialError::UnauthorizedSubject(ref msg)) if msg == "Unauthorized: You do not have permission to remove credentials.");
+    assert_matches!(response, Err(RemoveCredentialError::UnauthorizedIssuer(ref msg)) if msg == "Unauthorized: You do not have permission to remove credentials.");
 }
 
 /// Test: An authorized issuer cannot remove a credential that he was not the original issuer for
@@ -450,10 +451,10 @@ fn should_fail_to_remove_credential_for_caller_that_was_not_the_original_issuer(
 
     // // Ensure the correct error is returned
     match result {
-        Err(IssueCredentialError::UnauthorizedSubject(message)) => {
+        Err(RemoveCredentialError::UnauthorizedIssuer(message)) => {
             assert_eq!(message, "Unauthorized: You do not have permission to remove credentials.");
         }
-        _ => panic!("Expected Err(IssuerError::UnauthorizedSubject), got {:?}", result),
+        _ => panic!("Expected Err(IssuerError::UnauthorizedIssuer), got {:?}", result),
     }
 }
 
@@ -494,10 +495,10 @@ fn should_fail_to_remove_credential_for_caller_that_has_been_removed_as_caller()
 
     // // Ensure the correct error is returned
     match result {
-        Err(IssueCredentialError::UnauthorizedSubject(message)) => {
+        Err(RemoveCredentialError::UnauthorizedIssuer(message)) => {
             assert_eq!(message, "Unauthorized: You do not have permission to remove credentials.");
         }
-        _ => panic!("Expected Err(IssuerError::UnauthorizedSubject), got {:?}", result),
+        _ => panic!("Expected Err(IssuerError::UnauthorizedIssuer), got {:?}", result),
     }
 }
 
@@ -517,7 +518,7 @@ fn should_fail_to_remove_nonexistent_credential() {
         .expect("API call failed");
 
     // Ensure the error is returned
-    assert_matches!(response, Err(IssueCredentialError::UnauthorizedSubject(_)));
+    assert_matches!(response, Err(RemoveCredentialError::CredentialNotFound(_)));
 }
 
 /// Test: Remove credential successfully
@@ -576,7 +577,7 @@ fn should_fail_to_update_nonexistent_credential_() {
     )
     .expect("API call should fail");
 
-    assert_matches!(response, Err(IssueCredentialError::UnauthorizedSubject(_)));
+    assert_matches!(response, Err(IssueCredentialError::CredentialNotFound(_)));
 }
 /// Test: Update credentials for unauthorized principal
 #[test]
@@ -609,7 +610,7 @@ fn should_fail_to_update_credentials_for_unauthorized_principal() {
     .expect("API call failed");
 
     // Ensure the error is returned
-    assert_matches!(response, Err(IssueCredentialError::UnauthorizedSubject(ref msg)) if msg == "Unauthorized: You do not have permission to update credentials.");
+    assert_matches!(response, Err(IssueCredentialError::UnauthorizedIssuer(ref msg)) if msg == "Unauthorized: You do not have permission to update credentials.");
 }
 
 #[test]
@@ -751,7 +752,6 @@ fn should_update_compressed_fields_successfully() {
 fn should_return_vc_consent_message_for_civic_pass_vc() {
     let test_cases = [
         ("en-US", "en", "# Verifiable Credential"),
-        ("de-DE", "de", "# Verifiable Credential"),
         ("ja-JP", "en", "# Verifiable Credential"), // test fallback language
     ];
     let env = env();

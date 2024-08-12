@@ -19,12 +19,16 @@ const dummyCivicSampleKey = new Uint8Array([
 
 // Dummy principal for testing purposes - this is the principal from the vc-flows that represents the user id from the civic POV (the same user that logs into the demo RP)
 const principal = Principal.fromText("your-principal-here");
+const oneYearFromNow = new Date(Date.now());
+oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+const oneYearFromNowISOString = oneYearFromNow.toISOString();
 
 const mixedClaim = {
   claims: [
     ["passType", { Text: "tigoYhp9SpCDoCQmXGj2im5xa3mnjR1zuXrpCJ5ZRmi" }],
     ["status", { Text: "active" }],
-    ["expirationDate", { Number: 1000 + 365 * 24 * 60 * 60 * 1000 }]
+    // Expiration date is 1 year from now and converted to a string
+    ["expirationDate", { Text: oneYearFromNowISOString }],
   ]
 };
 

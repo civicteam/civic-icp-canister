@@ -21,6 +21,7 @@ pub struct PrepareCredentialRequest {
 pub enum IssueCredentialError {
     UnknownSubject(String),
     UnauthorizedSubject(String),
+    UnauthorizedIssuer(String),
     InvalidIdAlias(String),
     SignatureNotFound(String),
     Internal(String),

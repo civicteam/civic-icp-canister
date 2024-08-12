@@ -63,11 +63,15 @@ function App() {
   );
 }
 
+const oneYearFromNow = new Date(Date.now());
+oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+const oneYearFromNowISOString = oneYearFromNow.toISOString();
+
 const mixedClaim = {
   claims: [
     ["passType", { Text: "tigoYhp9SpCDoCQmXGj2im5xa3mnjR1zuXrpCJ5ZRmi" }],
     ["status", { Text: "active" }],
-    ["expirationDate", { Number: 1000 + 365 * 24 * 60 * 60 * 1000 }]
+    ["expirationDate", { Text: oneYearFromNowISOString }],
   ]
 };
 

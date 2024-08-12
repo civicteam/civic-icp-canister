@@ -23,16 +23,14 @@ Here is an example of a credential the Civic Canister can issue:
     "https://www.w3.org/ns/credentials/examples/v2"
   ],
   "id": "urn:uuid:6a9c92a9-2530-4e2b-9776-530467e9bbe0",
-  "type": ["VerifiableCredential", "CivicUniquenessPass"],
+  "type": ["VerifiableCredential", "CivicPass"],
   "issuer": "did:icp:v0:tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae",
   "expiry": "2024-04-04T00:00:00Z",
   "credentialSubject": {
     "id": "did:icp:user-principal",
-    "CivicPass": {
-      "id": "did:example:c276e12ec21ebfeb1f712ebc6f1",
-      "name": "Civic Uniqueness Pass",
-      "expiry": "2024-04-04T00:00:00Z"
-    }
+    "passType": "uniqobk8oGh4XBLMqM68K8M2zNu3CdYX7q5go7whQiv",
+    "status": "ACTIVE",
+    "expirationDate": "2024-12-31T23:59:59Z"
   }
 }
 ```
