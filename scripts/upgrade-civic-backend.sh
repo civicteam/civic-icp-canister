@@ -34,7 +34,7 @@ EOF
 }
 
 II_CANISTER_ID=
-ADMIN_PRINCIPAL_ID=tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae
+ADMIN_PRINCIPAL_ID="${ADMIN_PRINCIPAL_ID:-$(dfx identity get-principal)}"
 
 while [[ $# -gt 0  ]]
 do
@@ -103,6 +103,8 @@ echo "Using II canister: $II_CANISTER_ID" >&2
 echo "Using issuer canister: $ISSUER_CANISTER_ID" >&2
 echo "Using derivation origin: $ISSUER_DERIVATION_ORIGIN" >&2
 echo "Using frontend hostname: $ISSUER_FRONTEND_HOSTNAME" >&2
+echo "Using admin principal: $ADMIN_PRINCIPAL_ID"
+
 
 # At the time of writing dfx outputs incorrect JSON with dfx ping (commas between object
 # entries are missing).
@@ -122,7 +124,8 @@ if [ "$DFX_NETWORK" = "local" ]; then
   ALTERNATIVE_ORIGINS="\"http://$CIVIC_FRONTEND_CANISTER_ID.localhost:4943\""
   else
   if [ -n "${CANISTER_DOMAIN:-}" ]; then
-    ALTERNATIVE_ORIGINS="\"https://$CIVIC_FRONTEND_CANISTER_ID.icp0.io\", \"https://icp-sign.civic.me\""
+    # add the alternative frontends you require for your canister here - these are the ones for icp.civic.com
+    ALTERNATIVE_ORIGINS="\"https://$CIVIC_FRONTEND_CANISTER_ID.icp0.io\", \"https://icp-sign.civic.me\", \"https://icp-getpass.civic.com\"" 
   else
     ALTERNATIVE_ORIGINS="\"https://$CIVIC_FRONTEND_CANISTER_ID.icp0.io\""
   fi
@@ -150,7 +153,7 @@ dfx deploy --upgrade-unchanged civic_canister_backend --network "$DFX_NETWORK" -
         derivation_origin = "'"$ISSUER_DERIVATION_ORIGIN"'";
         frontend_hostname = "'"$ISSUER_FRONTEND_HOSTNAME"'";
         admin = principal "'"$ADMIN_PRINCIPAL_ID"'";
-        authorized_issuers = vec { principal "'"$ADMIN_PRINCIPAL_ID"'" };
+        authorized_issuers = vec { principal "'"$ADMIN_PRINCIPAL_ID"'"};
     }
 )'
 # Revert changes
