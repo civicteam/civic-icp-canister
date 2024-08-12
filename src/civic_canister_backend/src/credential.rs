@@ -16,11 +16,13 @@ use identity_credential::credential::{CredentialBuilder, Subject};
 use lazy_static::lazy_static;
 use serde::Serialize;
 use serde_bytes::ByteBuf;
+use serde_json::json;
+use serde_json::Map;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
+use vc_util::issuer_api::ArgumentValue;
 use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
-use std::fmt;
 use std::iter::repeat;
 use vc_util::issuer_api::{
     CredentialSpec, GetCredentialRequest, IssueCredentialError, IssuedCredentialData,
@@ -43,19 +45,6 @@ lazy_static! {
     /// Seed and public key used for signing the credentials.
     pub(crate) static ref CANISTER_SIG_SEED: Vec<u8> = hash_bytes("a_random_seed").to_vec();
     static ref CANISTER_SIG_PK: CanisterSigPublicKey = CanisterSigPublicKey::new(ic_cdk::id(), CANISTER_SIG_SEED.clone());
-}
-
-/// Supported types of credentials that can be issued by this canister.
-#[derive(Debug)]
-pub enum SupportedCredentialType {
-    VerifiedAdult,
-}
-impl fmt::Display for SupportedCredentialType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            SupportedCredentialType::VerifiedAdult => write!(f, "VerifiedAdult"),
-        }
-    }
 }
 
 /// Represents different types of claim values that can be part of a credential.
@@ -141,6 +130,12 @@ struct StoredCredential {
     claim: Vec<Claim>,
 }
 
+#[derive(CandidType, Deserialize, Debug)]
+ pub enum RemoveCredentialError {
+     CredentialNotFound(String),
+     UnauthorizedIssuer(String),
+ }
+
 /// Convert from a single full credential to a single stored credential
 impl From<FullCredential> for StoredCredential {
     fn from(full_credential: FullCredential) -> Self {
@@ -211,13 +206,6 @@ impl From<Vec<FullCredential>> for CredentialList {
     }
 }
 
-/// Enumerates potential errors that can occur during credential operations.
-#[derive(CandidType, Deserialize, Debug)]
-pub enum CredentialError {
-    NoCredentialFound(String),
-    UnauthorizedSubject(String),
-}
-
 fn is_authorized_issuer(caller: Principal) -> bool {
     CONFIG.with(|config_cell| {
         let config = config_cell.borrow();
@@ -232,11 +220,11 @@ fn is_authorized_issuer(caller: Principal) -> bool {
 async fn add_credentials(
     principal: Principal,
     new_credentials: Vec<Credential>,
-) -> Result<String, CredentialError> {
+) -> Result<String, IssueCredentialError> {
     // Check if the caller is the authorized principal
     if !is_authorized_issuer(caller()) {
-        return Err(CredentialError::UnauthorizedSubject(
-            "Unauthorized: You do not have permission to add credentials.".to_string(),
+        return Err(IssueCredentialError::UnauthorizedIssuer(
+            "UnauthorizedIssuer: You do not have permission to add credentials.".to_string(),
         ));
     }
     let full_credentials: Vec<FullCredential> = new_credentials.into_iter().map(FullCredential::from).collect();
@@ -280,10 +268,10 @@ async fn add_credentials(
 async fn remove_credential(
     principal: Principal,
     credential_id: String,
-) -> Result<String, CredentialError> {
+) -> Result<String, RemoveCredentialError> {
     // Check if the caller is an authorized issuer
     if !is_authorized_issuer(caller()) {
-        return Err(CredentialError::UnauthorizedSubject(
+        return Err(RemoveCredentialError::UnauthorizedIssuer(
             "Unauthorized: You do not have permission to remove credentials.".to_string(),
         ));
     }
@@ -313,20 +301,20 @@ async fn remove_credential(
                     credentials.insert(principal, CredentialList(existing_credentials_vec));
                     Ok("Credential removed successfully".to_string())
                 } else {
-                    Err(CredentialError::UnauthorizedSubject(
+                    Err(RemoveCredentialError::UnauthorizedIssuer(
                         "Unauthorized: You do not have permission to remove this credential."
                             .to_string(),
                     ))
                 }
             } else {
-                Err(CredentialError::NoCredentialFound(format!(
+                Err(RemoveCredentialError::CredentialNotFound(format!(
                     "Credential not found with id {} for principal {}",
                     credential_id,
                     principal.to_text()
                 )))
             }
         } else {
-            Err(CredentialError::NoCredentialFound(format!(
+            Err(RemoveCredentialError::CredentialNotFound(format!(
                 "No credentials found for principal {}",
                 principal.to_text()
             )))
@@ -343,12 +331,12 @@ async fn update_credential(
     principal: Principal,
     credential_id: String,
     updated_credential: Credential,
-) -> Result<String, CredentialError> {
+) -> Result<String, IssueCredentialError> {
     let caller = caller();
 
     // Check if the caller is an authorized issuer
     if !is_authorized_issuer(caller) {
-        return Err(CredentialError::UnauthorizedSubject(
+        return Err(IssueCredentialError::UnauthorizedIssuer(
             "Unauthorized: You do not have permission to update credentials.".to_string(),
         ));
     }
@@ -380,20 +368,20 @@ async fn update_credential(
                         updated_stored_credential
                     ))
                 } else {
-                    Err(CredentialError::UnauthorizedSubject(
+                    Err(IssueCredentialError::UnauthorizedIssuer(
                         "Unauthorized: You do not have permission to update this credential."
                             .to_string(),
                     ))
                 }
             } else {
-                Err(CredentialError::NoCredentialFound(format!(
+                Err(IssueCredentialError::CredentialNotFound(format!(
                     "No credential found with ID {} for principal {}",
                     credential_id,
                     principal.to_text()
                 )))
             }
         } else {
-            Err(CredentialError::NoCredentialFound(format!(
+            Err(IssueCredentialError::CredentialNotFound(format!(
                 "No credentials found for principal {}",
                 principal.to_text()
             )))
@@ -405,11 +393,11 @@ async fn update_credential(
 /// Retrieves all credentials for a given principal.
 #[query]
 #[candid_method(query)]
-fn get_all_credentials(principal: Principal) -> Result<Vec<FullCredential>, CredentialError> {
+fn get_all_credentials(principal: Principal) -> Result<Vec<FullCredential>, IssueCredentialError> {
     if let Some(c) = CREDENTIALS.with(|c| c.borrow().get(&principal)) {
         Ok(c.into())
     } else {
-        Err(CredentialError::NoCredentialFound(format!(
+        Err(IssueCredentialError::UnauthorizedSubject(format!(
             "No credentials found for the principal {}",
             principal.to_text()
         )))
@@ -461,11 +449,6 @@ fn get_credential(req: GetCredentialRequest) -> Result<IssuedCredentialData, Iss
     if let Err(err) = authorize_vc_request(&req.signed_id_alias, &caller(), time().into()) {
         return Result::<IssuedCredentialData, IssueCredentialError>::Err(err);
     };
-    if let Err(err) = verify_credential_spec(&req.credential_spec) {
-        return Result::<IssuedCredentialData, IssueCredentialError>::Err(
-            IssueCredentialError::UnsupportedCredentialSpec(err),
-        );
-    }
     // Check if the prepared context is present in the request. This context should contain the JWT of the VC, get it as a string
     let prepared_context = match req.prepared_context {
         Some(context) => context,
@@ -543,40 +526,80 @@ fn authorize_vc_request(
     })
 }
 
-/// Check if the given user has a credential of the type and return it.
 fn verify_authorized_principal(
-    credential_type: SupportedCredentialType,
+    credential_spec: &CredentialSpec,
     alias_tuple: &AliasTuple,
 ) -> Result<StoredCredential, IssueCredentialError> {
-    // Get the credentials of this user
     if let Some(credentials) = CREDENTIALS.with(|c| c.borrow().get(&alias_tuple.id_dapp)) {
-        // Check if the user has a credential of the type and return it
         let v: Vec<StoredCredential> = credentials.into();
         for c in v {
-            if c.type_.contains(&credential_type.to_string()) {
-                return Ok(c);
+            // Check if the credential type matches
+            if c.type_.contains(&credential_spec.credential_type) {
+                let vc_claims = stored_credential_to_vc_claims(&c);
+                
+                if verify_claims_match(&vc_claims, credential_spec).is_ok() {
+                    return Ok(c);
+                }
             }
         }
     }
-    // No (matching) credential found for this user
-    println!(
-        "*** Principal {} it is not authorized for credential type {:?}",
-        alias_tuple.id_dapp.to_text(),
-        credential_type
-    );
-    Err(IssueCredentialError::UnauthorizedSubject(format!(
-        "Unauthorized principal {}",
+    
+    Err(IssueCredentialError::CredentialNotFound(format!(
+        "Matching credential not found for principal {}",
         alias_tuple.id_dapp.to_text()
     )))
 }
 
-/// Verifies if the credential spec is supported and returns the corresponding credential type.
-pub(crate) fn verify_credential_spec(
+// Helper function to convert StoredCredential to the format expected by validate_claims_match_spec
+fn stored_credential_to_vc_claims(cred: &StoredCredential) -> Map<String, Value> {
+    let mut vc_claims = Map::new();
+
+    for claim in &cred.claim {
+        for (key, value) in &claim.claims {
+            let json_value = match value {
+                ClaimValue::Boolean(b) => json!(b),
+                ClaimValue::Date(s) => json!(s),
+                ClaimValue::Text(s) => json!(s),
+                ClaimValue::Number(n) => json!(n),
+                ClaimValue::Claim(_) => continue, // Skip nested claims for now
+            };
+            vc_claims.insert(key.clone(), json_value);
+        }
+    }
+
+    vc_claims
+}
+
+pub fn verify_claims_match(
+    vc_claims: &Map<String, Value>,
     spec: &CredentialSpec,
-) -> Result<SupportedCredentialType, String> {
-    match spec.credential_type.as_str() {
-        "VerifiedAdult" => Ok(SupportedCredentialType::VerifiedAdult),
-        other => Err(format!("Credential {} is not supported", other)),
+) -> Result<(), IssueCredentialError> {
+    if let Some(spec_arguments) = spec.arguments.as_ref() {
+        for (key, expected_value) in spec_arguments.iter() {
+            if let Some(claim_value) = vc_claims.get(key) {
+                if !values_match(expected_value, claim_value) {
+                    return Err(IssueCredentialError::UnsupportedCredentialSpec(format!(
+                        "Mismatch in credential argument '{}': expected {:?}, found {:?}",
+                        key, expected_value, claim_value
+                    )));
+                }
+            } else {
+                return Err(IssueCredentialError::UnsupportedCredentialSpec(format!(
+                    "Missing credential argument: '{}' (expected {:?})",
+                    key, expected_value
+                )));
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn values_match(spec_value: &ArgumentValue, claim_value: &Value) -> bool {
+    match spec_value {
+        ArgumentValue::String(s) => claim_value.as_str().map_or(false, |v| v == s),
+        ArgumentValue::Int(i) => claim_value.as_i64().map_or(false, |v| v == *i as i64)
+        // Add more cases if ArgumentValue has other variants
     }
 }
 
@@ -608,19 +631,25 @@ fn prepare_credential_jwt(
     credential_spec: &CredentialSpec,
     alias_tuple: &AliasTuple,
 ) -> Result<String, IssueCredentialError> {
-    let credential_type = match verify_credential_spec(credential_spec) {
-        Ok(credential_type) => credential_type,
+    let credential = verify_authorized_principal(credential_spec, alias_tuple);
+
+    match credential {
         Err(err) => {
-            return Err(IssueCredentialError::UnsupportedCredentialSpec(err));
+            match err {
+                IssueCredentialError::CredentialNotFound(_) => {
+                    // If the user does not have the credential, return an empty string so the identity canister does not show an error message
+                    return Ok("".to_string());
+                }
+                _ => {
+                    return Err(err);
+                }
+                
+            }
+        },
+        Ok(credential) => {
+            return Ok(build_credential(alias_tuple.id_dapp, credential_spec, credential));
         }
-    };
-    // Currently only supports VerifiedAdults spec
-    let credential = verify_authorized_principal(credential_type, alias_tuple)?;
-    Ok(build_credential(
-        alias_tuple.id_alias,
-        credential_spec,
-        credential,
-    ))
+    }
 }
 
 /// Internal parameters to pass to the build_credential_jwt function.
@@ -671,7 +700,6 @@ fn build_credential_jwt(params: CredentialParams) -> String {
     let mut credential = CredentialBuilder::default()
         .id(Url::parse(params.credential_id).unwrap())
         .issuer(Url::parse(params.issuer).unwrap())
-        .type_("VerifiedCredential".to_string())
         .type_(params.spec.credential_type)
         .subjects(subjects) // add objects to the credentialSubject
         .expiration_date(expiration_date);

@@ -21,10 +21,12 @@ pub struct PrepareCredentialRequest {
 pub enum IssueCredentialError {
     UnknownSubject(String),
     UnauthorizedSubject(String),
+    UnauthorizedIssuer(String),
     InvalidIdAlias(String),
     SignatureNotFound(String),
     Internal(String),
     UnsupportedCredentialSpec(String),
+    CredentialNotFound(String)
 }
 
 #[derive(Clone, Debug, CandidType, Deserialize, Eq, PartialEq)]
@@ -47,14 +49,14 @@ pub struct IssuedCredentialData {
 #[derive(Eq, PartialEq, Clone, Debug, CandidType, Deserialize)]
 pub enum ArgumentValue {
     String(String),
-    Int(i32),
+    Int(i32)
 }
 
 impl Display for ArgumentValue {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
             ArgumentValue::String(s) => write!(f, "'{}'", s),
-            ArgumentValue::Int(i) => write!(f, "{}", i),
+            ArgumentValue::Int(i) => write!(f, "{}", i)
         }
     }
 }
@@ -63,7 +65,7 @@ impl From<ArgumentValue> for Value {
     fn from(argument_value: ArgumentValue) -> Self {
         match argument_value {
             ArgumentValue::String(s) => Value::String(s),
-            ArgumentValue::Int(i) => Value::Number(Number::from(i)),
+            ArgumentValue::Int(i) => Value::Number(Number::from(i))
         }
     }
 }
