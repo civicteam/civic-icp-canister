@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Principal } from '@dfinity/principal';
 import { PrincipalService } from './service/PrincipalService.js';
 import { config } from './config.js';
-import ICPCredentialCheckButton from '@civic/icp-gateway-react-ui';
+import ICPCredentialCheckButton, { CredentialCheckResponse } from '@civic/icp-gateway-react-ui';
 
 function App() {
   const [principal, setPrincipal] = useState<Principal | undefined>(undefined);
@@ -35,7 +35,7 @@ function App() {
     }
   }, []);
 
-  const handleCredentialCheck = useCallback(async (credential: any, error: Error) => {
+  const handleCredentialCheck = useCallback(async (credential?: CredentialCheckResponse, error?: Error) => {
     console.log('handleCredentialCheck', credential, error);
   }, []);
 
