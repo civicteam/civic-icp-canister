@@ -1,7 +1,5 @@
 {
   "dependencies": {
-    "@civic/civic-sign": "^0.6.0-beta.23",
-    "@civic/icp-gateway-react": "^0.0.5-beta.1",
     "@civic/icp-gateway-react-ui": "^0.0.1-beta.4",
     "@dfinity/auth-client": "^2.0.0",
     "@dfinity/identity": "^2.0.0",
