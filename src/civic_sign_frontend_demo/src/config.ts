@@ -3,7 +3,7 @@ const isDev = import.meta.env.VITE_ENV === 'development';
 console.log('isDev:', isDev);
 
 const internetIdentityCanisterId = import.meta.env.VITE_INTERNET_IDENTITY_CANISTER_ID;
-const civicBackendCanisterId = isDev ? import.meta.env.VITE_CIVIC_BACKEND_CANISTER_ID : '73ncn-4qaaa-aaaag-alddq-cai';
+const civicBackendCanisterId = isDev ? import.meta.env.VITE_CIVIC_BACKEND_CANISTER_ID : 'be2us-64aaa-aaaaa-qaabq-cai';
 const host = import.meta.env.VITE_HOST;
 
 console.log('env', { internetIdentityCanisterId, civicBackendCanisterId, host });
@@ -18,7 +18,7 @@ const civicBackendCanisterUrl = !isDev
 
 
 const portalUrl = `https://icp-getpass.civic.com`;
-const gatekeeperNetwork = "tigoYhp9SpCDoCQmXGj2im5xa3mnjR1zuXrpCJ5ZRmi";
+const gatekeeperNetwork = "ta136ftcpd8RyTYu3FGBjstD7EMXGBWrcwotdScrAKu";
 
 // This is for demo purposes but should be replaced with a more secure method
 const dummyCivicSampleKey = new Uint8Array([

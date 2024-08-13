@@ -2,7 +2,6 @@
 import { fileURLToPath, URL } from 'url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
-import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import environment from 'vite-plugin-environment';
 import topLevelAwait from "vite-plugin-top-level-await";
 import wasm from "vite-plugin-wasm";
@@ -15,7 +14,6 @@ export default defineConfig({
     emptyOutDir: true,
   },
   plugins: [
-    nodePolyfills(),
     topLevelAwait(),
     wasm(),
     environment("all", { prefix: "CANISTER_" }),

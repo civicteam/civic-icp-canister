@@ -2,8 +2,9 @@
   "dependencies": {
     "@civic/civic-sign": "^0.6.0-beta.23",
     "@civic/icp-gateway-react": "^0.0.5-beta.1",
-    "@dfinity/auth-client": "^1.3.0",
-    "@dfinity/principal": "^1.3.0",
+    "@civic/icp-gateway-react-ui": "^0.0.1-beta.4",
+    "@dfinity/identity": "^2.0.0",
+    "@dfinity/principal": "^2.0.0",
     "@dfinity/verifiable-credentials": "^0.0.2",
     "axios": "^1.7.2",
     "jwt-decode": "^4.0.0",
