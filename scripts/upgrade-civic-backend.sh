@@ -122,7 +122,7 @@ if [ "$DFX_NETWORK" = "local" ]; then
   ALTERNATIVE_ORIGINS="\"http://$CIVIC_FRONTEND_CANISTER_ID.localhost:4943\""
   else
   if [ -n "${CANISTER_DOMAIN:-}" ]; then
-    ALTERNATIVE_ORIGINS="\"https://$CIVIC_FRONTEND_CANISTER_ID.icp0.io\", \"https://icp-sign.civic.me\""
+    ALTERNATIVE_ORIGINS="\"https://$CIVIC_FRONTEND_CANISTER_ID.icp0.io\", \"https://icp-sign.civic.me\", \"https://icp-getpass.civic.com\""
   else
     ALTERNATIVE_ORIGINS="\"https://$CIVIC_FRONTEND_CANISTER_ID.icp0.io\""
   fi
