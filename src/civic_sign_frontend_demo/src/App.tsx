@@ -6,7 +6,6 @@ import ICPCredentialCheckButton from '@civic/icp-gateway-react-ui';
 
 function App() {
   const [principal, setPrincipal] = useState<Principal | undefined>(undefined);
-  const icpWallet = useMemo(() => ({ principal: principal?.toText() ?? undefined }), [principal]);
   const { gatekeeperNetwork } = config;
 
   const [urlCode, setUrlCode] = useState<string | null>(null);
@@ -36,14 +35,19 @@ function App() {
     }
   }, []);
 
+  const handleCredentialCheck = useCallback(async (credential: any, error: Error) => {
+    console.log('handleCredentialCheck', credential, error);
+  }, []);
+
   return (
     <main>
         <img src="/logo2.svg" alt="DFINITY logo" />
         {principal && <h1>Welcome to the ICP Relying Canister</h1>}
         {principal && <p>Logged in as {principal?.toText()}</p>}
-        {principal 
-          ? <ICPCredentialCheckButton principal={principal} gatekeeperNetwork={gatekeeperNetwork} /> 
-          : <button onClick={handleLogin}>Login</button>}
+        {principal
+          ? <ICPCredentialCheckButton principal={principal} gatekeeperNetwork={gatekeeperNetwork} onCredentialCheck={handleCredentialCheck} /> 
+          : urlCode ? <></> : <button onClick={handleLogin}>Login</button>}
+        {urlCode && <img src={'https://www.icegif.com/wp-content/uploads/2023/01/icegif-162.gif'} alt="Cool GIF for active status" style={{ width: '100px', height: '100px' }} />}
     </main>
   );
 }

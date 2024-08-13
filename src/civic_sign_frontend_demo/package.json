@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@civic/icp-gateway-react-ui": "^0.0.1-beta.4",
+    "@civic/icp-gateway-react-ui": "^0.0.1-beta.5",
     "@dfinity/auth-client": "^2.0.0",
     "@dfinity/identity": "^2.0.0",
     "@dfinity/principal": "^2.0.0",
