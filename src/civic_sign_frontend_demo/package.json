@@ -4,6 +4,7 @@
     "@dfinity/auth-client": "^2.0.0",
     "@dfinity/identity": "^2.0.0",
     "@dfinity/principal": "^2.0.0",
+    "@dfinity/candid": "^2.0.0",
     "@dfinity/verifiable-credentials": "^0.0.2",
     "axios": "^1.7.2",
     "jwt-decode": "^4.0.0",

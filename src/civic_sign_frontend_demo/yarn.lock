@@ -245,6 +245,11 @@
   dependencies:
     idb "^7.0.2"
 
+"@dfinity/candid@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@dfinity/candid/-/candid-2.0.0.tgz#e65a6b8ff565e82ec1dab4d9187b024b893aa532"
+  integrity sha512-poxIEnzErcKBM5yroabQ3VqQpiYZnqYZdLJWFuIQZzioGdP1mlnVLHx7IbgHN4HBlqVXYPFmEzMU02FnyYUA1Q==
+
 "@dfinity/identity@^2.0.0":
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/@dfinity/identity/-/identity-2.0.0.tgz#0a920742fc46be95d0fa8d3c0d26001b66b7a1c1"
