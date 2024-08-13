@@ -36,7 +36,6 @@
     "build": "tsc && vite build",
     "format": "prettier --write \"src/**/*.{json,js,jsx,ts,tsx,css,scss}\"",
     "start": "vite --port 3000",
-    "test": "vitest run",
     "serve": "vite preview",
     "vite": "NODE_OPTIONS='--experimental-wasm-modules' vite"
   },
