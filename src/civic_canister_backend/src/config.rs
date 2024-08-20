@@ -161,6 +161,16 @@ fn init(init_arg: Option<IssuerInit>) {
     init_assets();
 }
 
+#[query]
+#[candid_method(query)]
+fn list_issuers() -> Vec<Principal> {
+    CONFIG.with(|config_cell| {
+        let config = config_cell.borrow();
+        let current_config = config.get();
+        current_config.authorized_issuers.clone()
+    })
+}
+
 #[update]
 #[candid_method(update)]
 fn add_issuer(new_issuer: Principal) -> Result<(), IssuerError> {
