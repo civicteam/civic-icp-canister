@@ -242,6 +242,21 @@ mod api {
         .map(|(x,)| x)
     }
 
+    pub fn list_issuers(
+        env: &StateMachine,
+        canister_id: CanisterId,
+        caller: Principal,
+    ) -> Result<Vec<Principal>, CallError> {
+        call_candid_as(
+            env,
+            canister_id,
+            caller,
+            "list_issuers",
+            (),
+        )
+        .map(|(x,)| x)
+    }
+
     pub fn add_issuer(
         env: &StateMachine,
         canister_id: CanisterId,
@@ -1135,4 +1150,60 @@ fn should_issue_credential_e2e() -> Result<(), CallError> {
     }
 
     Ok(())
+}
+
+#[test]
+fn should_add_credential_for_authorised_issuer() {
+    let env = env();
+    let canister_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
+    let civic_issuer =
+        Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae")
+            .unwrap();
+
+    // add another issuer that is allowed to issue credentials into the canister
+    let another_issuer = principal_2();
+    let add_result = api::add_issuer(&env, canister_id, civic_issuer, another_issuer);
+    println!("Add issuer result: {:?}", add_result);
+
+    // Add a credential as the original issuer
+    let credential = construct_credential();
+    let _ = api::add_credentials_with_sender(
+        &env,
+        canister_id,
+        another_issuer,
+        principal_1(),
+        vec![credential.clone()],
+    )
+    .expect("API call failed");
+
+    // // Attempt to remove the credential as the other issuer
+    let result = api::get_all_credentials(&env, canister_id, principal_1())
+    .expect("API call failed")
+    .expect("get_all_credentials error");
+    
+    assert_eq!(result.len(), 1);
+}
+
+#[test]
+fn test_list_issuers() {
+    // Setup
+    let env = env();
+    let canister_id = install_issuer(&env, &DUMMY_ISSUER_INIT);
+    let civic_issuer = Principal::from_text("tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae").unwrap();
+    
+    // Create some test issuers
+    let another_issuer = principal_2();
+    let add_result = api::add_issuer(&env, canister_id, civic_issuer, another_issuer);
+    println!("Add issuer result: {:?}", add_result);
+
+    // Call the list_issuers method
+    let result = api::list_issuers(&env, canister_id, Principal::anonymous())
+        .expect("API call failed");
+
+    println!("List of issuers: {:?}", result);
+
+    // Assertions
+    assert!(result.contains(&civic_issuer), "Civic issuer not found in the list");
+    assert!(result.contains(&another_issuer), "Added issuer not found in the list");
+    assert_eq!(result.len(), 2, "Unexpected number of issuers");
 }
