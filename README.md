@@ -73,7 +73,11 @@ This section provides steps to set up and run the project locally. Follow the st
    ```
 
 ## Deploy the canisters 
-To simplify the deployment of the canisters we provide a script `deploy-civic.sh` you can find under `scripts`. To execute it make sure that you have run `npm install` beforehand inside the project. 
+To simplify the deployment of the canisters we provide a script `deploy-civic.sh` you can find under `scripts`. Make sure that you have run `npm install` beforehand inside the project. 
+
+If you want to set a specific admin principal, you can use the `ADMIN_PRINCIPAL_ID` environment variable. Otherwise it will use the principal of the `dfx identity` you are using to deploy. 
+
+Run the script with 
   ```bash
   ./scripts/deploy-civic.sh local 
   ```
@@ -140,7 +144,10 @@ This script performs the following tasks:
 5. **Fetch Credentials**: Fetches and logs all credentials associated with a specified principal.
 
 ### Usage Instructions
-
+Note that the script uses a dummy issuer principal which needs to be added to your canister config (inside the deploy/upgrade scripts): 
+```
+authorized_issuers = vec { principal "'"$ADMIN_PRINCIPAL_ID"'"; principal "'"tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae"'" };
+```  
 1. **Ensure Environment Variables are Set**: Make sure the `.env.local` file contains the necessary environment variables.
 
 2. **Run the Script**:
@@ -194,9 +201,9 @@ Use an external ICP wallet or exchange to transfer cycles to your wallet address
 ```
 
 ## Deploy the canisters
-You can use the deploy script to deploy the canisters to mainnet in one step. Be sure that you have deployed locally first ([see](https://github.com/civicteam/civic-icp-canister/tree/develop?tab=readme-ov-file#deploy-the-canisters)), this is necessary for it to work.
+You can use the deploy script to deploy the canisters to mainnet in one step. It's necessary to deploy locally first ([more information](https://github.com/civicteam/civic-icp-canister/tree/develop?tab=readme-ov-file#deploy-the-canisters)):
 
-Ensure you have run `npm install` in your project folder. Deploy locally with 
+Ensure you have run `npm install` in your project folder. Set your `ADMIN_PRINCIPAL_ID` environment variable if necessary and deploy locally with 
 ```bash
 ./scripts/deploy-civic.sh local 
 ```
@@ -285,3 +292,11 @@ The Civic Canister supports stable storage and the credential data and configura
 DFX_NETWORK=network ./scripts/upgrade-civic.sh
 ```
 setting network to `ic` or `local`. This also allows you to test the stable storage without having to change the canister code. 
+
+## Setting a custom domain
+If you want to set a custom domain for the canister, you can pass it to the script with `--domain=your-domain.com`. Custom alternative frontends are also supported, edit `/scripts/upgrade-civic.sh`:
+```
+  if [ -n "${CANISTER_DOMAIN:-}" ]; then
+    # add the alternative frontends you require for your canister here
+
+```

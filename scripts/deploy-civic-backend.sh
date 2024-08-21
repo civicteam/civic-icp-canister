@@ -34,7 +34,7 @@ EOF
 }
 
 II_CANISTER_ID=
-ADMIN_PRINCIPAL_ID=tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae
+ADMIN_PRINCIPAL_ID="${ADMIN_PRINCIPAL_ID:-$(dfx identity get-principal)}"
 
 while [[ $# -gt 0  ]]
 do
@@ -94,6 +94,8 @@ echo "Using II canister: $II_CANISTER_ID" >&2
 echo "Using issuer canister: $ISSUER_CANISTER_ID" >&2
 echo "Using derivation origin: $ISSUER_DERIVATION_ORIGIN" >&2
 echo "Using frontend hostname: $ISSUER_FRONTEND_HOSTNAME" >&2
+echo "Using admin principal: $ADMIN_PRINCIPAL_ID"
+
 
 # At the time of writing dfx outputs incorrect JSON with dfx ping (commas between object
 # entries are missing).
