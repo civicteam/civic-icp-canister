@@ -34,7 +34,7 @@ EOF
 }
 
 II_CANISTER_ID=
-ADMIN_PRINCIPAL_ID=tglqb-kbqlj-to66e-3w5sg-kkz32-c6ffi-nsnta-vj2gf-vdcc5-5rzjk-jae
+ADMIN_PRINCIPAL_ID="${ADMIN_PRINCIPAL_ID:-$(dfx identity get-principal)}"
 
 while [[ $# -gt 0  ]]
 do
@@ -150,7 +150,7 @@ dfx deploy --upgrade-unchanged civic_canister_backend --network "$DFX_NETWORK" -
         derivation_origin = "'"$ISSUER_DERIVATION_ORIGIN"'";
         frontend_hostname = "'"$ISSUER_FRONTEND_HOSTNAME"'";
         admin = principal "'"$ADMIN_PRINCIPAL_ID"'";
-        authorized_issuers = vec { principal "'"$ADMIN_PRINCIPAL_ID"'" };
+        authorized_issuers = vec {};
     }
 )'
 # Revert changes

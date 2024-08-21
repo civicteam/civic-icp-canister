@@ -107,7 +107,7 @@ impl Default for IssuerConfig {
             derivation_origin: derivation_origin.clone(),
             frontend_hostname: derivation_origin,
             admin: ic_cdk::api::caller(),
-            authorized_issuers: vec![ic_cdk::api::caller()],
+            authorized_issuers: vec![],
         }
     }
 }
