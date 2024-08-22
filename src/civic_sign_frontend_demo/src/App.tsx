@@ -1,14 +1,14 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Principal } from '@dfinity/principal';
 import { PrincipalService } from './service/PrincipalService.js';
-import { config } from './config.js';
+import { config, GatekeeperNetwork } from './config.js';
 import ICPCredentialCheckButton, { CredentialCheckResponse } from '@civic/icp-gateway-react-ui';
 import { ChevronDown } from 'lucide-react';
 
 function App() {
   const [principal, setPrincipal] = useState<Principal | undefined>(undefined);
   const [urlCode, setUrlCode] = useState<string | null>(null);
-  const [selectedGatekeeperNetwork, setSelectedGatekeeperNetwork] = useState<string>(config.gatekeeperNetworks[0]);
+  const [selectedGatekeeperNetwork, setSelectedGatekeeperNetwork] = useState<GatekeeperNetwork>(config.gatekeeperNetworks[0]);
 
   // Assume we have an array of available gatekeeperNetworks
   const gatekeeperNetworks = useMemo(() => config.gatekeeperNetworks, []);
@@ -42,7 +42,9 @@ function App() {
   }, []);
 
   const handleGatekeeperNetworkChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedGatekeeperNetwork(event.target.value);
+    const selectedNetwork = gatekeeperNetworks.find((network) => network.name === event.target.value);
+    console.log('Selected network:', selectedNetwork);
+    setSelectedGatekeeperNetwork(selectedNetwork || gatekeeperNetworks[0]);
   }, []);
 
   return (
@@ -56,7 +58,7 @@ function App() {
             <p className="text-center mb-6">Logged in as <span className="font-mono bg-gray-100 p-1 rounded">{principal?.toText()}</span></p>
             <ICPCredentialCheckButton
               principal={principal}
-              gatekeeperNetwork={selectedGatekeeperNetwork}
+              gatekeeperNetwork={selectedGatekeeperNetwork.address}
               onCredentialCheck={handleCredentialCheck}
               config={{ stage: 'dev' }}
             />
@@ -67,13 +69,13 @@ function App() {
             <div className="relative mb-6">
               <select
                 id="gatekeeperNetwork"
-                value={selectedGatekeeperNetwork}
+                value={selectedGatekeeperNetwork.name}
                 onChange={handleGatekeeperNetworkChange}
                 className="block appearance-none w-full bg-white border border-gray-300 text-gray-700 py-3 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
               >
                 {gatekeeperNetworks.map((network) => (
-                  <option key={network} value={network}>
-                    {network}
+                  <option key={network.name} value={network.name}>
+                    {network.name}
                   </option>
                 ))}
               </select>
