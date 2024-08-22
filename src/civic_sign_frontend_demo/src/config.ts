@@ -18,7 +18,11 @@ const civicBackendCanisterUrl = !isDev
 
 
 const portalUrl = `https://icp-getpass.civic.com`;
-const gatekeeperNetwork = "ta136ftcpd8RyTYu3FGBjstD7EMXGBWrcwotdScrAKu";
+const gatekeeperNetworks = [
+  'ta136ftcpd8RyTYu3FGBjstD7EMXGBWrcwotdScrAKu',
+  'tunQheuPpHhjjsbrUDp4rikqYez9UXv4SXLRHf9Kzsv', 
+  'tigoYhp9SpCDoCQmXGj2im5xa3mnjR1zuXrpCJ5ZRmi'
+];
 
 // This is for demo purposes but should be replaced with a more secure method
 const dummyCivicSampleKey = new Uint8Array([
@@ -33,5 +37,5 @@ export const config = {
   internetIdentityCanisterId,
   dummyCivicSampleKey,
   portalUrl,
-  gatekeeperNetwork,
+  gatekeeperNetworks,
 };
