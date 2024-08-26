@@ -60,7 +60,6 @@ function App() {
               principal={principal}
               gatekeeperNetwork={selectedGatekeeperNetwork.address}
               onCredentialCheck={handleCredentialCheck}
-              config={{ stage: 'dev' }}
             />
           </div>
         ) : (
