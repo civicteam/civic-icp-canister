@@ -20,9 +20,9 @@ const civicBackendCanisterUrl = !isDev
 const portalUrl = `https://icp-getpass.civic.com`;
 export type GatekeeperNetwork = { name: string, address: string };
 const gatekeeperNetworks = [
-  { name: 'Age 13', address: 'ta136ftcpd8RyTYu3FGBjstD7EMXGBWrcwotdScrAKu', },
-  { name: 'Uniqueness', address: 'tunQheuPpHhjjsbrUDp4rikqYez9UXv4SXLRHf9Kzsv', },
-  { name: 'Captcha', address: 'tigoYhp9SpCDoCQmXGj2im5xa3mnjR1zuXrpCJ5ZRmi', },
+  { name: 'Age 13', address: 'ag13vc1KaV5kMjp3Gb5yTq8cyZSnHPVkTHdNJ2fWXk1', },
+  { name: 'Uniqueness', address: 'uniqobk8oGh4XBLMqM68K8M2zNu3CdYX7q5go7whQiv', },
+  { name: 'Captcha', address: 'ignREusXmGrscGNUesoU9mxfds9AiYTezUKex2PsZV6', },
 ];
 
 // This is for demo purposes but should be replaced with a more secure method
