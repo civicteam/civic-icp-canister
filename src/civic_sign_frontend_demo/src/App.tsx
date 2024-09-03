@@ -56,7 +56,7 @@ function App() {
 
   return (
     <main className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-lg p-20  w-full">
+      <div className="bg-white rounded-lg shadow-lg p-20 max-w-2xl  w-full">
         <img src="/logo2.svg" alt="DFINITY logo" className="mx-auto mb-8 w-32" />
         
         {principal ? (
