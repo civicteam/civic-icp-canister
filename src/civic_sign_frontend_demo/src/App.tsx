@@ -64,9 +64,13 @@ function App() {
             <h1 className="text-2xl font-bold text-center mb-4">Welcome to the ICP Relying Canister</h1>
             <p className="text-center mb-6">Logged in as <span className="font-mono bg-gray-100 p-1 rounded">{principal?.toText()}</span></p>
             {credentialCheckResponse && (
-              <div className="mb-6 ">
-                <p className="text-sm text-gray-600">Response:</p>
-                <p className="font-mono text-sm bg-gray-100 p-8 rounded">{JSON.stringify(credentialCheckResponse.credential, undefined, 2)}</p>
+              <div className="mb-6 w-full">
+                <p className="text-sm text-gray-600 mb-2">Response:</p>
+                <div className="bg-gray-100 rounded-md p-4 overflow-x-auto">
+                  <pre className="text-sm">
+                    <code>{JSON.stringify(credentialCheckResponse.credential, null, 2)}</code>
+                  </pre>
+                </div>
               </div>
             )}
             <ICPCredentialCheckButton
