@@ -9,6 +9,7 @@ function App() {
   const [principal, setPrincipal] = useState<Principal | undefined>(undefined);
   const [urlCode, setUrlCode] = useState<string | null>(null);
   const [selectedGatekeeperNetwork, setSelectedGatekeeperNetwork] = useState<GatekeeperNetwork>(config.gatekeeperNetworks[0]);
+  const [credentialCheckResponse, setCredentialCheckResponse] = useState<CredentialCheckResponse | undefined>(undefined);
 
   // Assume we have an array of available gatekeeperNetworks
   const gatekeeperNetworks = useMemo(() => config.gatekeeperNetworks, []);
@@ -38,24 +39,36 @@ function App() {
   }, []);
 
   const handleCredentialCheck = useCallback(async (credential?: CredentialCheckResponse, error?: Error) => {
-    console.log('handleCredentialCheck', credential, error);
+    if (error) {
+      console.error('Error checking credential:', error);
+      return;
+    }
+    console.log('Credential check response:', credential);
+    setCredentialCheckResponse(credential);
   }, []);
 
   const handleGatekeeperNetworkChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedNetwork = gatekeeperNetworks.find((network) => network.name === event.target.value);
     console.log('Selected network:', selectedNetwork);
     setSelectedGatekeeperNetwork(selectedNetwork || gatekeeperNetworks[0]);
+    setCredentialCheckResponse(undefined);
   }, []);
 
   return (
     <main className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
+      <div className="bg-white rounded-lg shadow-lg p-20  w-full">
         <img src="/logo2.svg" alt="DFINITY logo" className="mx-auto mb-8 w-32" />
         
         {principal ? (
           <div className="flex flex-col items-center justify-center">
             <h1 className="text-2xl font-bold text-center mb-4">Welcome to the ICP Relying Canister</h1>
             <p className="text-center mb-6">Logged in as <span className="font-mono bg-gray-100 p-1 rounded">{principal?.toText()}</span></p>
+            {credentialCheckResponse && (
+              <div className="mb-6 ">
+                <p className="text-sm text-gray-600">Response:</p>
+                <p className="font-mono text-sm bg-gray-100 p-8 rounded">{JSON.stringify(credentialCheckResponse.credential, undefined, 2)}</p>
+              </div>
+            )}
             <ICPCredentialCheckButton
               principal={principal}
               gatekeeperNetwork={selectedGatekeeperNetwork.address}
@@ -104,6 +117,7 @@ function App() {
           </div>
         )}
       </div>
+      
     </main>
   );
 }
